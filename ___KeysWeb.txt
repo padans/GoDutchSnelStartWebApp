@@ -1,0 +1,87 @@
+{
+  "SnelStartApi": {
+    "AuthUrl": "https://auth.snelstart.nl/b2b/token",
+    "ApiBaseUrl": "https://b2bapi.snelstart.nl/v2"
+  }
+}
+
+Stripe 
+Primarykey: 70e64fa21553415290c4ea79dfcaeaee
+Secondary:  06e9f13d8c17448ab63851213982f69b
+
+
+Padans BV 
+IBAN:          NL07SWNB3250693972
+TenantID:      6f082b3d-293b-48a6-ae4b-f42fadb4439d
+BankAccountID: 2a670622-a4cf-4dab-9c03-91a12aa6fd1d
+SnelStartClientKey = maatwerksleutel
+SnelStartSubscriptionKey = primary subscription key
+ {
+    "id": "d01a0d61-d6a2-4cf1-a066-df47ac647ad6",
+    "nummer": "1105",
+    "omschrijving": "GoDutch"
+  },
+  {
+    "id": "d01a0d61-d6a2-4cf1-a066-df47ac647ad6",
+    "nummer": "1105",
+    "omschrijving": "GoDutch"
+  },
+
+
+Voor de test  (aanpassing credentials) PUT:
+
+{
+  "goDutchApiBaseUrl": "https://backend.godutch.com/",
+  "goDutchUsername": "ed64280c-57f5-4df8-be7f-309ea773bbbd@godutch.com",
+  "goDutchPassword": "MsL73xt7kHAC576",
+  "snelStartAuthUrl": "https://auth.snelstart.nl/b2b/token",
+  "snelStartApiBaseUrl": "https://b2bapi.snelstart.nl/v2",
+  "snelStartClientKey": "RDdoR0NWbGptb3BrOFB5dDR1NnQ3VnVTTk50ZjhvRldNTi83NGVJeldGS3Fhc3VxSUw1cFJCRnhlQkdCNWU0cXhiUSt1SzhtbGEyNlZnbHBJeUYyemFpOWxrWHBXRlRsVnByQkE3Y29iMm9hdysyT3VYZmd6dmRRU1VxM3BLekZ1VHp3akZMdi9qUkNmT3RWZFVRdHovZmFySXdjL0NMdkMyUjhPRG5UcFBVbTBTWkV6QkdRc2Y1SFpMT3d3R2ZYTGxrSlhkM0VnYkorcEsrTnZXRVBEdWRyQmxPMTVjdmVUZnR4Nm1TdVB6RVRxd2thdktIYUxUdi9ZTnpJSkoxUDpXYVh2QkFWVzNUYWxlQkNGZlk0M2pnWWxwTDBxKy9KVDRKZ2NRazViSTBtMnpnN3hjQlA3KzBqMFhkbEVCWk5ZNEp2bGhmSmVEcDFJTzZGeWxpREZ0MVBKQ2wvQTBhdXFmd1RFK3BNNjZiVDJWbXhFc3pGa0ZqbXpUR0g5M1VrVzEyUjJ2Tm5odVpwZHZlREgzVDhobmtMWjQwdFZHN0xFZDdxK2lkUy9kcldwUlhRSDU5SjZUNlZXUTNFclA3YVMzU2UwV0xYNmJudStyMDlReTN2a3h0cFp6VWF0U2ZQejF4Y3IzRlR5TGxUTHZkQkdTb3YwUmFZbHJmc09uNmtt",
+  "snelStartSubscriptionKey": "70e64fa21553415290c4ea79dfcaeaee",
+  "exportFormat": "MT940",
+  "syncEnabled": true
+}
+
+
+30 april 2026
+SnelStartSubScriptionKey: 70e64fa21553415290c4ea79dfcaeaee
+			
+{			 
+  "success": false,
+  "provider": "SnelStart",
+  "message": "SnelStart token request failed with HTTP 400. Response: {\"error\":\"GrantType clientkey was found. Parameter clientkey does not contain a valid value\"}",
+  "testedUrl": "https://auth.snelstart.nl/b2b/token",
+  "statusCode": 400
+}5dce0f01-f6f5-4c9d-8eec-268b0cfee00a
+
+TenantID:    		     6f082b3d-293b-48a6-ae4b-f42fadb4439d
+BankAccountID: 		     2a670622-a4cf-4dab-9c03-91a12aa6fd1d
+settingsId (BankAccount):    6070DE0A-A07D-410D-9D15-F63F74ABCAAC
+SnelStartAdministrationId:   6c80c77e-1be1-4cd5-9733-a6109f536728
+(BankAccountSneStartLink)Id: 5dce0f01-f6f5-4c9d-8eec-268b0cfee00a			   
+
+
+
+NL07SWNB3250693972
+2026-01-01T00:00:00
+2026-01-31T23:59:59
+
+WEBHOOKTEST:
+{
+  "tenantId": "6f082b3d-293b-48a6-ae4b-f42fadb4439d",
+  "bankAccountId": "2a670622-a4cf-4dab-9c03-91a12aa6fd1d",
+  "iban": "NL07SWNB3250693972",
+  "from": "2026-01-01T00:00:00",
+  "to": "2026-01-31T23:59:59",
+  "triggerSource": "manual-webhook-test",
+  "rawPayload": "{ \"test\": true }"
+}
+
+
+        public string AuthUrl { get; init; } = "https://auth.snelstart.nl/b2b/token";
+        public string ApiBaseUrl { get; init; } = "https://b2bapi.snelstart.nl/v2";
+        public string ClientKey { get; init; } = string.Empty;
+        public string SubscriptionKey { get; init; } = string.Empty;
+    }
+}
+

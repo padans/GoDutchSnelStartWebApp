@@ -1,0 +1,1562 @@
+{
+  "openapi": "3.0.1",
+  "x-stoplight": {
+    "id": "ug91pl2h37xmd"
+  },
+  "info": {
+    "title": "Banking",
+    "version": "v1"
+  },
+  "paths": {
+    "/accounting/v1/accounts": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Get Merchant Accounts - related to the input session",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Page Number"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Page Size"
+          },
+          {
+            "name": "X-Session",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Non Interactive User Session (Merchant Session)",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true,
+            "name": "X-Partner-Id"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "X-Application-Id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiGatewayLibrary.Models.PaginatedList`1[Application.Common.Models.Account.Response.AccountResponseModel"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "items": [
+                        {
+                          "account_number": "50085063456",
+                          "iban": "50085063456",
+                          "currency": "EUR",
+                          "name": "EUR Account",
+                          "is_reserve": false,
+                          "is_suspense_account": false
+                        }
+                      ],
+                      "page": 1,
+                      "page_size": 20,
+                      "total_pages": 1,
+                      "total_count": 2,
+                      "has_previous_page": false,
+                      "has_next_page": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ValidationProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "errors": {
+                        "property1": [
+                          "string"
+                        ],
+                        "property2": [
+                          "string"
+                        ]
+                      },
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "a67blgeayv8zo"
+        },
+        "requestBody": {
+          "content": {}
+        },
+        "operationId": "get-merchant-accounts-related-to-the-input-session"
+      },
+      "parameters": []
+    },
+    "/accounting/v1/accounts/statements": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Generate Account Statement File based on input Date. Date should be (yyyy-mm-dd) format",
+        "parameters": [
+          {
+            "name": "X-Session",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "X-Partner-Id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "X-Application-Id",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json; x-api-version=1": {
+              "schema": {
+                "$ref": "#/components/schemas/Application.Common.Models.Account.Request.AccountStatementRequestModel"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "account_number": "string",
+                    "document_type": "MT940MultiCash",
+                    "date": "2019-08-24T14:15:22Z"
+                  }
+                }
+              }
+            },
+            "text/json; x-api-version=1": {
+              "schema": {
+                "$ref": "#/components/schemas/Application.Common.Models.Account.Request.AccountStatementRequestModel"
+              }
+            },
+            "application/*+json; x-api-version=1": {
+              "schema": {
+                "$ref": "#/components/schemas/Application.Common.Models.Account.Request.AccountStatementRequestModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "": {
+                      "type": "string",
+                      "x-stoplight": {
+                        "id": "6qvi81yr12vco"
+                      },
+                      "example": "\t :20:200111\n :25:50710731642\n :28:601\n :60F:C200309EUR12345,\n :62F:C200309EUR12345,\n :64:C200309EUR12345,"
+                    }
+                  }
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "": "\n:20:200111\n :25:50710731642\n :28:601\n :60F:C200309EUR12345,\n :62F:C200309EUR12345,\n :64:C200309EUR12345,"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "zmt23ot1oqfhr"
+        },
+        "operationId": "generate-account-statement-file-based-on-input-date"
+      },
+      "parameters": []
+    },
+    "/accounting/v1/transactions": {
+      "get": {
+        "tags": [
+          "Transaction"
+        ],
+        "summary": "Get Merchant Тransactions List",
+        "parameters": [
+          {
+            "name": "start_trn_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "transaction_types",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sign",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Application.Common.Enums.TransactionSign"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "account_number",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ruid",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Application.Common.Enums.TransactionOrder"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-Session",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true,
+            "name": "X-Partner-Id"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true,
+            "name": "X-Application-Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Application.Common.Models.Base.PaginationListModel`1[Application.Common.Models.Transaction.Response.TransactionListResponseModel]"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "items": [
+                        {
+                          "id": 10474587,
+                          "date": "2025-10-20T10:52:36",
+                          "payment_reference": "POSA01525856ITL4",
+                          "transaction_type": "013",
+                          "transaction_currency": "EUR",
+                          "transaction_amount": 0.88,
+                          "original_currency": "EUR",
+                          "original_amount": 0.22,
+                          "sign": "Credit",
+                          "reference_number": "REF1234567890",
+                          "reference_number_type": "None",
+                          "terminal_id": "80026232",
+                          "serial_number": "N96N960WC15224",
+                          "account_number": "50480563548",
+                          "ruid": "string",
+                          "billing_descriptor": "DEMO K300",
+                          "pan": "*9766",
+                          "description": "DEMO K300 - 000057 / Payment on TID 80025996, 0.88 EUR"
+                        }
+                      ],
+                      "page": 0,
+                      "page_size": 0,
+                      "total_pages": 0,
+                      "total_count": 0,
+                      "has_previous_page": true,
+                      "has_next_page": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ValidationProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "errors": {
+                        "property1": [
+                          "string"
+                        ],
+                        "property2": [
+                          "string"
+                        ]
+                      },
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "property1": null,
+                      "property2": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "0mgqn2fw2rgdu"
+        },
+        "x-internal": false,
+        "operationId": "get-merchant-transactions-list"
+      },
+      "parameters": []
+    },
+    "/accounting/v1/transactions/{payment_reference}": {
+      "get": {
+        "tags": [
+          "Transaction"
+        ],
+        "summary": "Get Merchant Transaction Details based on Payment Reference",
+        "parameters": [
+          {
+            "name": "payment_reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true,
+            "name": "X-Partner-Id"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true,
+            "name": "X-Application-Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.TransactionDetailsResponseModel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "iypmt994ekbty"
+        },
+        "operationId": "get-merchant-transaction-details-based-on-payment-reference"
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "payment_reference",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/accounting/v1/transactions/multiple": {
+      "get": {
+        "tags": [
+          "Transaction"
+        ],
+        "summary": "Get Multiple Merchant Transactions Details based on Payment References",
+        "parameters": [
+          {
+            "name": "payment_references",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string",
+              "format": "uri",
+              "example": "POSA019251FTE01,POSA019251FYWTE02"
+            },
+            "description": "Multiple Payment References separated by ','"
+          },
+          {
+            "name": "X-Session",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "X-Partner-Id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "X-Application-Id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.MultipleTransactionsResponseModel"
+                  }
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": [
+                      {
+                        "payment_reference": "string",
+                        "general": {
+                          "can_request_reversal": true,
+                          "is_fee": true,
+                          "is_reversal": true,
+                          "transaction_type": "string"
+                        },
+                        "details": [
+                          {
+                            "value": "string",
+                            "label": "string"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ValidationProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "type": "string",
+                      "title": "string",
+                      "status": 0,
+                      "detail": "string",
+                      "instance": "string",
+                      "additionalProp1": "string",
+                      "additionalProp2": "string",
+                      "additionalProp3": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "way67sd35xrfq"
+        },
+        "operationId": "get-multiple-merchant-transactions-details-based-on-payment-references"
+      },
+      "parameters": []
+    }
+  },
+  "components": {
+    "schemas": {
+      "Application.Common.Enums.AccountStatementDocumentType": {
+        "enum": [
+          "MT940MultiCash",
+          "MT940SWIFT",
+          "MT940Structured",
+          "MT940StructuredWithIban"
+        ],
+        "type": "string",
+        "x-stoplight": {
+          "id": "8mw23qknqph2i"
+        },
+        "x-examples": {
+          "Example 1": "MT940MultiCash"
+        }
+      },
+      "Application.Common.Enums.ReferenceNumberType": {
+        "enum": [
+          "None",
+          "ReferenceNumber",
+          "InvoiceNumber",
+          "ProductID",
+          "ReservationNumber"
+        ],
+        "type": "string",
+        "x-stoplight": {
+          "id": "mofwxvp9rwbny"
+        }
+      },
+      "Application.Common.Enums.TransactionOrder": {
+        "enum": [
+          "Ascending",
+          "Descending"
+        ],
+        "type": "string",
+        "x-stoplight": {
+          "id": "5wnv2bejomwtr"
+        }
+      },
+      "Application.Common.Enums.TransactionSign": {
+        "enum": [
+          "Credit",
+          "Debit"
+        ],
+        "type": "string",
+        "x-stoplight": {
+          "id": "0dv0y306k4xhk"
+        }
+      },
+      "Application.Common.Models.Account.Request.AccountStatementRequestModel": {
+        "required": [
+          "account_number",
+          "date",
+          "document_type"
+        ],
+        "type": "object",
+        "properties": {
+          "account_number": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "document_type": {
+            "$ref": "#/components/schemas/Application.Common.Enums.AccountStatementDocumentType"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "bjnovyprvrm8p"
+        },
+        "x-examples": {
+          "Example 1": {
+            "account_number": "string",
+            "document_type": "MT940MultiCash",
+            "date": "2019-08-24T14:15:22Z"
+          }
+        }
+      },
+      "Application.Common.Models.Account.Response.AccountResponseModel": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "lqiqunqivl913"
+        },
+        "properties": {
+          "account_number": {
+            "type": "string",
+            "example": "50085063456",
+            "nullable": true
+          },
+          "iban": {
+            "type": "string",
+            "example": "50085063456",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "example": "EUR Account",
+            "nullable": true
+          },
+          "is_reserve": {
+            "type": "boolean",
+            "default": false
+          },
+          "is_suspense_account": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "account_number": "50085063456",
+            "iban": "50085063456",
+            "currency": "EUR",
+            "name": "EUR Account",
+            "is_reserve": false,
+            "is_suspense_account": false
+          }
+        }
+      },
+      "ApiGatewayLibrary.Models.PaginatedList`1[Application.Common.Models.Account.Response.AccountResponseModel": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "en0dslccg8uhp"
+        },
+        "properties": {
+          "items": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/Application.Common.Models.Account.Response.AccountResponseModel"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "otxn2r2e7qma3"
+            },
+            "example": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "phgwzijccd2ez"
+            },
+            "example": 20
+          },
+          "total_pages": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "0vzgjsblhcv88"
+            },
+            "example": 1
+          },
+          "total_count": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "lrhv2hfoee5gj"
+            },
+            "example": 2
+          },
+          "has_previous_page": {
+            "type": "boolean",
+            "x-stoplight": {
+              "id": "i58cse37uet4w"
+            },
+            "default": false
+          },
+          "has_next_page": {
+            "type": "boolean",
+            "x-stoplight": {
+              "id": "f78kk4nu8th9k"
+            },
+            "default": false
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "items": [
+              {
+                "account_number": "50085063456",
+                "iban": "50085063456",
+                "currency": "EUR",
+                "name": "EUR Account",
+                "is_reserve": false,
+                "is_suspense_account": false
+              }
+            ],
+            "page": 1,
+            "page_size": 20,
+            "total_pages": 1,
+            "total_count": 2,
+            "has_previous_page": false,
+            "has_next_page": false
+          }
+        }
+      },
+      "Application.Common.Models.Base.PaginationListModel`1[Application.Common.Models.Transaction.Response.TransactionListResponseModel]": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "0i7roa2kmar6w"
+        },
+        "properties": {
+          "items": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.TransactionListResponseModel"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "i6vgkh8dvol1g"
+            }
+          },
+          "page_size": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "pkmxjd5j0qgcx"
+            }
+          },
+          "total_pages": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "sbmph7b5ypain"
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "x-stoplight": {
+              "id": "jx455wedo6ddw"
+            }
+          },
+          "has_previous_page": {
+            "type": "boolean",
+            "x-stoplight": {
+              "id": "vk47o8g05mbtv"
+            }
+          },
+          "has_next_page": {
+            "type": "boolean",
+            "x-stoplight": {
+              "id": "cq5vn8by1udrv"
+            }
+          }
+        }
+      },
+      "Application.Common.Models.Transaction.Response.Base.GeneralDetails": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "9ud4o9l0vj561"
+        },
+        "properties": {
+          "can_request_reversal": {
+            "type": "boolean",
+            "default": true
+          },
+          "is_fee": {
+            "type": "boolean",
+            "default": true
+          },
+          "is_reversal": {
+            "type": "boolean",
+            "default": true
+          },
+          "transaction_type": {
+            "type": "string",
+            "example": "501",
+            "nullable": true
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "can_request_reversal": true,
+            "is_fee": true,
+            "is_reversal": true,
+            "transaction_type": "501"
+          }
+        }
+      },
+      "Application.Common.Models.Transaction.Response.Base.TransactionDetails": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "apb4s6pr2apnf"
+        },
+        "properties": {
+          "value": {
+            "type": "string",
+            "example": "2722",
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "example": "Payment from card",
+            "nullable": true
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "value": "2722",
+            "label": "Payment from card"
+          }
+        }
+      },
+      "Application.Common.Models.Transaction.Response.MultipleTransactionsResponseModel": {
+        "type": "object",
+        "properties": {
+          "payment_reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "general": {
+            "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.Base.GeneralDetails"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.Base.TransactionDetails"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "31opspb7r21bf"
+        }
+      },
+      "Application.Common.Models.Transaction.Response.TransactionDetailsResponseModel": {
+        "type": "object",
+        "properties": {
+          "general": {
+            "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.Base.GeneralDetails"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Application.Common.Models.Transaction.Response.Base.TransactionDetails"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "36vp2gb832weh"
+        }
+      },
+      "Application.Common.Models.Transaction.Response.TransactionListResponseModel": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-stoplight": {
+          "id": "sjuqdvvmyejv9"
+        },
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "example": 10474587
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-10-20T10:52:36"
+          },
+          "payment_reference": {
+            "type": "string",
+            "example": "POSA01525856ITL4",
+            "nullable": true
+          },
+          "transaction_type": {
+            "type": "string",
+            "example": "013",
+            "nullable": true
+          },
+          "transaction_currency": {
+            "type": "string",
+            "example": "EUR",
+            "nullable": true
+          },
+          "transaction_amount": {
+            "type": "number",
+            "format": "double",
+            "example": 0.88
+          },
+          "original_currency": {
+            "type": "string",
+            "example": "EUR",
+            "nullable": true
+          },
+          "original_amount": {
+            "type": "number",
+            "format": "double",
+            "example": 0.22
+          },
+          "sign": {
+            "$ref": "#/components/schemas/Application.Common.Enums.TransactionSign"
+          },
+          "reference_number": {
+            "type": "string",
+            "example": "REF1234567890",
+            "nullable": true
+          },
+          "reference_number_type": {
+            "$ref": "#/components/schemas/Application.Common.Enums.ReferenceNumberType"
+          },
+          "terminal_id": {
+            "type": "string",
+            "example": "80026232",
+            "nullable": true
+          },
+          "serial_number": {
+            "type": "string",
+            "example": "N96N960WC15224",
+            "nullable": true
+          },
+          "account_number": {
+            "type": "string",
+            "example": "50480563548",
+            "nullable": true
+          },
+          "ruid": {
+            "type": "string",
+            "example": "string",
+            "nullable": true
+          },
+          "billing_descriptor": {
+            "type": "string",
+            "example": "DEMO K300",
+            "nullable": true
+          },
+          "pan": {
+            "type": "string",
+            "example": "*9766",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "example": "DEMO K300 - 000057 / Payment on TID 80025996, 0.88 EUR",
+            "nullable": true
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "id": 10474587,
+            "date": "2025-10-20T10:52:36",
+            "payment_reference": "POSA01525856ITL4",
+            "transaction_type": "013",
+            "transaction_currency": "EUR",
+            "transaction_amount": 0.88,
+            "original_currency": "EUR",
+            "original_amount": 0.22,
+            "sign": "Credit",
+            "reference_number": "REF1234567890",
+            "reference_number_type": "None",
+            "terminal_id": "80026232",
+            "serial_number": "N96N960WC15224",
+            "account_number": "50480563548",
+            "ruid": "string",
+            "billing_descriptor": "DEMO K300",
+            "pan": "*9766",
+            "description": "DEMO K300 - 000057 / Payment on TID 80025996, 0.88 EUR"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Mvc.ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "additionalProp1": {
+            "type": "string"
+          },
+          "additionalProp2": {
+            "type": "string"
+          },
+          "additionalProp3": {
+            "type": "string"
+          }
+        },
+        "x-examples": {
+          "Example 1": {
+            "type": "string",
+            "title": "string",
+            "status": 0,
+            "detail": "string",
+            "instance": "string",
+            "additionalProp1": "string",
+            "additionalProp2": "string",
+            "additionalProp3": "string"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Mvc.ValidationProblemDetails": {
+        "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails",
+        "x-examples": {
+          "Example 1": {
+            "type": "string",
+            "title": "string",
+            "status": 0,
+            "detail": "string",
+            "instance": "string",
+            "property1": null,
+            "property2": null
+          }
+        },
+        "description": "",
+        "title": ""
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://demo-api-gateway.mypos.com",
+      "description": "Demo"
+    },
+    {
+      "url": "https://api-gateway.mypos.com",
+      "description": "Prod"
+    }
+  ],
+  "x-Session": null
+}

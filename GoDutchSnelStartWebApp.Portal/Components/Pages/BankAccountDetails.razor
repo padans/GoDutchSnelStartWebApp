@@ -1,0 +1,1751 @@
+﻿@page "/bankaccounts/{BankAccountId:guid}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
+@using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<BankAccountDetails> Logger
+
+<PageTitle>Bankaccount details</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Bankaccount details</h1>
+            <p class="text-muted mb-0">Overzicht van account, SnelStart-instellingen en synchronisatiestatus.</p>
+        </div>
+
+        <a class="btn btn-outline-secondary" href="/bankaccounts">
+            Terug naar overzicht
+        </a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccessMessage"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(infoMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @infoMessage
+            <button type="button" class="btn-close" @onclick="ClearInfoMessage"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="alert alert-info">Gegevens worden geladen...</div>
+    }
+    else if (bankAccount is null)
+    {
+        <div class="alert alert-warning">Bankaccount niet gevonden.</div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Bankaccount</div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Naam</dt>
+                            <dd class="col-sm-8">@bankAccount.AccountName</dd>
+
+                            <dt class="col-sm-4">IBAN</dt>
+                            <dd class="col-sm-8">@bankAccount.Iban</dd>
+
+                            <dt class="col-sm-4">Actief</dt>
+                            <dd class="col-sm-8">
+                                <span class="@GetBooleanBadgeClass(bankAccount.IsActive)">
+                                    @(bankAccount.IsActive ? "Ja" : "Nee")
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">TenantId</dt>
+                            <dd class="col-sm-8">@bankAccount.TenantId</dd>
+
+                            <dt class="col-sm-4">BankAccountId</dt>
+                            <dd class="col-sm-8">@bankAccount.Id</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Bankaccount status</span>
+                        <span class="@GetBooleanBadgeClass(bankAccount.IsActive)">
+                            @(bankAccount.IsActive ? "Actief" : "Non-actief")
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3">
+                            Zet deze bankrekening op non-actief als de tenant deze rekening niet meer wil synchroniseren.
+                            Een non-actieve bankrekening wordt niet meer meegenomen in de automatische sync.
+                        </p>
+
+                        @if (bankAccount.IsActive)
+                        {
+                            <button class="btn btn-outline-danger"
+                                    @onclick="() => SetBankAccountActiveAsync(false)"
+                                    disabled="@isSavingBankAccountStatus">
+                                @(isSavingBankAccountStatus ? "Opslaan..." : "Bankaccount op non-actief zetten")
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-success"
+                                    @onclick="() => SetBankAccountActiveAsync(true)"
+                                    disabled="@isSavingBankAccountStatus">
+                                @(isSavingBankAccountStatus ? "Opslaan..." : "Bankaccount weer actief zetten")
+                            </button>
+                        }
+
+                        <div class="form-text mt-2">
+                            Bij non-actief zetten wordt ook de interne SnelStart-koppeling uitgeschakeld.
+                            Historische synchronisatieruns blijven bewaard.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">Laatste synchronisatie</div>
+                    <div class="card-body">
+                        @if (syncStatus is null)
+                        {
+                            <div class="text-muted">Geen synchronisatiestatus gevonden.</div>
+                        }
+                        else
+                        {
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Status</dt>
+                                <dd class="col-sm-8">
+                                    <span class="@GetSyncStatusBadgeClass(syncStatus.Status)">
+                                        @syncStatus.Status
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-4">Laatste run</dt>
+                                <dd class="col-sm-8">@FormatDateTime(syncStatus.LastRunAt)</dd>
+
+                                <dt class="col-sm-4">Transacties</dt>
+                                <dd class="col-sm-8">@syncStatus.TransactionCount</dd>
+
+                                <dt class="col-sm-4">Retries</dt>
+                                <dd class="col-sm-8">@syncStatus.RetryCount</dd>
+
+                                <dt class="col-sm-4">Trigger</dt>
+                                <dd class="col-sm-8">@(syncStatus.TriggerSource ?? "-")</dd>
+
+                                <dt class="col-sm-4">Melding</dt>
+                                <dd class="col-sm-8">@(syncStatus.Message ?? "-")</dd>
+                            </dl>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">Onboarding & koppeling status</div>
+                    <div class="card-body">
+                        <dl class="row mb-4">
+                            <dt class="col-sm-4">GoDutch bankrekening</dt>
+                            <dd class="col-sm-8">
+                                <span class="@GetPresenceBadgeClass(IsGoDutchConfigured())">
+                                    @(IsGoDutchConfigured() ? "Aanwezig" : "Controleren")
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">SnelStart koppeling</dt>
+                            <dd class="col-sm-8">
+                                <span class="@GetPresenceBadgeClass(IsSnelStartConfigured())">
+                                    @(IsSnelStartConfigured() ? "Aanwezig" : "Controleren")
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Dagboek ingesteld</dt>
+                            <dd class="col-sm-8">
+                                @if (IsDagboekConfigured())
+                                {
+                                    <span class="badge text-bg-success">
+                                        @bankAccount!.SnelStartDagboekCode (@bankAccount.SnelStartDagboekNaam)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Niet ingesteld</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Grootboek ingesteld</dt>
+                            <dd class="col-sm-8">
+                                @if (IsGrootboekConfigured())
+                                {
+                                    <span class="badge text-bg-success">
+                                        @bankAccount!.SnelStartGrootboekNummer (@bankAccount.SnelStartGrootboekNaam)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Niet ingesteld</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Eerste synchronisatie</dt>
+                            <dd class="col-sm-8">
+                                <span class="@GetPresenceBadgeClass(syncStatus?.LastRunAt is not null)">
+                                    @(syncStatus?.LastRunAt is not null ? "Uitgevoerd" : "Nog niet uitgevoerd")
+                                </span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">SnelStart credentials</div>
+                    <div class="card-body">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Subscription key</label>
+                                <InputText class="form-control"
+                                           type="password"
+                                           @bind-Value="settings.SnelStartSubscriptionKey" />
+
+                                @if (settings.HasSnelStartSubscriptionKey)
+                                {
+                                    <div class="form-text text-success">
+                                        Subscription key is opgeslagen. Laat leeg om ongewijzigd te laten.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="form-text text-warning">
+                                        Nog geen subscription key opgeslagen.
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Client key (maatwerksleutel)</label>
+                                <InputText class="form-control"
+                                           @bind-Value="settings.SnelStartClientKey" />
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-primary"
+                                            @onclick="SaveSettingsAsync"
+                                            disabled="@isSavingSettings">
+                                        @(isSavingSettings ? "Opslaan..." : "Opslaan credentials")
+                                    </button>
+
+                                    <button class="btn btn-outline-success"
+                                            @onclick="TestSnelStartAsync"
+                                            disabled="@(!CanTestSnelStart())"
+                                            title="Sla eerst de SnelStart credentials op.">
+                                        @(isTestingSnelStart ? "Testen..." : "Test SnelStart")
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (snelStartTestResult is not null)
+                            {
+                                <div class="mt-4">
+                                    <div class="@GetConnectionTestAlertClass(snelStartTestResult.Success)">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>
+                                                    Laatste SnelStart test:
+                                                    @(snelStartTestResult.Success ? "geslaagd" : "mislukt")
+                                                </strong>
+
+                                                <div class="mt-1">
+                                                    @snelStartTestResult.Message
+                                                </div>
+                                            </div>
+
+                                            <span class="@GetConnectionTestBadgeClass(snelStartTestResult.Success)">
+                                                @(snelStartTestResult.Success ? "OK" : "Fout")
+                                            </span>
+                                        </div>
+
+                                        <hr />
+
+                                        <dl class="row mb-0 small">
+                                            <dt class="col-sm-3">Provider</dt>
+                                            <dd class="col-sm-9">@DisplayValue(snelStartTestResult.Provider)</dd>
+
+                                            <dt class="col-sm-3">HTTP status</dt>
+                                            <dd class="col-sm-9">
+                                                @(snelStartTestResult.StatusCode.HasValue
+                                                    ? snelStartTestResult.StatusCode.Value.ToString()
+                                                    : "-")
+                                            </dd>
+
+                                            <dt class="col-sm-3">Geteste URL</dt>
+                                            <dd class="col-sm-9 text-break">
+                                                @DisplayValue(snelStartTestResult.TestedUrl)
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            }
+
+                            
+                        </div>
+
+                        <div class="form-text mt-3">
+                            Stap 1: vul de SnelStart API credentials in en sla ze op.
+                            Stap 2: test de verbinding.
+                            Stap 3: haal daarna dagboeken en grootboeken op bij <strong>SnelStart instellingen</strong>.
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>SnelStart instellingen</span>
+
+                        @if (!isEditingSnelStartSettings)
+                        {
+                            <button class="btn btn-sm btn-outline-primary"
+                                    @onclick="BeginEditSnelStartSettings"
+                                    disabled="@(!HasSavedSnelStartCredentials())"
+                                    title="Sla eerst de SnelStart credentials op.">
+                                Wijzigen
+                            </button>
+                        }
+                    </div>
+
+                    <div class="card-body">
+                        @if (!HasSavedSnelStartCredentials())
+                        {
+                            <div class="alert alert-warning mb-3">
+                                Vul eerst de <strong>SnelStart credentials</strong> in en klik op
+                                <strong>Opslaan credentials</strong>. Daarna kun je de verbinding testen en dagboeken/grootboeken ophalen.
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @if (isEditingSnelStartSettings)
+                            {
+                                <button class="btn btn-outline-success"
+                                        @onclick="LoadSnelStartLookupsAsync"
+                                        disabled="@(!CanLoadSnelStartLookups())"
+                                        title="Sla eerst de SnelStart credentials op en test de verbinding.">
+                                    @(isLoadingSnelStartLookups ? "Ophalen..." : "Dagboeken en grootboeken ophalen uit SnelStart")
+                                </button>
+
+                                <button class="btn btn-primary"
+                                        @onclick="SaveSnelStartSettingsAsync"
+                                        disabled="@isSavingSnelStartSettings">
+                                    @(isSavingSnelStartSettings ? "Opslaan..." : "Opslaan instellingen")
+                                </button>
+
+                                <button class="btn btn-outline-secondary"
+                                        @onclick="CancelEditSnelStartSettings"
+                                        disabled="@isSavingSnelStartSettings">
+                                    Annuleren
+                                </button>
+                            }
+                        </div>
+
+                        @if (!isEditingSnelStartSettings)
+                        {
+                            <div class="alert alert-light border mb-3">
+                                Deze instellingen zijn alleen te wijzigen via de knop <strong>Wijzigen</strong>.
+                            </div>
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="alert alert-light border mb-0">
+                                    <div class="fw-semibold">SnelStart administratie</div>
+                                    <div class="small text-muted">
+                                        De administratie wordt bepaald door de ingevoerde SnelStart maatwerksleutel.
+                                        De applicatie maakt automatisch een interne technische SnelStart-koppeling aan voor deze bankrekening.
+                                    </div>
+
+                                    @if (snelStartLink is not null && snelStartLink.SnelStartAdministrationId != Guid.Empty)
+                                    {
+                                        <div class="small text-success mt-2">
+                                            Interne koppeling aanwezig: @snelStartLink.SnelStartAdministrationId
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Exportformaat</label>
+                                <InputSelect class="form-select"
+                                             @bind-Value="settings.ExportFormat"
+                                             disabled="@(!isEditingSnelStartSettings)">
+                                    <option value="Mt940">MT940</option>
+                                    <option value="Camt053">CAMT.053</option>
+                                </InputSelect>
+                                <div class="form-text">
+                                    Kies het formaat dat naar SnelStart wordt geüpload. Dit wordt per bankrekening opgeslagen.
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="row g-3 align-items-start">
+                                    <div class="col-lg-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="mb-3">Dagboek</h6>
+
+                                            <label class="form-label">Dagboek kiezen</label>
+                                            <select class="form-select"
+                                                    value="@snelStartSettings.SnelStartDagboekIdText"
+                                                    @onchange="OnDagboekChangedAsync"
+                                                    disabled="@(!CanSelectSnelStartLookupValues())">
+                                                <option value="">-- Kies een dagboek --</option>
+
+                                                @foreach (var dagboek in dagboeken)
+                                                {
+                                                    <option value="@dagboek.Id.ToString()">
+                                                        @dagboek.DisplayName
+                                                    </option>
+                                                }
+                                            </select>
+
+                                            @if (isEditingSnelStartSettings && dagboeken.Count == 0)
+                                            {
+                                                <div class="form-text mb-3">
+                                                    Sla eerst de SnelStart credentials op. Daarna kun je dagboeken ophalen.
+                                                </div>
+                                            }
+
+                                            <div class="mt-3">
+                                                <label class="form-label">DagboekId</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartDagboekIdText"
+                                                           disabled="true" />
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="form-label">Dagboek code</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartDagboekCode"
+                                                           disabled="true" />
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="form-label">Dagboek naam</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartDagboekNaam"
+                                                           disabled="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="mb-3">Grootboek</h6>
+
+                                            <label class="form-label">Grootboek kiezen</label>
+                                            <select class="form-select"
+                                                    value="@snelStartSettings.SnelStartGrootboekIdText"
+                                                    @onchange="OnGrootboekChangedAsync"
+                                                    disabled="@(!CanSelectSnelStartLookupValues())">
+                                                <option value="">-- Kies een grootboek --</option>
+
+                                                @foreach (var grootboek in grootboeken)
+                                                {
+                                                    <option value="@grootboek.Id.ToString()">
+                                                        @grootboek.DisplayName
+                                                    </option>
+                                                }
+                                            </select>
+
+                                            @if (isEditingSnelStartSettings && grootboeken.Count == 0)
+                                            {
+                                                <div class="form-text mb-3">
+                                                    Sla eerst de SnelStart credentials op. Daarna kun je grootboeken ophalen.
+                                                </div>
+                                            }
+
+                                            <div class="mt-3">
+                                                <label class="form-label">GrootboekId</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartGrootboekIdText"
+                                                           disabled="true" />
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="form-label">Grootboek nummer</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartGrootboekNummer"
+                                                           disabled="true" />
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="form-label">Grootboek naam</label>
+                                                <InputText class="form-control"
+                                                           @bind-Value="snelStartSettings.SnelStartGrootboekNaam"
+                                                           disabled="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-text mt-3">
+                            Gebruik wijzigen om dagboek en grootboek aan te passen. Na opslaan wordt de onboardingstatus bijgewerkt.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Automatische synchronisatie</span>
+                        @if (snelStartLink is not null)
+                        {
+                            <span class="@(snelStartLink.AutoSyncEnabled ? "badge text-bg-success" : "badge text-bg-secondary")">
+                                @(snelStartLink.AutoSyncEnabled ? "Actief" : "Uit")
+                            </span>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (snelStartLink is null || snelStartLink.Id == Guid.Empty)
+                        {
+                            <div class="alert alert-warning mb-0">
+                                De automatische sync kan worden ingesteld nadat de SnelStart credentials zijn opgeslagen
+                                en de interne SnelStart-koppeling is aangemaakt.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <div class="form-check mt-4">
+                                        <InputCheckbox class="form-check-input"
+                                                       @bind-Value="autoSyncEnabled"
+                                                       id="autoSyncEnabled" />
+                                        <label class="form-check-label" for="autoSyncEnabled">
+                                            Automatisch synchroniseren
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Interval</label>
+                                    <InputSelect class="form-select" @bind-Value="syncIntervalMinutes" disabled="@(!autoSyncEnabled)">
+                                        @foreach (var option in syncIntervalOptions)
+                                        {
+                                            <option value="@option">@FormatInterval(option)</option>
+                                        }
+                                    </InputSelect>
+                                    <div class="form-text">Minimum 15 minuten.</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary"
+                                            @onclick="SaveAutoSyncSettingsAsync"
+                                            disabled="@(isSavingAutoSyncSettings || bankAccount?.IsActive != true)">
+                                        @(isSavingAutoSyncSettings ? "Opslaan..." : "Sync-instellingen opslaan")
+                                    </button>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-3">Laatste run</dt>
+                                <dd class="col-sm-9">@FormatDateTime(snelStartLink.LastRunUtc)</dd>
+
+                                <dt class="col-sm-3">Volgende run</dt>
+                                <dd class="col-sm-9">@FormatDateTime(snelStartLink.NextRunUtc)</dd>
+
+                                <dt class="col-sm-3">Koppeling actief</dt>
+                                <dd class="col-sm-9">@(snelStartLink.IsActive ? "Ja" : "Nee")</dd>
+
+                                <dt class="col-sm-3">Exportformaat</dt>
+                                <dd class="col-sm-9">@FormatExportFormat(snelStartLink.ExportFormat)</dd>
+                            </dl>
+
+                            <div class="form-text mt-3">
+                                De worker controleert periodiek of deze bankrekening aan de beurt is.
+                                De volgende run wordt na elke poging opnieuw berekend op basis van dit interval.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-info">
+                    <div class="card-header">GoDutch credentials</div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-0">
+                            GoDutch credentials worden op tenantniveau beheerd via het bankaccounts-overzicht.
+                            Dit bankaccount gebruikt de tenant-GoDutch koppeling en matcht transacties op IBAN
+                            <strong>@bankAccount!.Iban</strong>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">Handmatige resync</div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Vanaf datum/tijd (lokale tijd)</label>
+                                <InputDate @bind-Value="resyncFromUtc"
+                                           class="form-control"
+                                           Type="InputDateType.DateTimeLocal" />
+                            </div>
+
+                            <div class="col-auto">
+                                <button class="btn btn-primary"
+                                        @onclick="ExecuteResyncAsync"
+                                        disabled="@(isResyncing || bankAccount?.IsActive != true)">
+                                    @(isResyncing ? "Bezig..." : "Resync uitvoeren")
+                                </button>
+                            </div>
+
+                            <div class="col-auto">
+                                <button class="btn btn-outline-secondary"
+                                        @onclick="ReloadAsync"
+                                        disabled="@isResyncing">
+                                    Vernieuwen
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (resyncResult is not null)
+                        {
+                            <div class="card border-light bg-light mt-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="card-title mb-1">Resync-resultaat</h5>
+                                            <div class="text-muted small">
+                                                Periode: @FormatDateTime(resyncResult.PeriodFromUtc) t/m @FormatDateTime(resyncResult.PeriodToUtc)
+                                            </div>
+                                        </div>
+                                        <span class="@GetSyncStatusBadgeClass(resyncResult.Status)">@resyncResult.Status</span>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-white">
+                                                <div class="fw-semibold mb-2">GoDutch</div>
+                                                <dl class="row small mb-0">
+                                                    <dt class="col-7">Transacties gelezen</dt>
+                                                    <dd class="col-5 text-end">@resyncResult.GoDutchTransactionCount</dd>
+
+                                                    <dt class="col-7">Binnen periode</dt>
+                                                    <dd class="col-5 text-end">@resyncResult.PeriodTransactionCount</dd>
+
+                                                    <dt class="col-7">Saldo-context</dt>
+                                                    <dd class="col-5 text-end">@resyncResult.BalanceAnchorCount</dd>
+
+                                                    <dt class="col-7">Voor export</dt>
+                                                    <dd class="col-5 text-end">@resyncResult.ExportTransactionCount</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-white">
+                                                <div class="fw-semibold mb-2">Saldo</div>
+                                                <dl class="row small mb-0">
+                                                    <dt class="col-6">Beginsaldo</dt>
+                                                    <dd class="col-6 text-end">@FormatAmount(resyncResult.OpeningBalance)</dd>
+
+                                                    <dt class="col-6">Datum begin</dt>
+                                                    <dd class="col-6 text-end">@FormatDate(resyncResult.OpeningBalanceDate)</dd>
+
+                                                    <dt class="col-6">Mutaties</dt>
+                                                    <dd class="col-6 text-end">@FormatAmount(resyncResult.TotalAmount)</dd>
+
+                                                    <dt class="col-6">Eindsaldo</dt>
+                                                    <dd class="col-6 text-end">@FormatAmount(resyncResult.ClosingBalance)</dd>
+
+                                                    <dt class="col-6">Datum eind</dt>
+                                                    <dd class="col-6 text-end">@FormatDate(resyncResult.ClosingBalanceDate)</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div class="border rounded p-3 h-100 bg-white">
+                                                <div class="fw-semibold mb-2">SnelStart</div>
+                                                <dl class="row small mb-0">
+                                                    <dt class="col-7">Download</dt>
+                                                    <dd class="col-5 text-end">@(resyncResult.DownloadSucceeded ? "Gelukt" : "Niet gelukt")</dd>
+
+                                                    <dt class="col-7">Upload geprobeerd</dt>
+                                                    <dd class="col-5 text-end">@(resyncResult.SnelStartUploadAttempted ? "Ja" : "Nee")</dd>
+
+                                                    <dt class="col-7">Upload gelukt</dt>
+                                                    <dd class="col-5 text-end">@(resyncResult.UploadSucceeded ? "Ja" : "Nee")</dd>
+
+                                                    <dt class="col-7">Al eerder ingelezen</dt>
+                                                    <dd class="col-5 text-end">@FormatDuplicateImportStatus(resyncResult)</dd>
+
+                                                    <dt class="col-7">Retries</dt>
+                                                    <dd class="col-5 text-end">@resyncResult.RetryCount</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(resyncResult.Message))
+                                    {
+                                        <div class="alert alert-secondary small mt-3 mb-0">
+                                            @resyncResult.Message
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="form-text mt-3">
+                            Voert een handmatige GoDutch-download en SnelStart-import uit vanaf deze datum/tijd.
+                            Het resultaat toont aantallen en begin-/eindsaldo met datum.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid BankAccountId { get; set; }
+
+    private Guid TenantId => TenantOptions.Value.TenantId;
+
+    private bool isLoading = true;
+    private bool isResyncing;
+    private bool isSavingSnelStartSettings;
+    private bool isEditingSnelStartSettings;
+    private bool isSavingAutoSyncSettings;
+    private bool isSavingBankAccountStatus;
+
+    private string? errorMessage;
+    private string? successMessage;
+    private string? infoMessage;
+
+    private BankAccountViewModel? bankAccount;
+    private BankAccountSyncStatusViewModel? syncStatus;
+    private BankAccountResyncResultViewModel? resyncResult;
+    private DateTime? resyncFromUtc = DateTime.UtcNow.AddDays(-1);
+
+    private SnelStartSettingsEditModel snelStartSettings = new();
+
+    private BankAccountSettingsViewModel settings = new();
+    private bool isSavingSettings;
+
+    private bool isTestingSnelStart;
+    private ConnectionTestResultViewModel? snelStartTestResult;
+    private bool isLoadingSnelStartLookups;
+    private BankAccountSnelStartLinkViewModel? snelStartLink;
+    private bool autoSyncEnabled = true;
+    private int syncIntervalMinutes = 15;
+    private readonly int[] syncIntervalOptions = [15, 30, 60, 120, 240, 1440];
+    private readonly List<SnelStartAdministrationViewModel> snelStartAdministrations = [];
+    private readonly List<SnelStartDagboekLookupViewModel> dagboeken = [];
+    private readonly List<SnelStartGrootboekLookupViewModel> grootboeken = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            bankAccount = null;
+            syncStatus = null;
+            snelStartLink = null;
+            snelStartAdministrations.Clear();
+
+            bankAccount = await BackendApiClient.GetBankAccountByIdAsync(
+                TenantId,
+                BankAccountId);
+
+            settings = await BackendApiClient.GetBankAccountSettingsAsync(TenantId, BankAccountId)
+           ?? new BankAccountSettingsViewModel
+           {
+               BankAccountId = BankAccountId,
+               SnelStartAuthUrl = "https://auth.snelstart.nl/b2b/token",
+               SnelStartApiBaseUrl = "https://b2bapi.snelstart.nl/v2",
+               ExportFormat = "MT940",
+               SyncEnabled = true
+           };
+
+            // Secrets worden nooit opnieuw zichtbaar gemaakt in de UI.
+            settings.SnelStartSubscriptionKey = null;
+
+            if (string.IsNullOrWhiteSpace(settings.SnelStartAuthUrl))
+            {
+                settings.SnelStartAuthUrl = "https://auth.snelstart.nl/b2b/token";
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.SnelStartApiBaseUrl))
+            {
+                settings.SnelStartApiBaseUrl = "https://b2bapi.snelstart.nl/v2";
+            }
+
+            settings.ExportFormat = NormalizeExportFormat(settings.ExportFormat);
+
+            var administrations = await BackendApiClient.GetSnelStartAdministrationsByTenantAsync(TenantId);
+            snelStartAdministrations.AddRange(administrations.Where(x => x.IsActive));
+
+            snelStartLink = await BackendApiClient.GetBankAccountSnelStartLinkByBankAccountIdAsync(BankAccountId);
+
+            if (bankAccount is not null)
+            {
+                syncStatus = await BackendApiClient.GetSyncStatusAsync(
+                    TenantId,
+                    BankAccountId);
+
+                snelStartSettings = SnelStartSettingsEditModel.FromBankAccount(bankAccount);
+                ApplySnelStartLinkSelection();
+                ApplyAutoSyncSettingsFromLink();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Laden van bankaccount details mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Laden van bankaccount details is mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SetBankAccountActiveAsync(bool isActive)
+    {
+        try
+        {
+            if (bankAccount is null)
+            {
+                errorMessage = "Bankaccount is niet geladen.";
+                return;
+            }
+
+            if (bankAccount.IsActive == isActive)
+            {
+                infoMessage = isActive
+                    ? "Dit bankaccount is al actief."
+                    : "Dit bankaccount is al non-actief.";
+                return;
+            }
+
+            isSavingBankAccountStatus = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+
+            var request = new UpdateBankAccountSnelStartSettingsRequestViewModel
+            {
+                AccountName = bankAccount.AccountName,
+                Iban = bankAccount.Iban,
+                IsActive = isActive,
+                SnelStartDagboekId = bankAccount.SnelStartDagboekId,
+                SnelStartDagboekCode = bankAccount.SnelStartDagboekCode,
+                SnelStartDagboekNaam = bankAccount.SnelStartDagboekNaam,
+                SnelStartGrootboekId = bankAccount.SnelStartGrootboekId,
+                SnelStartGrootboekNummer = bankAccount.SnelStartGrootboekNummer,
+                SnelStartGrootboekNaam = bankAccount.SnelStartGrootboekNaam
+            };
+
+            await BackendApiClient.UpdateBankAccountSnelStartSettingsAsync(
+                TenantId,
+                BankAccountId,
+                request);
+
+            if (snelStartLink is not null && snelStartLink.Id != Guid.Empty)
+            {
+                await BackendApiClient.UpdateBankAccountSnelStartLinkAsync(
+                    snelStartLink.Id,
+                    new UpdateBankAccountSnelStartLinkRequestViewModel
+                    {
+                        Id = snelStartLink.Id,
+                        BankAccountId = BankAccountId,
+                        SnelStartAdministrationId = snelStartLink.SnelStartAdministrationId,
+                        ExportFormat = NormalizeExportFormat(settings.ExportFormat ?? snelStartLink.ExportFormat),
+                        IsActive = isActive,
+                        AutoSyncEnabled = isActive && autoSyncEnabled,
+                        SyncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes)
+                    });
+            }
+
+            successMessage = isActive
+                ? "Bankaccount is weer actief gezet."
+                : "Bankaccount is op non-actief gezet. Automatische sync voor deze rekening is uitgeschakeld.";
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Wijzigen bankaccountstatus mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Wijzigen bankaccountstatus mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSavingBankAccountStatus = false;
+        }
+    }
+
+    private async Task TestSnelStartAsync()
+    {
+        try
+        {
+            if (!HasSavedSnelStartCredentials())
+            {
+                infoMessage = "Sla eerst de SnelStart credentials op voordat je de verbinding test.";
+                return;
+            }
+
+            isTestingSnelStart = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+            snelStartTestResult = null;
+
+            var result = await BackendApiClient.TestSnelStartAsync(
+                TenantId,
+                BankAccountId);
+
+            snelStartTestResult = result;
+
+            if (result.Success)
+            {
+                successMessage = $"SnelStart test geslaagd. {result.Message}";
+            }
+            else
+            {
+                errorMessage = $"SnelStart test mislukt. {result.Message}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SnelStart test mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"SnelStart test mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isTestingSnelStart = false;
+        }
+    }
+
+
+    private async Task LoadSnelStartLookupsAsync()
+    {
+        try
+        {
+            if (!HasSavedSnelStartCredentials())
+            {
+                infoMessage = "Sla eerst de SnelStart credentials op voordat je dagboeken en grootboeken ophaalt.";
+                return;
+            }
+
+            isLoadingSnelStartLookups = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+
+            dagboeken.Clear();
+            grootboeken.Clear();
+
+            var dagboekResult = await BackendApiClient.GetSnelStartDagboekenAsync(
+                TenantId,
+                BankAccountId);
+
+            var grootboekResult = await BackendApiClient.GetSnelStartGrootboekenAsync(
+                TenantId,
+                BankAccountId);
+
+            dagboeken.AddRange(dagboekResult);
+            grootboeken.AddRange(grootboekResult);
+
+            successMessage = $"SnelStart lijsten opgehaald: {dagboeken.Count} dagboeken en {grootboeken.Count} grootboeken.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ophalen SnelStart dagboeken/grootboeken mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Ophalen uit SnelStart mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingSnelStartLookups = false;
+        }
+    }
+
+    private Task OnDagboekSelectedAsync(string? selectedId)
+    {
+        snelStartSettings.SnelStartDagboekIdText = selectedId;
+
+        if (string.IsNullOrWhiteSpace(selectedId))
+        {
+            snelStartSettings.SnelStartDagboekCode = null;
+            snelStartSettings.SnelStartDagboekNaam = null;
+            return Task.CompletedTask;
+        }
+
+        var selectedDagboek = dagboeken.FirstOrDefault(x =>
+            string.Equals(x.Id.ToString(), selectedId, StringComparison.OrdinalIgnoreCase));
+
+        if (selectedDagboek is not null)
+        {
+            snelStartSettings.SnelStartDagboekCode = selectedDagboek.Nummer;
+            snelStartSettings.SnelStartDagboekNaam = selectedDagboek.Omschrijving;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnGrootboekSelectedAsync(string? selectedId)
+    {
+        snelStartSettings.SnelStartGrootboekIdText = selectedId;
+
+        if (string.IsNullOrWhiteSpace(selectedId))
+        {
+            snelStartSettings.SnelStartGrootboekNummer = null;
+            snelStartSettings.SnelStartGrootboekNaam = null;
+            return Task.CompletedTask;
+        }
+
+        var selectedGrootboek = grootboeken.FirstOrDefault(x =>
+            string.Equals(x.Id.ToString(), selectedId, StringComparison.OrdinalIgnoreCase));
+
+        if (selectedGrootboek is not null)
+        {
+            snelStartSettings.SnelStartGrootboekNummer = selectedGrootboek.Nummer;
+            snelStartSettings.SnelStartGrootboekNaam = selectedGrootboek.Omschrijving;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnSnelStartAdministrationChangedAsync(ChangeEventArgs e)
+    {
+        snelStartSettings.SnelStartAdministrationIdText = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnDagboekChangedAsync(ChangeEventArgs e)
+    {
+        return OnDagboekSelectedAsync(e.Value?.ToString());
+    }
+
+    private Task OnGrootboekChangedAsync(ChangeEventArgs e)
+    {
+        return OnGrootboekSelectedAsync(e.Value?.ToString());
+    }
+
+    private void BeginEditSnelStartSettings()
+    {
+        if (bankAccount is null)
+        {
+            errorMessage = "Bankaccount is niet geladen.";
+            return;
+        }
+
+        if (!HasSavedSnelStartCredentials())
+        {
+            infoMessage = "Sla eerst de SnelStart credentials op voordat je dagboek en grootboek instelt.";
+            return;
+        }
+
+        isEditingSnelStartSettings = true;
+        errorMessage = null;
+        successMessage = null;
+        infoMessage = null;
+
+        snelStartSettings = SnelStartSettingsEditModel.FromBankAccount(bankAccount);
+    }
+
+    private void CancelEditSnelStartSettings()
+    {
+        if (bankAccount is not null)
+        {
+            snelStartSettings = SnelStartSettingsEditModel.FromBankAccount(bankAccount);
+        }
+
+        dagboeken.Clear();
+        grootboeken.Clear();
+
+        isEditingSnelStartSettings = false;
+        isLoadingSnelStartLookups = false;
+
+        infoMessage = "Wijzigen van SnelStart instellingen geannuleerd.";
+    }
+
+    private async Task SaveSnelStartSettingsAsync()
+    {
+        try
+        {
+            if (bankAccount is null)
+            {
+                errorMessage = "Bankaccount is niet geladen.";
+                return;
+            }
+
+            if (!isEditingSnelStartSettings)
+            {
+                errorMessage = "Klik eerst op Wijzigen voordat je instellingen opslaat.";
+                return;
+            }
+
+            isSavingSnelStartSettings = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+
+            var dagboekId = ParseOptionalGuid(snelStartSettings.SnelStartDagboekIdText, "DagboekId");
+            var grootboekId = ParseOptionalGuid(snelStartSettings.SnelStartGrootboekIdText, "GrootboekId");
+
+            settings.ExportFormat = NormalizeExportFormat(settings.ExportFormat);
+            settings.SyncEnabled = true;
+
+            await BackendApiClient.SaveBankAccountSettingsAsync(
+                TenantId,
+                BankAccountId,
+                settings);
+
+            var request = new UpdateBankAccountSnelStartSettingsRequestViewModel
+            {
+                AccountName = bankAccount.AccountName,
+                Iban = bankAccount.Iban,
+                IsActive = bankAccount.IsActive,
+
+                SnelStartDagboekId = dagboekId,
+                SnelStartDagboekCode = Normalize(snelStartSettings.SnelStartDagboekCode),
+                SnelStartDagboekNaam = Normalize(snelStartSettings.SnelStartDagboekNaam),
+
+                SnelStartGrootboekId = grootboekId,
+                SnelStartGrootboekNummer = Normalize(snelStartSettings.SnelStartGrootboekNummer),
+                SnelStartGrootboekNaam = Normalize(snelStartSettings.SnelStartGrootboekNaam)
+            };
+
+            await BackendApiClient.UpdateBankAccountSnelStartSettingsAsync(
+                TenantId,
+                BankAccountId,
+                request);
+
+            await EnsureInternalSnelStartAdministrationAndLinkAsync(requireFreshClientKey: false);
+
+            isEditingSnelStartSettings = false;
+            dagboeken.Clear();
+            grootboeken.Clear();
+
+            successMessage = "SnelStart instellingen zijn opgeslagen. De interne SnelStart-koppeling is automatisch aangemaakt of bijgewerkt.";
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Opslaan SnelStart instellingen mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Opslaan SnelStart instellingen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSavingSnelStartSettings = false;
+        }
+    }
+
+    private async Task<Guid> EnsureInternalSnelStartAdministrationAndLinkAsync(bool requireFreshClientKey)
+    {
+        if (bankAccount is null)
+        {
+            throw new InvalidOperationException("Bankaccount is niet geladen.");
+        }
+
+        var clientKey = settings.SnelStartClientKey?.Trim();
+
+        if (string.IsNullOrWhiteSpace(clientKey))
+        {
+            throw new InvalidOperationException("SnelStart maatwerksleutel/client key is verplicht om de interne SnelStart-koppeling aan te maken.");
+        }
+
+        if (requireFreshClientKey && string.IsNullOrWhiteSpace(clientKey))
+        {
+            throw new InvalidOperationException("Vul de SnelStart maatwerksleutel/client key in en sla de credentials opnieuw op.");
+        }
+
+        var administrationName = BuildInternalSnelStartAdministrationName();
+        Guid administrationId;
+
+        if (snelStartLink is not null && snelStartLink.SnelStartAdministrationId != Guid.Empty)
+        {
+            administrationId = snelStartLink.SnelStartAdministrationId;
+
+            await BackendApiClient.UpdateSnelStartAdministrationAsync(
+                administrationId,
+                new UpdateSnelStartAdministrationRequestViewModel
+                {
+                    Id = administrationId,
+                    TenantId = TenantId,
+                    Name = administrationName,
+                    AdministrationClientKey = clientKey,
+                    IsActive = true
+                });
+        }
+        else
+        {
+            administrationId = await BackendApiClient.CreateSnelStartAdministrationAsync(
+                new CreateSnelStartAdministrationRequestViewModel
+                {
+                    TenantId = TenantId,
+                    Name = administrationName,
+                    AdministrationClientKey = clientKey,
+                    IsActive = true
+                });
+        }
+
+        await UpsertBankAccountSnelStartLinkAsync(administrationId);
+
+        return administrationId;
+    }
+
+    private string BuildInternalSnelStartAdministrationName()
+    {
+        if (bankAccount is null)
+        {
+            return "SnelStart koppeling";
+        }
+
+        var iban = string.IsNullOrWhiteSpace(bankAccount.Iban)
+            ? bankAccount.Id.ToString()
+            : bankAccount.Iban.Trim();
+
+        return $"SnelStart - {iban}";
+    }
+
+    private async Task UpsertBankAccountSnelStartLinkAsync(Guid administrationId)
+    {
+        var exportFormat = NormalizeExportFormat(settings.ExportFormat);
+
+        if (snelStartLink is null || snelStartLink.Id == Guid.Empty)
+        {
+            var id = await BackendApiClient.CreateBankAccountSnelStartLinkAsync(
+                new CreateBankAccountSnelStartLinkRequestViewModel
+                {
+                    BankAccountId = BankAccountId,
+                    SnelStartAdministrationId = administrationId,
+                    ExportFormat = exportFormat,
+                    IsActive = true,
+                    AutoSyncEnabled = autoSyncEnabled,
+                    SyncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes)
+                });
+
+            snelStartLink = new BankAccountSnelStartLinkViewModel
+            {
+                Id = id,
+                BankAccountId = BankAccountId,
+                SnelStartAdministrationId = administrationId,
+                ExportFormat = exportFormat,
+                IsActive = true,
+                AutoSyncEnabled = autoSyncEnabled,
+                SyncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes)
+            };
+
+            return;
+        }
+
+        await BackendApiClient.UpdateBankAccountSnelStartLinkAsync(
+            snelStartLink.Id,
+            new UpdateBankAccountSnelStartLinkRequestViewModel
+            {
+                Id = snelStartLink.Id,
+                BankAccountId = BankAccountId,
+                SnelStartAdministrationId = administrationId,
+                ExportFormat = exportFormat,
+                IsActive = true,
+                AutoSyncEnabled = autoSyncEnabled,
+                SyncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes)
+            });
+
+        snelStartLink.SnelStartAdministrationId = administrationId;
+        snelStartLink.ExportFormat = exportFormat;
+        snelStartLink.IsActive = true;
+        snelStartLink.AutoSyncEnabled = autoSyncEnabled;
+        snelStartLink.SyncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes);
+    }
+
+    private async Task SaveAutoSyncSettingsAsync()
+    {
+        try
+        {
+            if (snelStartLink is null || snelStartLink.Id == Guid.Empty)
+            {
+                infoMessage = "Maak eerst de SnelStart-koppeling aan door de credentials op te slaan.";
+                return;
+            }
+
+            isSavingAutoSyncSettings = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+
+            syncIntervalMinutes = NormalizeSyncInterval(syncIntervalMinutes);
+
+            await BackendApiClient.UpdateBankAccountSnelStartLinkAsync(
+                snelStartLink.Id,
+                new UpdateBankAccountSnelStartLinkRequestViewModel
+                {
+                    Id = snelStartLink.Id,
+                    BankAccountId = BankAccountId,
+                    SnelStartAdministrationId = snelStartLink.SnelStartAdministrationId,
+                    ExportFormat = NormalizeExportFormat(settings.ExportFormat ?? snelStartLink.ExportFormat),
+                    IsActive = snelStartLink.IsActive,
+                    AutoSyncEnabled = autoSyncEnabled,
+                    SyncIntervalMinutes = syncIntervalMinutes
+                });
+
+            successMessage = autoSyncEnabled
+                ? $"Automatische sync is opgeslagen: elke {FormatInterval(syncIntervalMinutes).ToLowerInvariant()}."
+                : "Automatische sync is uitgeschakeld voor deze bankrekening.";
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Opslaan automatische sync-instellingen mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Opslaan automatische sync-instellingen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSavingAutoSyncSettings = false;
+        }
+    }
+
+    private async Task ExecuteResyncAsync()
+    {
+        try
+        {
+            isResyncing = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+            resyncResult = null;
+
+            if (!resyncFromUtc.HasValue)
+            {
+                errorMessage = "De opgegeven datum/tijd is ongeldig.";
+                return;
+            }
+
+            var fromUtc = DateTime.SpecifyKind(resyncFromUtc.Value, DateTimeKind.Local).ToUniversalTime();
+
+            resyncResult = await BackendApiClient.ForceResyncAsync(
+                TenantId,
+                BankAccountId,
+                fromUtc);
+
+            await LoadAsync();
+
+            if (string.Equals(resyncResult.Status, "Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                infoMessage = $"Resync uitgevoerd met fout. De GoDutch-aantallen en saldi staan in de resultaatkaart hieronder. {resyncResult.Message}";
+            }
+            else
+            {
+                successMessage = $"Resync afgerond. Status: {resyncResult.Status}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Force resync mislukt voor {BankAccountId}", BankAccountId);
+            errorMessage = $"Force resync mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isResyncing = false;
+        }
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = null;
+    }
+
+    private void ClearInfoMessage()
+    {
+        infoMessage = null;
+    }
+
+    private bool HasSavedSnelStartCredentials()
+    {
+        return settings is not null &&
+               settings.HasSnelStartSubscriptionKey &&
+               !string.IsNullOrWhiteSpace(settings.SnelStartClientKey) &&
+               !string.IsNullOrWhiteSpace(settings.SnelStartAuthUrl) &&
+               !string.IsNullOrWhiteSpace(settings.SnelStartApiBaseUrl);
+    }
+
+    private bool CanTestSnelStart()
+    {
+        return HasSavedSnelStartCredentials() && !isTestingSnelStart && !isSavingSettings;
+    }
+    private string? ValidateSnelStartCredentialInput()
+    {
+        if (settings is null)
+        {
+            return "SnelStart instellingen zijn niet geladen.";
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.SnelStartClientKey))
+        {
+            return "Vul de SnelStart client key (maatwerksleutel) in voordat je de credentials opslaat.";
+        }
+
+        if (!settings.HasSnelStartSubscriptionKey &&
+            string.IsNullOrWhiteSpace(settings.SnelStartSubscriptionKey))
+        {
+            return "Vul de SnelStart subscription key in voordat je de credentials opslaat. Voor een nieuw bankaccount zijn subscription key en client key allebei verplicht.";
+        }
+
+        return null;
+    }
+
+
+    private bool CanLoadSnelStartLookups()
+    {
+        return isEditingSnelStartSettings &&
+               HasSavedSnelStartCredentials() &&
+               !isLoadingSnelStartLookups &&
+               !isSavingSnelStartSettings;
+    }
+
+    private bool CanSelectSnelStartLookupValues()
+    {
+        return isEditingSnelStartSettings &&
+               HasSavedSnelStartCredentials() &&
+               !isLoadingSnelStartLookups;
+    }
+
+    private bool CanEditSnelStartLedgerFields()
+    {
+        return isEditingSnelStartSettings && HasSavedSnelStartCredentials();
+    }
+
+    private bool IsGoDutchConfigured()
+    {
+        return bankAccount is not null &&
+               !string.IsNullOrWhiteSpace(bankAccount.Iban);
+    }
+
+    private bool IsSnelStartConfigured()
+    {
+        return HasSavedSnelStartCredentials() &&
+               snelStartLink is not null &&
+               snelStartLink.IsActive;
+    }
+
+    private bool IsDagboekConfigured()
+    {
+        return bankAccount is not null &&
+               (!string.IsNullOrWhiteSpace(bankAccount.SnelStartDagboekCode) ||
+                bankAccount.SnelStartDagboekId.HasValue);
+    }
+
+    private bool IsGrootboekConfigured()
+    {
+        return bankAccount is not null &&
+               (!string.IsNullOrWhiteSpace(bankAccount.SnelStartGrootboekNummer) ||
+                bankAccount.SnelStartGrootboekId.HasValue);
+    }
+
+    private void ApplySnelStartLinkSelection()
+    {
+        snelStartSettings.SnelStartAdministrationIdText = snelStartLink?.SnelStartAdministrationId.ToString();
+
+        if (string.IsNullOrWhiteSpace(snelStartSettings.SnelStartAdministrationIdText) &&
+            snelStartAdministrations.Count == 1)
+        {
+            snelStartSettings.SnelStartAdministrationIdText = snelStartAdministrations[0].Id.ToString();
+        }
+    }
+
+    private static string GetAdministrationDisplayName(SnelStartAdministrationViewModel administration)
+    {
+        var name = !string.IsNullOrWhiteSpace(administration.DisplayName)
+            ? administration.DisplayName
+            : !string.IsNullOrWhiteSpace(administration.Name)
+                ? administration.Name
+                : administration.AdministrationName;
+
+        return string.IsNullOrWhiteSpace(name)
+            ? administration.Id.ToString()
+            : $"{name} ({administration.Id})";
+    }
+
+    private static Guid ParseRequiredGuid(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"{fieldName} is verplicht.");
+        }
+
+        return Guid.TryParse(value.Trim(), out var result) && result != Guid.Empty
+            ? result
+            : throw new InvalidOperationException($"{fieldName} is geen geldige GUID.");
+    }
+
+    private static Guid? ParseOptionalGuid(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Guid.TryParse(value.Trim(), out var result)
+            ? result
+            : throw new InvalidOperationException($"{fieldName} is geen geldige GUID.");
+    }
+
+    private static string NormalizeExportFormat(string? value)
+    {
+        var normalized = value?.Trim();
+
+        return normalized switch
+        {
+            "Camt053" => "Camt053",
+            "camt053" => "Camt053",
+            "CAMT053" => "Camt053",
+            "CAMT.053" => "Camt053",
+            "camt.053" => "Camt053",
+            "Mt940" => "Mt940",
+            "mt940" => "Mt940",
+            "MT940" => "Mt940",
+            _ => "Mt940"
+        };
+    }
+
+    private static string FormatExportFormat(string? value)
+    {
+        return NormalizeExportFormat(value) == "Camt053"
+            ? "CAMT.053"
+            : "MT940";
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private void ApplyAutoSyncSettingsFromLink()
+    {
+        autoSyncEnabled = snelStartLink?.AutoSyncEnabled ?? true;
+        syncIntervalMinutes = NormalizeSyncInterval(snelStartLink?.SyncIntervalMinutes ?? 15);
+    }
+
+    private static int NormalizeSyncInterval(int value)
+    {
+        return value switch
+        {
+            15 or 30 or 60 or 120 or 240 or 1440 => value,
+            < 15 => 15,
+            _ => 15
+        };
+    }
+
+    private static string FormatInterval(int minutes)
+    {
+        return minutes switch
+        {
+            15 => "15 minuten",
+            30 => "30 minuten",
+            60 => "1 uur",
+            120 => "2 uur",
+            240 => "4 uur",
+            1440 => "1 dag",
+            _ => $"{minutes} minuten"
+        };
+    }
+
+    private static string FormatDateTime(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")
+            : "-";
+    }
+
+    private static string FormatDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToLocalTime().ToString("dd-MM-yyyy")
+            : "-";
+    }
+
+    private static string FormatAmount(decimal? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString("N2")
+            : "-";
+    }
+
+    private static string FormatDuplicateImportStatus(BankAccountResyncResultViewModel result)
+    {
+        if (!result.SnelStartUploadAttempted)
+        {
+            return "n.v.t.";
+        }
+
+        return result.IsDuplicateImport ? "Ja" : "Nee";
+    }
+
+    private static string GetSyncStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Succeeded" => "badge text-bg-success",
+            "Skipped" => "badge text-bg-warning",
+            "Failed" => "badge text-bg-danger",
+            _ => "badge text-bg-secondary"
+        };
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        try
+        {
+            isSavingSettings = true;
+            errorMessage = null;
+            successMessage = null;
+            infoMessage = null;
+
+            var validationMessage = ValidateSnelStartCredentialInput();
+            if (!string.IsNullOrWhiteSpace(validationMessage))
+            {
+                errorMessage = validationMessage;
+                return;
+            }
+
+            settings.BankAccountId = BankAccountId;
+            settings.SnelStartAuthUrl = string.IsNullOrWhiteSpace(settings.SnelStartAuthUrl)
+                ? "https://auth.snelstart.nl/b2b/token"
+                : settings.SnelStartAuthUrl.Trim();
+            settings.SnelStartApiBaseUrl = string.IsNullOrWhiteSpace(settings.SnelStartApiBaseUrl)
+                ? "https://b2bapi.snelstart.nl/v2"
+                : settings.SnelStartApiBaseUrl.Trim();
+            settings.SnelStartClientKey = settings.SnelStartClientKey?.Trim();
+            settings.SnelStartSubscriptionKey = settings.SnelStartSubscriptionKey?.Trim();
+            settings.ExportFormat = NormalizeExportFormat(settings.ExportFormat);
+            settings.SyncEnabled = true;
+
+            await BackendApiClient.SaveBankAccountSettingsAsync(
+                TenantId,
+                BankAccountId,
+                settings);
+
+            await EnsureInternalSnelStartAdministrationAndLinkAsync(requireFreshClientKey: true);
+
+            settings.SnelStartSubscriptionKey = null;
+            successMessage = "SnelStart credentials zijn opgeslagen. De interne SnelStart-koppeling is automatisch aangemaakt of bijgewerkt. Je kunt nu de verbinding testen en daarna dagboeken/grootboeken ophalen.";
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSavingSettings = false;
+        }
+    }
+
+    private static string GetPresenceBadgeClass(bool isPresent)
+    {
+        return isPresent
+            ? "badge text-bg-success"
+            : "badge text-bg-warning";
+    }
+
+    private static string GetBooleanBadgeClass(bool value)
+    {
+        return value
+            ? "badge text-bg-success"
+            : "badge text-bg-secondary";
+    }
+
+    private static string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private static string GetConnectionTestAlertClass(bool success)
+    {
+        return success
+            ? "alert alert-success mb-0"
+            : "alert alert-danger mb-0";
+    }
+
+    private static string GetConnectionTestBadgeClass(bool success)
+    {
+        return success
+            ? "badge text-bg-success"
+            : "badge text-bg-danger";
+    }
+
+    private sealed class SnelStartSettingsEditModel
+    {
+        public string? SnelStartAdministrationIdText { get; set; }
+
+        public string? SnelStartDagboekIdText { get; set; }
+        public string? SnelStartDagboekCode { get; set; }
+        public string? SnelStartDagboekNaam { get; set; }
+
+        public string? SnelStartGrootboekIdText { get; set; }
+        public string? SnelStartGrootboekNummer { get; set; }
+        public string? SnelStartGrootboekNaam { get; set; }
+
+        public static SnelStartSettingsEditModel FromBankAccount(BankAccountViewModel bankAccount)
+        {
+            return new SnelStartSettingsEditModel
+            {
+                SnelStartDagboekIdText = bankAccount.SnelStartDagboekId?.ToString(),
+                SnelStartDagboekCode = bankAccount.SnelStartDagboekCode,
+                SnelStartDagboekNaam = bankAccount.SnelStartDagboekNaam,
+                SnelStartGrootboekIdText = bankAccount.SnelStartGrootboekId?.ToString(),
+                SnelStartGrootboekNummer = bankAccount.SnelStartGrootboekNummer,
+                SnelStartGrootboekNaam = bankAccount.SnelStartGrootboekNaam
+            };
+        }
+    }
+}

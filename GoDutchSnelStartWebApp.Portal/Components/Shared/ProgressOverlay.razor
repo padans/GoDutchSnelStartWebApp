@@ -1,0 +1,73 @@
+﻿@if (Visible)
+{
+    <div class="progress-overlay-backdrop">
+        <div class="progress-overlay-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h5 class="mb-0">@Title</h5>
+
+                @if (ShowPercentage)
+                {
+                    <span class="badge bg-primary">@ProgressPercentage%</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Message))
+            {
+                <div class="text-muted mb-2">@Message</div>
+            }
+
+            <div class="progress mb-2" style="height: 22px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     role="progressbar"
+                     style="width: @ProgressPercentage%;"
+                     aria-valuenow="@ProgressPercentage"
+                     aria-valuemin="0"
+                     aria-valuemax="100">
+                    @if (ShowPercentage)
+                    {
+                        <span>@ProgressPercentage%</span>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Detail))
+            {
+                <div class="small text-muted">@Detail</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Bezig...";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string? Detail { get; set; }
+
+    [Parameter] public int ProgressPercentage { get; set; }
+
+    [Parameter] public bool ShowPercentage { get; set; } = true;
+}
+
+<style>
+    .progress-overlay-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.20);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .progress-overlay-card {
+        width: min(560px, 95vw);
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.18);
+    }
+</style>

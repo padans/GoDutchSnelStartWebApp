@@ -1,0 +1,1480 @@
+﻿@page "/mypos/import"
+@rendermode InteractiveServer
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+@using GoDutchSnelStartWebApp.Portal.Components.Shared
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosImport> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>myPOS transacties ophalen</PageTitle>
+
+<ProgressOverlay Visible="@showProgress"
+                 Title="@progressTitle"
+                 Message="@progressMessage"
+                 Detail="@progressDetail"
+                 ProgressPercentage="@progressPercentage" />
+
+<h1>myPOS transacties ophalen</h1>
+<p class="text-muted">
+    Kies zelf de periode waarover myPOS transacties moeten worden opgehaald. De transacties worden eerst raw opgeslagen.
+    Controleer daarna de totalisaties en de SnelStart-grootboek mappings voordat er later naar SnelStart wordt geëxporteerd.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success" role="alert">@successMessage</div>
+}
+
+<div class="row g-3 align-items-end mb-3">
+    <div class="col-md-3">
+        <label class="form-label">Periode</label>
+        <select class="form-select"
+                value="@periodMode"
+                @onchange="OnPeriodModeChanged">
+            <option value="Manual">Handmatig</option>
+            <option value="Day">Dag</option>
+            <option value="Week">Week</option>
+            <option value="Month">Maand</option>
+            <option value="Quarter">Kwartaal</option>
+            <option value="Year">Jaar</option>
+        </select>
+    </div>
+
+    @if (periodMode == "Day" || periodMode == "Week")
+    {
+        <div class="col-md-3">
+            <label class="form-label">
+                @(periodMode == "Day" ? "Datum" : "Datum in week")
+            </label>
+            <input type="date"
+                   class="form-control"
+                   value="@FormatDateInput(selectedPeriodDate)"
+                   @onchange="OnSelectedPeriodDateChanged" />
+        </div>
+    }
+
+    @if (periodMode == "Month")
+    {
+        <div class="col-md-3">
+            <label class="form-label">Maand</label>
+            <select class="form-select"
+                    value="@selectedMonth"
+                    @onchange="OnSelectedMonthChanged">
+                <option value="1">Januari</option>
+                <option value="2">Februari</option>
+                <option value="3">Maart</option>
+                <option value="4">April</option>
+                <option value="5">Mei</option>
+                <option value="6">Juni</option>
+                <option value="7">Juli</option>
+                <option value="8">Augustus</option>
+                <option value="9">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Jaar</label>
+            <select class="form-select"
+                    value="@selectedYear"
+                    @onchange="OnSelectedYearChanged">
+                @foreach (var year in AvailableYears)
+                {
+                    <option value="@year">@year</option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (periodMode == "Quarter")
+    {
+        <div class="col-md-3">
+            <label class="form-label">Kwartaal</label>
+            <select class="form-select"
+                    value="@selectedQuarter"
+                    @onchange="OnSelectedQuarterChanged">
+                <option value="1">1e kwartaal</option>
+                <option value="2">2e kwartaal</option>
+                <option value="3">3e kwartaal</option>
+                <option value="4">4e kwartaal</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Jaar</label>
+            <select class="form-select"
+                    value="@selectedYear"
+                    @onchange="OnSelectedYearChanged">
+                @foreach (var year in AvailableYears)
+                {
+                    <option value="@year">@year</option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (periodMode == "Year")
+    {
+        <div class="col-md-2">
+            <label class="form-label">Jaar</label>
+            <select class="form-select"
+                    value="@selectedYear"
+                    @onchange="OnSelectedYearChanged">
+                @foreach (var year in AvailableYears)
+                {
+                    <option value="@year">@year</option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (periodMode != "Manual")
+    {
+        <div class="col-md-3 text-muted">
+            <div class="small">
+                Periode wordt automatisch ingevuld.
+            </div>
+        </div>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Periode ophalen</div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Vanaf datum</label>
+                <input type="date" class="form-control" @bind="fromDate" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Vanaf tijd</label>
+                <input type="time" class="form-control" @bind="fromTime" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">T/m datum</label>
+                <input type="date" class="form-control" @bind="toDate" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">T/m tijd</label>
+                <input type="time" class="form-control" @bind="toTime" />
+            </div>
+
+            <div class="col-md-2">
+                <div class="form-check mb-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="includeExported"
+                           @bind="includeExported" />
+                    <label class="form-check-label" for="includeExported">
+                        Inclusief export
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="button"
+                    class="btn btn-primary me-2"
+                    @onclick="() => LoadDataForPeriodAsync(true)"
+                    disabled="@isBusy">
+                @(isBusy ? "Ophalen..." : "myPOS transacties ophalen")
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="() => LoadDataForPeriodAsync(false)"
+                    disabled="@isBusy">
+                Vernieuwen
+            </button>
+        </div>
+
+        @if (connection is not null)
+        {
+            <div class="text-muted mt-3">
+                myPOS-koppeling actief: @(connection.IsActive ? "Ja" : "Nee")
+                @if (!string.IsNullOrWhiteSpace(connection.ClientId))
+                {
+                    <span> · ClientId: @Mask(connection.ClientId)</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@if (importResult is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">Importresultaat</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <strong>Opgehaald uit myPOS</strong>
+                    <div class="fs-4">@importResult.FetchedCount</div>
+                </div>
+                <div class="col-md-3">
+                    <strong>Nieuw toegevoegd</strong>
+                    <div class="fs-4">@importResult.InsertedCount</div>
+                </div>
+                <div class="col-md-3">
+                    <strong>Bestaand/bijgewerkt</strong>
+                    <div class="fs-4">@importResult.UpdatedCount</div>
+                </div>
+                <div class="col-md-3">
+                    <strong>Niet toegevoegd</strong>
+                    <div class="fs-4">@importResult.SkippedCount</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>API vanaf UTC</strong>
+                    <div>@importResult.FromUtc.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>API t/m UTC</strong>
+                    <div>@importResult.ToUtc.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                </div>
+
+                <span class="text-muted">
+                    De API gebruikt UTC-tijden. Daarom kan de vanafdatum in UTC één dag eerder zijn bij zomertijd.
+                </span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(importResult.Message))
+            {
+                <div class="alert alert-secondary mt-3 mb-0">@importResult.Message</div>
+            }
+        </div>
+    </div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted">Raw transacties</div>
+                <div class="fs-3">@rawTransactions.Count</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted">Totaalbedrag</div>
+                <div class="fs-3">@TotalAmount.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted">Klaar voor export</div>
+                <div class="fs-3">@transactionTotals.Count(x => x.IsReadyForExport) / @transactionTotals.Count</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted">Ontbrekende mappings</div>
+                <div class="fs-3">@transactionTotals.Count(x => !x.IsReadyForExport)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Totalisaties per myPOS transactietype</span>
+        @if (transactionTotals.Any(x => !x.IsReadyForExport))
+        {
+            <span class="badge text-bg-warning">Nog niet exporteerbaar</span>
+        }
+        else if (transactionTotals.Count > 0)
+        {
+            <span class="badge text-bg-success">Klaar voor export</span>
+        }
+    </div>
+
+    <div class="card-body">
+        @if (transactionTotals.Count == 0)
+        {
+            <div class="text-muted">Geen totalisaties gevonden voor deze periode.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Omschrijving</th>
+                            <th class="text-end">Aantal</th>
+                            <th class="text-end">Bruto</th>
+                            <th class="text-end">Netto controle</th>
+                            <th class="text-end">Btw controle</th>
+                            <th>Valuta</th>
+                            <th>Btw</th>
+                            <th>SnelStart grootboek</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var total in transactionTotals.OrderBy(x => x.TransactionType))
+                        {
+                            <tr class="@(total.IsReadyForExport ? "" : "table-warning")">
+                                <td><strong>@total.TransactionType</strong></td>
+                                <td>@total.Description</td>
+                                <td class="text-end">@total.TransactionCount</td>
+                                <td class="text-end">@total.BrutoControleBedrag.ToString("N2")</td>
+                                <td class="text-end">@total.NettoControleBedrag.ToString("N2")</td>
+                                <td class="text-end">@total.BtwControleBedrag.ToString("N2")</td>
+                                <td>@total.Currency</td>
+                                <td>@total.BtwDisplayName</td>
+                                <td>
+                                    @if (total.SnelStartGrootboekId.HasValue)
+                                    {
+                                        <span>@total.SnelStartGrootboekNummer - @total.SnelStartGrootboekNaam</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Niet gekoppeld</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (total.IsReadyForExport)
+                                    {
+                                        <span class="badge text-bg-success">OK</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-warning">@total.MappingWarning</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="2">Totaal</th>
+                            <th class="text-end">@transactionTotals.Sum(x => x.TransactionCount)</th>
+                            <th class="text-end">@transactionTotals.Sum(x => x.BrutoControleBedrag).ToString("N2")</th>
+                            <th class="text-end">@transactionTotals.Sum(x => x.NettoControleBedrag).ToString("N2")</th>
+                            <th class="text-end">@transactionTotals.Sum(x => x.BtwControleBedrag).ToString("N2")</th>
+                            <th colspan="4"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div class="card mb-3">
+                    <div class="card-header">Exportbatch</div>
+                    <div class="card-body">
+                        <p class="text-muted mb-2">
+                            Maak eerst een exportbatch aan. Hiermee wordt nog niets naar SnelStart geboekt.
+                            De batch controleert periode, boekjaar, bankdagboek, IBAN en mappings.
+                        </p>
+
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                @onclick="CreateExportBatchAsync"
+                                disabled="@isCreatingExportBatch">
+                            @(isCreatingExportBatch ? "Batch aanmaken..." : "Concept exportbatch aanmaken")
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary ms-2"
+                                @onclick="LoadExportBatchesForCurrentPeriodAsync"
+                                disabled="@isCreatingExportBatch">
+                            Batches vernieuwen
+                        </button>
+
+                        @if (currentExportBatch is not null)
+                        {
+                            <hr />
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <strong>Status</strong><br />
+                                    @if (currentExportBatch.IsReadyForExport)
+                                    {
+                                        <span class="badge bg-success">@currentExportBatch.Status</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">@currentExportBatch.Status</span>
+                                    }
+                                </div>
+
+                                <div class="col-md-2">
+                                    <strong>Boekjaar</strong><br />
+                                    @(currentExportBatch.BookYear?.ToString() ?? "-")
+                                </div>
+
+                                <div class="col-md-3">
+                                    <strong>Periode lokaal</strong><br />
+                                    @FormatDate(currentExportBatch.PeriodFromLocalDate)
+                                    t/m
+                                    @FormatDate(currentExportBatch.PeriodToLocalDate)
+                                </div>
+
+                                <div class="col-md-3">
+                                    <strong>SnelStart bankboek</strong><br />
+                                    @currentExportBatch.BankboekDisplayName
+                                </div>
+
+                                <div class="col-md-2">
+                                    <strong>IBAN</strong><br />
+                                    @currentExportBatch.SnelStartBankIban
+                                </div>
+
+                                <div class="col-md-2">
+                                    <strong>Raw</strong><br />
+                                    @currentExportBatch.RawTransactionCount
+                                </div>
+
+                                <div class="col-md-2">
+                                    <strong>Regels</strong><br />
+                                    @currentExportBatch.LineCount
+                                </div>
+
+                                <div class="col-md-2">
+                                    <strong>Totaal</strong><br />
+                                    @currentExportBatch.TotalAmount.ToString("N2") @currentExportBatch.Currency
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(currentExportBatch.BookYearValidationMessage))
+                            {
+                                <div class="alert alert-info mt-3 mb-0">
+                                    @currentExportBatch.BookYearValidationMessage
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(currentExportBatch.ValidationMessage))
+                            {
+                                <div class="alert @(currentExportBatch.IsReadyForExport ? "alert-success" : "alert-warning") mt-3 mb-0">
+                                    @currentExportBatch.ValidationMessage
+                                </div>
+                            }
+
+                            @if (currentExportBatch is not null)
+                            {
+                                <div class="mt-3 d-flex gap-2">
+                                    <button type="button"
+                                            class="btn btn-success"
+                                            disabled="@(!CanExportCurrentBatch || isExportingBatch)"
+                                            @onclick="() => ExportBatchToSnelStartAsync(currentExportBatch)">
+                                        @if (isExportingBatch && exportingBatchId == currentExportBatch.Id)
+                                        {
+                                            <span>Exporteren...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Exporteren naar SnelStart</span>
+                                        }
+                                    </button>
+                                </div>
+                            }
+
+
+
+                            @if (currentExportBatch?.Lines.Count > 0)
+                            {
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-sm table-striped align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>Omschrijving</th>
+                                                <th class="text-end">Aantal</th>
+                                                <th class="text-end">Totaal</th>
+                                                <th>Valuta</th>
+                                                <th>Grootboek</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var line in currentExportBatch.Lines.OrderBy(x => x.TransactionType))
+                                            {
+                                                <tr>
+                                                    <td><strong>@line.TransactionType</strong></td>
+                                                    <td>@line.Description</td>
+                                                    <td class="text-end">@line.TransactionCount</td>
+                                                    <td class="text-end">@line.TotalAmount.ToString("N2")</td>
+                                                    <td>@line.Currency</td>
+                                                    <td>@line.GrootboekDisplayName</td>
+                                                    <td>
+                                                        @if (line.IsReadyForExport)
+                                                        {
+                                                            <span class="badge bg-success">OK</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark">
+                                                                @(line.MappingWarning ?? "Niet gereed")
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        }
+                        else if (exportBatches.Count == 0)
+                        {
+                            <div class="form-text mt-3">
+                                Er is nog geen exportbatch aangemaakt voor deze periode.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="form-text mt-2">
+        Netto en btw zijn controlebedragen voor de klant. De uiteindelijke btw-verwerking gebeurt straks in SnelStart
+        via de bankboeking met de gekozen grootboekrekening en btw-soort.
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>Raw transacties</span>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small">
+                Pagina @rawPageNumber van @RawTotalPages —
+                @PagedRawTransactions.Count() getoond van @rawTransactions.Count
+            </span>
+
+            <label class="text-muted small mb-0">Per pagina</label>
+
+            <select class="form-select form-select-sm" style="width: 90px;"
+                    value="@rawPageSize"
+                    @onchange="SetRawPageSize">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="250">250</option>
+                <option value="500">500</option>
+            </select>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="PreviousRawPage"
+                    disabled="@(rawPageNumber <= 1)">
+                Vorige
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="NextRawPage"
+                    disabled="@(rawPageNumber >= RawTotalPages)">
+                Volgende
+            </button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Datum/tijd</th>
+                    <th>Type</th>
+                    <th>Omschrijving</th>
+                    <th>Referentie</th>
+                    <th class="text-end">Bedrag</th>
+                    <th>Valuta</th>
+                    <th>Export</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in PagedRawTransactions)
+                {
+                    <tr>
+                        <td>@transaction.TransactionUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td><strong>@transaction.TransactionType</strong></td>
+                        <td>@transaction.Description</td>
+                        <td>@transaction.PaymentReference</td>
+                        <td class="text-end">@transaction.TransactionAmount.ToString("N2")</td>
+                        <td>@transaction.TransactionCurrency</td>
+                        <td>@(transaction.IsExported ? "Geëxporteerd" : "Niet geëxporteerd")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .raw-transactions-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+</style>
+
+
+@code {
+    private Guid TenantId => TenantOptions.Value.TenantId;
+
+    private TenantMyPosConnectionViewModel? connection;
+    private MyPosTransactionImportResultViewModel? importResult;
+    private List<MyPosRawTransactionViewModel> rawTransactions = [];
+    private List<MyPosTransactionTotalViewModel> transactionTotals = [];
+
+    private DateTime? fromDate = DateTime.Today.AddDays(-7);
+    private TimeOnly? fromTime = new(0, 0);
+
+    private DateTime? toDate = DateTime.Today;
+    private TimeOnly? toTime = new(23, 59);
+
+    private bool includeExported;
+    private bool isBusy;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private TenantMyPosConnectionViewModel? myPosConnection;
+    private MyPosExportBatchViewModel? currentExportBatch;
+    private List<MyPosExportBatchViewModel> exportBatches = [];
+    private bool isCreatingExportBatch;
+
+    private decimal TotalAmount => transactionTotals.Sum(x => x.TotalAmount);
+
+    private bool showProgress;
+    private string progressTitle = "Bezig...";
+    private string progressMessage = string.Empty;
+    private string progressDetail = string.Empty;
+    private int progressPercentage;
+
+    private int rawPageNumber = 1;
+    private int rawPageSize = 100;
+
+    private bool isExportingBatch;
+    private Guid? exportingBatchId;
+
+    private bool CanExportCurrentBatch =>
+        currentExportBatch is not null &&
+        currentExportBatch.IsReadyForExport &&
+        string.Equals(currentExportBatch.Status, "Ready", StringComparison.OrdinalIgnoreCase);
+
+    private int RawTotalPages =>
+        rawTransactions.Count == 0
+            ? 1
+            : (int)Math.Ceiling(rawTransactions.Count / (decimal)rawPageSize);
+
+    private IEnumerable<MyPosRawTransactionViewModel> PagedRawTransactions =>
+        rawTransactions
+            .OrderBy(x => x.TransactionUtc)
+            .Skip((rawPageNumber - 1) * rawPageSize)
+            .Take(rawPageSize);
+
+    private string periodMode = "Manual";
+
+    private DateTime? selectedPeriodDate = DateTime.Today;
+    private int selectedMonth = DateTime.Today.Month;
+    private int selectedQuarter = ((DateTime.Today.Month - 1) / 3) + 1;
+    private int selectedYear = DateTime.Today.Year;
+
+    private static readonly IReadOnlyList<int> AvailableYears =
+    [
+        DateTime.Today.Year - 2,
+    DateTime.Today.Year - 1,
+    DateTime.Today.Year,
+    DateTime.Today.Year + 1
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        await LoadConnectionAsync();
+
+        ApplySelectedPeriod();
+
+        rawTransactions = [];
+        transactionTotals = [];
+
+        await LoadExportBatchesForCurrentPeriodAsync();
+    }
+
+    private async Task LoadConnectionAsync()
+    {
+        errorMessage = null;
+
+        try
+        {
+            connection = await BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+
+            if (connection is null)
+            {
+                errorMessage = "Er is nog geen myPOS-koppeling ingesteld voor deze tenant.";
+            }
+            else if (!connection.IsActive)
+            {
+                errorMessage = "De myPOS-koppeling voor deze tenant is niet actief.";
+            }
+            myPosConnection = connection;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS connection laden mislukt.");
+            errorMessage = $"myPOS connection laden mislukt: {ex.Message}";
+        }
+    }
+
+    private async Task ImportAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        importResult = null;
+
+        if (connection is null)
+        {
+            await LoadConnectionAsync();
+        }
+
+        if (connection is null)
+        {
+            errorMessage = "Er is geen myPOS-koppeling beschikbaar.";
+            return;
+        }
+
+        if (!connection.IsActive)
+        {
+            errorMessage = "De myPOS-koppeling is niet actief.";
+            return;
+        }
+
+        if (!TryGetPeriod(out var fromUtc, out var toUtc))
+        {
+            return;
+        }
+
+        isBusy = true;
+
+        try
+        {
+            importResult = await BackendApiClient.ImportMyPosTransactionsAsync(
+                TenantId,
+                connection.Id,
+                fromUtc,
+                toUtc);
+
+            
+            successMessage =
+                           $"myPOS import uitgevoerd. Opgehaald: {importResult.FetchedCount}, " +
+                           $"nieuw toegevoegd: {importResult.InsertedCount}, " +
+                           $"bijgewerkt/bestaand: {importResult.UpdatedCount}, " +
+                           $"niet toegevoegd: {importResult.SkippedCount}.";
+
+            await LoadDataForPeriodAsync(showBusy: false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS transacties ophalen mislukt.");
+            errorMessage = $"myPOS transacties ophalen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task LoadDataForPeriodAsync()
+    {
+        await LoadDataForPeriodAsync(showBusy: true);
+    }
+
+    private async Task LoadDataForPeriodAsync(bool showBusy)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (!TryGetPeriod(out var fromUtc, out var toUtc))
+        {
+            errorMessage = "Kies eerst een geldige periode.";
+            return;
+        }
+
+        if (myPosConnection is null || myPosConnection.Id == Guid.Empty)
+        {
+            errorMessage = "Er is geen geldige myPOS-koppeling gevonden voor deze tenant.";
+            return;
+        }
+
+        if (showBusy)
+        {
+            showProgress = true;
+            progressTitle = "myPOS transacties ophalen";
+
+            await SetProgressAsync(
+                5,
+                "Periode controleren...",
+                $"{fromUtc:dd-MM-yyyy HH:mm} t/m {toUtc:dd-MM-yyyy HH:mm} UTC");
+
+            // Geeft Blazor even tijd om de progress-overlay zichtbaar te tekenen
+            // voordat de eerste HTTP-call start.
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(150);
+        }
+
+        try
+        {
+            MyPosTransactionImportResultViewModel importResult;
+
+            if (showBusy)
+            {
+                await SetProgressAsync(
+                    10,
+                    "myPOS import voorbereiden...",
+                    "De gekozen periode wordt indien nodig in maandblokken opgehaald.");
+            }
+
+            importResult = await ImportMyPosTransactionsInChunksAsync(
+                myPosConnection.Id,
+                fromUtc,
+                toUtc,
+                showBusy);
+
+            if (showBusy)
+            {
+                await SetProgressAsync(
+                    45,
+                    "Raw transacties laden...",
+                     $"Opgehaald: {importResult.FetchedCount}, nieuw: {importResult.InsertedCount}, bestaand/bijgewerkt: {importResult.UpdatedCount}, niet toegevoegd: {importResult.SkippedCount}");
+
+            }
+
+            var rawTask = BackendApiClient.GetMyPosRawTransactionsAsync(
+                TenantId,
+                fromUtc,
+                toUtc);
+
+            var totalsTask = BackendApiClient.GetMyPosTransactionTotalsAsync(
+                TenantId,
+                fromUtc,
+                toUtc,
+                includeExported);
+
+            await Task.WhenAll(rawTask, totalsTask);
+
+            rawTransactions = rawTask.Result.ToList();
+            transactionTotals = totalsTask.Result.ToList();
+
+            rawPageNumber = 1;
+
+            if (showBusy)
+            {
+                await SetProgressAsync(
+                    75,
+                    "Exportbatches laden...",
+                    $"{rawTransactions.Count} raw transacties, {transactionTotals.Count} totalisatieregels");
+            }
+
+            await LoadExportBatchesForCurrentPeriodAsync();
+
+            if (showBusy)
+            {
+                await SetProgressAsync(
+                    100,
+                    "Klaar.",
+                    "myPOS transacties, totalisaties en batches zijn bijgewerkt.");
+            }
+
+            successMessage =
+                $"myPOS import uitgevoerd. Opgehaald: {importResult.FetchedCount}, " +
+                $"nieuw toegevoegd: {importResult.InsertedCount}, " +
+                $"bestaand/bijgewerkt: {importResult.UpdatedCount}, " +
+                $"niet toegevoegd: {importResult.SkippedCount}.";
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "myPOS transacties ophalen is afgebroken of verlopen door timeout.");
+            errorMessage =
+                "myPOS transacties ophalen is afgebroken of duurde te lang. " +
+                "Probeer een kortere periode of verhoog de timeout van de myPOS HttpClient.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS transacties ophalen mislukt.");
+            errorMessage = $"myPOS transacties ophalen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            if (showBusy)
+            {
+                await Task.Delay(400);
+                HideProgress();
+            }
+        }
+    }
+
+    private bool TryGetPeriod(out DateTime fromUtc, out DateTime toUtc)
+    {
+        fromUtc = default;
+        toUtc = default;
+
+        try
+        {
+            var fromLocal = BuildLocalDateTime(fromDate, fromTime);
+            var toLocal = BuildLocalDateTime(toDate, toTime);
+
+            if (toLocal <= fromLocal)
+            {
+                errorMessage = "De t/m datum/tijd moet later zijn dan de vanaf datum/tijd.";
+                return false;
+            }
+
+            fromUtc = DateTime.SpecifyKind(fromLocal, DateTimeKind.Local).ToUniversalTime();
+            toUtc = DateTime.SpecifyKind(toLocal, DateTimeKind.Local).ToUniversalTime();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            return false;
+        }
+    }
+
+    private static DateTime BuildLocalDateTime(DateTime? date, TimeOnly? time)
+    {
+        if (!date.HasValue)
+        {
+            throw new InvalidOperationException("Datum ontbreekt.");
+        }
+
+        if (!time.HasValue)
+        {
+            throw new InvalidOperationException("Tijd ontbreekt.");
+        }
+
+        return date.Value.Date
+            .AddHours(time.Value.Hour)
+            .AddMinutes(time.Value.Minute)
+            .AddSeconds(time.Value.Second);
+    }
+
+    private static string Mask(string value)
+    {
+        if (value.Length <= 8)
+        {
+            return "********";
+        }
+
+        return $"{value[..4]}...{value[^4..]}";
+    }
+
+    private void PreviousRawPage()
+    {
+        if (rawPageNumber > 1)
+        {
+            rawPageNumber--;
+        }
+    }
+
+    private void NextRawPage()
+    {
+        if (rawPageNumber < RawTotalPages)
+        {
+            rawPageNumber++;
+        }
+    }
+
+    private void SetRawPageSize(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var pageSize) && pageSize > 0)
+        {
+            rawPageSize = pageSize;
+            rawPageNumber = 1;
+        }
+    }
+
+    private void OnPeriodModeChanged(ChangeEventArgs args)
+    {
+        periodMode = args.Value?.ToString() ?? "Manual";
+        ApplySelectedPeriod();
+    }
+
+    private void OnSelectedPeriodDateChanged(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var parsed))
+        {
+            selectedPeriodDate = parsed.Date;
+            ApplySelectedPeriod();
+        }
+    }
+
+    private void OnSelectedMonthChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var month))
+        {
+            selectedMonth = Math.Clamp(month, 1, 12);
+            ApplySelectedPeriod();
+        }
+    }
+
+    private void OnSelectedQuarterChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var quarter))
+        {
+            selectedQuarter = Math.Clamp(quarter, 1, 4);
+            ApplySelectedPeriod();
+        }
+    }
+
+    private void OnSelectedYearChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var year))
+        {
+            selectedYear = year;
+            ApplySelectedPeriod();
+        }
+    }
+
+    private void ApplySelectedPeriod()
+    {
+        switch (periodMode)
+        {
+            case "Day":
+                ApplyDayPeriod();
+                break;
+
+            case "Week":
+                ApplyWeekPeriod();
+                break;
+
+            case "Month":
+                ApplyMonthPeriod();
+                break;
+
+            case "Quarter":
+                ApplyQuarterPeriod();
+                break;
+
+            case "Year":
+                ApplyYearPeriod();
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private void ApplyDayPeriod()
+    {
+        var date = (selectedPeriodDate ?? DateTime.Today).Date;
+
+        fromDate = date;
+        fromTime = new TimeOnly(0, 0);
+
+        toDate = date;
+        toTime = new TimeOnly(23, 59);
+    }
+
+    private void ApplyWeekPeriod()
+    {
+        var date = (selectedPeriodDate ?? DateTime.Today).Date;
+
+        var diff = ((int)date.DayOfWeek + 6) % 7;
+        var monday = date.AddDays(-diff);
+        var sunday = monday.AddDays(6);
+
+        fromDate = monday;
+        fromTime = new TimeOnly(0, 0);
+
+        toDate = sunday;
+        toTime = new TimeOnly(23, 59);
+    }
+
+    private void ApplyMonthPeriod()
+    {
+        var firstDay = new DateTime(selectedYear, selectedMonth, 1);
+        var lastDay = firstDay.AddMonths(1).AddDays(-1);
+
+        fromDate = firstDay;
+        fromTime = new TimeOnly(0, 0);
+
+        toDate = lastDay;
+        toTime = new TimeOnly(23, 59);
+    }
+
+    private void ApplyQuarterPeriod()
+    {
+        var firstMonth = ((selectedQuarter - 1) * 3) + 1;
+        var firstDay = new DateTime(selectedYear, firstMonth, 1);
+        var lastDay = firstDay.AddMonths(3).AddDays(-1);
+
+        fromDate = firstDay;
+        fromTime = new TimeOnly(0, 0);
+
+        toDate = lastDay;
+        toTime = new TimeOnly(23, 59);
+    }
+
+    private void ApplyYearPeriod()
+    {
+        var firstDay = new DateTime(selectedYear, 1, 1);
+        var lastDay = new DateTime(selectedYear, 12, 31);
+
+        fromDate = firstDay;
+        fromTime = new TimeOnly(0, 0);
+
+        toDate = lastDay;
+        toTime = new TimeOnly(23, 59);
+    }
+
+    private static string FormatDateInput(DateTime? date)
+    {
+        return date.HasValue
+            ? date.Value.ToString("yyyy-MM-dd")
+            : string.Empty;
+    }
+
+    private async Task LoadExportBatchesForCurrentPeriodAsync()
+    {
+        if (!TryGetPeriod(out var fromUtc, out var toUtc))
+        {
+            return;
+        }
+
+        exportBatches = (await BackendApiClient.GetMyPosExportBatchesAsync(
+                TenantId,
+                fromUtc,
+                toUtc))
+            .OrderByDescending(x => x.CreatedUtc)
+            .ToList();
+
+        currentExportBatch = exportBatches.FirstOrDefault();
+    }
+
+    private async Task CreateExportBatchAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (!TryGetPeriod(out var fromUtc, out var toUtc))
+        {
+            errorMessage = "Kies eerst een geldige periode.";
+            return;
+        }
+
+        if (myPosConnection is null)
+        {
+            errorMessage = "Er is geen myPOS-koppeling gevonden voor deze tenant.";
+            return;
+        }
+
+        if (myPosConnection.Id == Guid.Empty)
+        {
+            errorMessage = "De myPOS-koppeling heeft geen geldige Id.";
+            return;
+        }
+
+        isCreatingExportBatch = true;
+
+        try
+        {
+            var request = new CreateMyPosExportBatchRequestViewModel
+            {
+                TenantMyPosConnectionId = myPosConnection.Id,
+                FromUtc = fromUtc,
+                ToUtc = toUtc,
+                IncludeExported = includeExported
+            };
+
+            currentExportBatch = await BackendApiClient.CreateMyPosExportBatchConceptAsync(
+                TenantId,
+                request);
+
+            await LoadExportBatchesForCurrentPeriodAsync();
+
+            successMessage = currentExportBatch.IsReadyForExport
+                ? "Exportbatch aangemaakt en klaar voor export."
+                : "Concept exportbatch aangemaakt. Controleer de meldingen.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS exportbatch aanmaken mislukt.");
+            errorMessage = $"myPOS exportbatch aanmaken mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isCreatingExportBatch = false;
+        }
+    }
+    private static string FormatDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString("dd-MM-yyyy")
+            : "-";
+    }
+
+
+    private async Task SetProgressAsync(
+    int percentage,
+    string message,
+    string? detail = null,
+    string? title = null)
+    {
+        progressPercentage = Math.Clamp(percentage, 0, 100);
+        progressMessage = message;
+        progressDetail = detail ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            progressTitle = title;
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        // Klein moment zodat de UI zichtbaar kan verversen.
+        await Task.Delay(75);
+    }
+
+    private void HideProgress()
+    {
+        showProgress = false;
+        progressPercentage = 0;
+        progressMessage = string.Empty;
+        progressDetail = string.Empty;
+    }
+
+    private async Task RunVisualProgressUntilAsync(
+    Func<Task> longRunningAction,
+    int startPercentage,
+    int maxPercentage,
+    string message,
+    string? detail = null)
+    {
+        var actionTask = longRunningAction();
+
+        var currentPercentage = startPercentage;
+
+        while (!actionTask.IsCompleted)
+        {
+            await SetProgressAsync(
+                currentPercentage,
+                message,
+                detail);
+
+            currentPercentage++;
+
+            if (currentPercentage > maxPercentage)
+            {
+                currentPercentage = startPercentage;
+            }
+
+            await Task.Delay(500);
+        }
+
+        await actionTask;
+    }
+
+    private async Task<MyPosTransactionImportResultViewModel> ImportMyPosTransactionsInChunksAsync(
+        Guid tenantMyPosConnectionId,
+        DateTime fromUtc,
+        DateTime toUtc,
+        bool showBusy)
+    {
+        var totalFetched = 0;
+        var totalInsertedOrUpdated = 0;
+        var totalInserted = 0;
+        var totalUpdated = 0;
+        var totalSkipped = 0;
+        var totalDuplicateInImport = 0;
+
+        var periods = BuildMonthlyUtcPeriods(fromUtc, toUtc).ToList();
+        var totalPeriods = periods.Count;
+
+        for (var index = 0; index < totalPeriods; index++)
+        {
+            var period = periods[index];
+
+            if (showBusy)
+            {
+                var percentage = 15 + (int)Math.Round(((double)index / totalPeriods) * 25);
+
+                await SetProgressAsync(
+                    percentage,
+                    "myPOS transacties ophalen...",
+                    $"Blok {index + 1} van {totalPeriods}: {period.FromUtc:dd-MM-yyyy HH:mm} t/m {period.ToUtc:dd-MM-yyyy HH:mm} UTC");
+            }
+
+            var result = await BackendApiClient.ImportMyPosTransactionsAsync(
+                TenantId,
+                tenantMyPosConnectionId,
+                period.FromUtc,
+                period.ToUtc);
+
+            totalFetched += result.FetchedCount;
+            totalInsertedOrUpdated += result.InsertedOrUpdatedCount;
+            totalInserted += result.InsertedCount;
+            totalUpdated += result.UpdatedCount;
+            totalSkipped += result.SkippedCount;
+            totalDuplicateInImport += result.DuplicateInImportCount;
+
+            if (showBusy)
+            {
+                var percentage = 15 + (int)Math.Round(((double)(index + 1) / totalPeriods) * 25);
+
+                await SetProgressAsync(
+                    percentage,
+                    "myPOS transacties opgehaald...",
+                    $"Blok {index + 1} van {totalPeriods} klaar. Nieuw: {totalInserted}, bestaand/bijgewerkt: {totalUpdated}, niet toegevoegd: {totalSkipped}");
+            }
+        }
+
+        return new MyPosTransactionImportResultViewModel
+        {
+            FetchedCount = totalFetched,
+            InsertedOrUpdatedCount = totalInsertedOrUpdated,
+            InsertedCount = totalInserted,
+            UpdatedCount = totalUpdated,
+            SkippedCount = totalSkipped,
+            DuplicateInImportCount = totalDuplicateInImport,
+            FromUtc = fromUtc,
+            ToUtc = toUtc,
+            Message = "myPOS download geslaagd en raw transacties verwerkt."
+        };
+    }
+
+    private static IEnumerable<(DateTime FromUtc, DateTime ToUtc)> BuildMonthlyUtcPeriods(
+    DateTime fromUtc,
+    DateTime toUtc)
+    {
+        var currentFromUtc = fromUtc;
+
+        while (currentFromUtc < toUtc)
+        {
+            var currentToUtc = currentFromUtc.AddMonths(1);
+
+            if (currentToUtc > toUtc)
+            {
+                currentToUtc = toUtc;
+            }
+
+            yield return (currentFromUtc, currentToUtc);
+
+            currentFromUtc = currentToUtc;
+        }
+    }
+
+    private async Task ExportBatchToSnelStartAsync(MyPosExportBatchViewModel batch)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (batch is null || batch.Id == Guid.Empty)
+        {
+            errorMessage = "Geen geldige exportbatch geselecteerd.";
+            return;
+        }
+
+        if (!batch.IsReadyForExport ||
+            !string.Equals(batch.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "Deze exportbatch is niet klaar voor export naar SnelStart.";
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            $"Weet je zeker dat je deze myPOS exportbatch naar SnelStart wilt exporteren?\n\n" +
+            $"Boekjaar: {batch.BookYear}\n" +
+            $"Periode: {batch.PeriodFromLocalDate:dd-MM-yyyy} t/m {batch.PeriodToLocalDate:dd-MM-yyyy}\n" +
+            $"Regels: {batch.LineCount}\n" +
+            $"Totaal: {batch.TotalAmount:N2} {batch.Currency}");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        isExportingBatch = true;
+        exportingBatchId = batch.Id;
+
+        showProgress = true;
+        progressTitle = "Exporteren naar SnelStart";
+
+        try
+        {
+            await SetProgressAsync(
+                10,
+                "Export voorbereiden...",
+                "De exportbatch wordt gecontroleerd.");
+
+            await SetProgressAsync(
+                35,
+                "SnelStart bankboeking aanmaken...",
+                "De volledige batch wordt als één bankboeking verzonden.");
+
+            var result = await BackendApiClient.ExportMyPosBatchToSnelStartAsync(
+                TenantId,
+                batch.Id);
+
+            await SetProgressAsync(
+                85,
+                "Exportstatus bijwerken...",
+                result.Message);
+
+            await LoadExportBatchesForCurrentPeriodAsync();
+
+            await SetProgressAsync(
+                100,
+                "Klaar.",
+                "De myPOS exportbatch is verwerkt.");
+
+            if (result.Success)
+            {
+                successMessage =
+                    $"myPOS exportbatch is naar SnelStart geëxporteerd. " +
+                    $"Regels: {result.ExportedLineCount}/{result.LineCount}.";
+            }
+            else
+            {
+                errorMessage =
+                    $"myPOS exportbatch is niet volledig geëxporteerd. " +
+                    $"Melding: {result.Message}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "myPOS exportbatch naar SnelStart mislukt. BatchId: {BatchId}",
+                batch.Id);
+
+            errorMessage = $"myPOS exportbatch naar SnelStart mislukt: {ex.Message}";
+
+            await LoadExportBatchesForCurrentPeriodAsync();
+        }
+        finally
+        {
+            await Task.Delay(400);
+            HideProgress();
+
+            isExportingBatch = false;
+            exportingBatchId = null;
+        }
+    }
+}

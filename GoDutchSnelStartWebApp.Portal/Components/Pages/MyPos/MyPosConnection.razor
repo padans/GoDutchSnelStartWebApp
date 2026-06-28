@@ -1,0 +1,364 @@
+﻿@page "/mypos/connection"
+@rendermode InteractiveServer
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosConnection> Logger
+
+<PageTitle>myPOS koppeling</PageTitle>
+
+<h1>myPOS koppeling</h1>
+
+<p class="text-muted">
+    Beheer de myPOS API-koppeling en koppel deze aan het virtuele SnelStart-bankdagboek.
+</p>
+
+<div class="alert alert-info">
+    <strong>Let op:</strong>
+    maak eerst in SnelStart zelf het bankdagboek aan voor de virtuele myPOS-bankrekening.
+    Koppel daar ook de juiste grootboekrekening aan het bankboek.
+    Dagboeken aanmaken buiten SnelStart om is niet mogelijk; deze pagina haalt alleen bestaande SnelStart-dagboeken op.
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success" role="alert">@successMessage</div>
+}
+
+@if (isLoading)
+{
+    <p>Gegevens laden...</p>
+}
+else if (connection is null)
+{
+    <div class="alert alert-warning">
+        Er is nog geen myPOS-koppeling aangemaakt voor deze tenant. Maak de eerste koppeling voorlopig via Swagger of de beheerfunctie.
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header">myPOS API-gegevens</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">Auth URL</label>
+                    <input class="form-control" @bind="connection.AuthUrl" />
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Transactions API base URL</label>
+                    <input class="form-control" @bind="connection.TransactionsApiBaseUrl" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ClientId</label>
+                    <input class="form-control" @bind="connection.ClientId" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ClientSecret</label>
+                    <input class="form-control"
+                           type="password"
+                           @bind="clientSecret" />
+                    <div class="form-text">
+                        Laat leeg om de bestaande encrypted waarde te behouden.
+                        Huidig opgeslagen: @(connection.HasClientSecret ? "Ja" : "Nee")
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ApiKey</label>
+                    <input class="form-control"
+                           type="password"
+                           @bind="apiKey" />
+                    <div class="form-text">
+                        Laat leeg om de bestaande encrypted waarde te behouden.
+                        Huidig opgeslagen: @(connection.HasApiKey ? "Ja" : "Nee")
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="isActive"
+                               @bind="connection.IsActive" />
+                        <label class="form-check-label" for="isActive">
+                            myPOS-koppeling actief
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">SnelStart-bankdagboek voor myPOS</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">SnelStart dagboek</label>
+                    <select class="form-select"
+                            value="@FormatGuid(connection.SnelStartBankDagboekId)"
+                            @onchange="OnDagboekChanged">
+                        <option value="">-- Kies een SnelStart dagboek --</option>
+
+                        @foreach (var dagboek in dagboeken)
+                        {
+                            <option value="@dagboek.Id">
+                                @dagboek.Nummer - @dagboek.Omschrijving
+                            </option>
+                        }
+                    </select>
+                    <div class="form-text">
+                        Kies hier het bestaande SnelStart-bankdagboek, bijvoorbeeld 1150 - MyPos Bank.
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">myPOS IBAN / virtuele bankrekening</label>
+                    <input class="form-control"
+                           placeholder="IE91MPOS99039025035759"
+                           @bind="connection.SnelStartBankIban" />
+                    <div class="form-text">
+                        Dit moet overeenkomen met de virtuele bankrekening die in SnelStart is aangemaakt.
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Huidige koppeling</label>
+                    <div class="form-control-plaintext">
+                        @BankDagboekDisplayName
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <button type="button"
+                    class="btn btn-primary"
+                    @onclick="SaveAsync"
+                    disabled="@isSaving">
+                @(isSaving ? "Opslaan..." : "Opslaan")
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary ms-2"
+                    @onclick="LoadDataAsync"
+                    disabled="@isSaving">
+                Vernieuwen
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private Guid TenantId => TenantOptions.Value.TenantId;
+
+    private TenantMyPosConnectionViewModel? connection;
+    private List<SnelStartDagboekLookupViewModel> dagboeken = [];
+
+    private bool isLoading;
+    private bool isSaving;
+
+    private string? clientSecret;
+    private string? apiKey;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private string BankDagboekDisplayName
+    {
+        get
+        {
+            if (connection is null)
+            {
+                return "-";
+            }
+
+            if (!string.IsNullOrWhiteSpace(connection.SnelStartBankDagboekNummer) &&
+                !string.IsNullOrWhiteSpace(connection.SnelStartBankDagboekNaam))
+            {
+                return $"{connection.SnelStartBankDagboekNummer} - {connection.SnelStartBankDagboekNaam}";
+            }
+
+            return "-";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var connectionTask = BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+            var dagboekenTask = BackendApiClient.GetTenantSnelStartDagboekenAsync(TenantId);
+
+            await Task.WhenAll(connectionTask, dagboekenTask);
+
+            connection = connectionTask.Result;
+            dagboeken = dagboekenTask.Result
+                .OrderBy(x => x.Nummer)
+                .ThenBy(x => x.Omschrijving)
+                .ToList();
+
+            clientSecret = null;
+            apiKey = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS koppeling laden mislukt.");
+            errorMessage = $"myPOS koppeling laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnDagboekChanged(ChangeEventArgs args)
+    {
+        if (connection is null)
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(args.Value?.ToString(), out var dagboekId))
+        {
+            connection.SnelStartBankDagboekId = null;
+            connection.SnelStartBankDagboekNummer = null;
+            connection.SnelStartBankDagboekNaam = null;
+            return;
+        }
+
+        var selectedDagboek = dagboeken.FirstOrDefault(x => x.Id == dagboekId);
+
+        if (selectedDagboek is null)
+        {
+            connection.SnelStartBankDagboekId = null;
+            connection.SnelStartBankDagboekNummer = null;
+            connection.SnelStartBankDagboekNaam = null;
+            return;
+        }
+
+        connection.SnelStartBankDagboekId = selectedDagboek.Id;
+        connection.SnelStartBankDagboekNummer = selectedDagboek.Nummer;
+        connection.SnelStartBankDagboekNaam = selectedDagboek.Omschrijving;
+    }
+
+    private async Task SaveAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (connection is null)
+        {
+            errorMessage = "Er is geen myPOS-koppeling geladen.";
+            return;
+        }
+
+        if (connection.Id == Guid.Empty)
+        {
+            errorMessage = "De myPOS-koppeling heeft geen geldige Id.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.AuthUrl))
+        {
+            errorMessage = "Auth URL is verplicht.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.TransactionsApiBaseUrl))
+        {
+            errorMessage = "Transactions API base URL is verplicht.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.ClientId))
+        {
+            errorMessage = "ClientId is verplicht.";
+            return;
+        }
+
+        if (connection.SnelStartBankDagboekId is null)
+        {
+            errorMessage = "Kies een SnelStart-bankdagboek voor myPOS.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(connection.SnelStartBankIban))
+        {
+            errorMessage = "Vul de myPOS IBAN / virtuele bankrekening in.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var request = new UpdateTenantMyPosConnectionRequestViewModel
+            {
+                AuthUrl = connection.AuthUrl.Trim(),
+                TransactionsApiBaseUrl = connection.TransactionsApiBaseUrl.Trim(),
+                ClientId = connection.ClientId.Trim(),
+                ClientSecret = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
+                ApiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim(),
+                SnelStartBankDagboekId = connection.SnelStartBankDagboekId,
+                SnelStartBankDagboekNummer = NormalizeNullable(connection.SnelStartBankDagboekNummer),
+                SnelStartBankDagboekNaam = NormalizeNullable(connection.SnelStartBankDagboekNaam),
+                SnelStartBankIban = NormalizeNullable(connection.SnelStartBankIban),
+                IsActive = connection.IsActive
+            };
+
+            await BackendApiClient.UpdateTenantMyPosConnectionAsync(
+                TenantId,
+                connection.Id,
+                request);
+
+            successMessage = "myPOS koppeling opgeslagen.";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS koppeling opslaan mislukt.");
+            errorMessage = $"myPOS koppeling opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string FormatGuid(Guid? value)
+    {
+        return value.HasValue && value.Value != Guid.Empty
+            ? value.Value.ToString()
+            : string.Empty;
+    }
+
+    private static string? NormalizeNullable(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+    }
+}

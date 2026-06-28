@@ -1,0 +1,1002 @@
+﻿Solution: GoDutchSnelStartWebApp.slnx
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Application
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.APPLICATION
+|   GoDutchSnelStartWebApp.Application.csproj
+|   
++---Abstractions
+|   +---Repositories
+|   |   |   IBankAccountRepository.cs
+|   |   |   IBankAccountSettingsRepository.cs
+|   |   |   IBankAccountSnelStartLinkRepository.cs
+|   |   |   IGoDutchImportRunRepository.cs
+|   |   |   ISnelStartAdministrationRepository.cs
+|   |   |   ITenantGoDutchConnectionRepository.cs
+|   |   |   ITenantRepository.cs
+|   |   |   
+|   |   +---MyPos
+|   |   |       IMyPosExportBatchRepository.cs
+|   |   |       IMyPosRawTransactionRepository.cs
+|   |   |       IMyPosTransactionTypeMappingRepository.cs
+|   |   |       ITenantMyPosConnectionRepository.cs
+|   |   |       
+|   |   \---SnelStart
+|   |           ITenantSnelStartConnectionRepository.cs
+|   |           
+|   \---Security
+|           ISecretEncryptionService.cs
+|           
++---BankAccounts
+|   +---Dtos
+|   |       BankAccountDto.cs
+|   |       BankAccountResyncResultDto.cs
+|   |       CreateBankAccountRequest.cs
+|   |       ForceResyncRequest.cs
+|   |       UpdateBankAccountRequest.cs
+|   |       
+|   +---Interfaces
+|   |       IBankAccountResyncService.cs
+|   |       IBankAccountService.cs
+|   |       
+|   \---Services
+|           BankAccountResyncService.cs
+|           BankAccountService.cs
+|           
++---BankAccountSettings
+|   +---Dtos
+|   |       BankAccountSettingsDto.cs
+|   |       CreateBankAccountSettingsRequest.cs
+|   |       UpdateBankAccountSettingsRequest.cs
+|   |       
+|   +---Interfaces
+|   |       IBankAccountSettingsService.cs
+|   |       
+|   \---Services
+|           BankAccountSettingsService.cs
+|           
++---bin
+|   \---Debug
+|       \---net10.0
+|               GoDutchSnelStartWebApp.Application.deps.json
+|               GoDutchSnelStartWebApp.Application.dll
+|               GoDutchSnelStartWebApp.Application.pdb
+|               GoDutchSnelStartWebApp.Domain.dll
+|               GoDutchSnelStartWebApp.Domain.pdb
+|               
++---Configuration
+|       GoDutchApiRetryOptions.cs
+|       GoDutchAutoSyncOptions.cs
+|       SnelStartImportRetryOptions.cs
+|       
++---ConnectivityTests
+|   +---Dtos
+|   |       ConnectionTestResultDto.cs
+|   |       
+|   +---Interfaces
+|   |       IConnectionTestService.cs
+|   |       ISnelStartConnectionTestClient.cs
+|   |       
+|   \---Services
+|           ConnectionTestService.cs
+|           
++---GoDutchAccounts
+|   +---Dtos
+|   |       GoDutchAccountLookupDto.cs
+|   |       
+|   \---Interfaces
+|           IGoDutchAccountLookupService.cs
+|           
++---GoDutchConnections
+|   +---Dtos
+|   |       CreateTenantGoDutchConnectionRequest.cs
+|   |       TenantGoDutchConnectionDto.cs
+|   |       UpdateTenantGoDutchConnectionRequest.cs
+|   |       
+|   +---Interfaces
+|   |       ITenantGoDutchConnectionService.cs
+|   |       
+|   \---Services
+|           TenantGoDutchConnectionService.cs
+|           
++---GoDutchTransactions
+|   +---Dtos
+|   |       BankTransactionDto.cs
+|   |       CalculatedBalancesDto.cs
+|   |       GoDutchTransactionDto.cs
+|   |       GoDutchWebhookImportRequest.cs
+|   |       Mt940Request.cs
+|   |       SnelStartExportFormat.cs
+|   |       SnelStartImportRequest.cs
+|   |       SnelStartImportResult.cs
+|   |       
+|   +---Helpers
+|   |       GoDutchSyncPeriodCalculator.cs
+|   |       
+|   +---Interfaces
+|   |       IBalanceCalculationService.cs
+|   |       ICamt053Generator.cs
+|   |       IGoDutchAutoSyncService.cs
+|   |       IGoDutchCamt053ExportService.cs
+|   |       IGoDutchMt940ExportService.cs
+|   |       IGoDutchSnelStartAutoImportService.cs
+|   |       IGoDutchSnelStartExportService.cs
+|   |       IGoDutchSnelStartImportService.cs
+|   |       IGoDutchTransactionService.cs
+|   |       IGoDutchWebhookImportService.cs
+|   |       IMt940Generator.cs
+|   |       ISnelStartBankStatementImporter.cs
+|   |       
+|   \---Services
+|           BalanceCalculationService.cs
+|           GoDutchAutoSyncService.cs
+|           GoDutchCamt053ExportService.cs
+|           GoDutchMt940ExportService.cs
+|           GoDutchSnelStartAutoImportService.cs
+|           GoDutchSnelStartExportService.cs
+|           GoDutchSnelStartImportService.cs
+|           GoDutchWebhookImportService.cs
+|           
++---MyPos
+|   +---Dtos
+|   |       CreateMyPosExportBatchRequest.cs
+|   |       CreateTenantMyPosConnectionRequest.cs
+|   |       MyPosExportBatchDto.cs
+|   |       MyPosExportBatchExportResultDto.cs
+|   |       MyPosExportBatchLineDto.cs
+|   |       MyPosRawTransactionDto.cs
+|   |       MyPosRawTransactionUpsertResultDto.cs
+|   |       MyPosTransactionImportResultDto.cs
+|   |       MyPosTransactionTotalDto.cs
+|   |       MyPosTransactionTypeMappingDto.cs
+|   |       TenantMyPosConnectionDto.cs
+|   |       UpdateTenantMyPosConnectionRequest.cs
+|   |       UpsertMyPosTransactionTypeMappingRequest.cs
+|   |       
+|   +---Interfaces
+|   |       IMyPosExportBatchExportService.cs
+|   |       IMyPosExportBatchService.cs
+|   |       IMyPosTransactionImportService.cs
+|   |       IMyPosTransactionTotalService.cs
+|   |       IMyPosTransactionTypeMappingService.cs
+|   |       ITenantMyPosConnectionService.cs
+|   |       
+|   \---Services
+|           MyPosExportBatchService.cs
+|           MyPosTransactionTotalService.cs
+|           MyPosTransactionTypeMappingService.cs
+|           TenantMyPosConnectionService.cs
+|           
++---obj
+|   |   GoDutchSnelStartWebApp.Application.csproj.nuget.dgspec.json
+|   |   GoDutchSnelStartWebApp.Application.csproj.nuget.g.props
+|   |   GoDutchSnelStartWebApp.Application.csproj.nuget.g.targets
+|   |   project.assets.json
+|   |   project.nuget.cache
+|   |   
+|   \---Debug
+|       \---net10.0
+|           |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+|           |   GoDutchS.A6FFF57E.Up2Date
+|           |   GoDutchSnelStartWebApp.Application.AssemblyInfo.cs
+|           |   GoDutchSnelStartWebApp.Application.AssemblyInfoInputs.cache
+|           |   GoDutchSnelStartWebApp.Application.assets.cache
+|           |   GoDutchSnelStartWebApp.Application.csproj.AssemblyReference.cache
+|           |   GoDutchSnelStartWebApp.Application.csproj.BuildWithSkipAnalyzers
+|           |   GoDutchSnelStartWebApp.Application.csproj.CoreCompileInputs.cache
+|           |   GoDutchSnelStartWebApp.Application.csproj.FileListAbsolute.txt
+|           |   GoDutchSnelStartWebApp.Application.dll
+|           |   GoDutchSnelStartWebApp.Application.GeneratedMSBuildEditorConfig.editorconfig
+|           |   GoDutchSnelStartWebApp.Application.GlobalUsings.g.cs
+|           |   GoDutchSnelStartWebApp.Application.pdb
+|           |   
+|           +---ref
+|           |       GoDutchSnelStartWebApp.Application.dll
+|           |       
+|           \---refint
+|                   GoDutchSnelStartWebApp.Application.dll
+|                   
++---SnelStart
+|   \---Interfaces
+|           ISnelStartLatestBookingDateService.cs
+|           
++---SnelStartAdministrations
+|   +---Dtos
+|   |       BankAccountSnelStartLinkDto.cs
+|   |       CreateBankAccountSnelStartLinkRequest.cs
+|   |       CreateSnelStartAdministrationRequest.cs
+|   |       SnelStartAdministrationDto.cs
+|   |       UpdateBankAccountSnelStartLinkRequest.cs
+|   |       UpdateSnelStartAdministrationRequest.cs
+|   |       
+|   +---Interfaces
+|   |       IBankAccountSnelStartLinkService.cs
+|   |       ISnelStartAdministrationService.cs
+|   |       
+|   \---Services
+|           BankAccountSnelStartLinkService.cs
+|           SnelStartAdministrationService.cs
+|           
++---SnelStartConnections
+|   +---Dtos
+|   |       CreateTenantSnelStartConnectionRequest.cs
+|   |       TenantSnelStartConnectionDto.cs
+|   |       UpdateTenantSnelStartConnectionRequest.cs
+|   |       
+|   +---Interfaces
+|   |       ITenantSnelStartConnectionService.cs
+|   |       
+|   \---Services
+|           TenantSnelStartConnectionService.cs
+|           
++---SnelStartLookups
+|   |   SnelStartLookupException.cs
+|   |   
+|   +---Dtos
+|   |       CreateSnelStartGrootboekRequest.cs
+|   |       SnelStartBtwTariefLookupDto.cs
+|   |       SnelStartDagboekLookupDto.cs
+|   |       SnelStartGrootboekLookupDto.cs
+|   |       
+|   \---Interfaces
+|           ISnelStartLookupService.cs
+|           
+\---Tenants
+    +---Dtos
+    |       CreateTenantRequest.cs
+    |       TenantDto.cs
+    |       UpdateTenantRequest.cs
+    |       
+    +---Interfaces
+    |       ITenantService.cs
+    |       
+    \---Services
+            TenantService.cs
+            
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Domain
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.DOMAIN
+|   GoDutchSnelStartWebApp.Domain.csproj
+|   
++---bin
+|   \---Debug
+|       \---net10.0
+|               GoDutchSnelStartWebApp.Domain.deps.json
+|               GoDutchSnelStartWebApp.Domain.dll
+|               GoDutchSnelStartWebApp.Domain.pdb
+|               
++---Common
++---Entities
+|   |   BankAccount.cs
+|   |   BankAccountSetting.cs
+|   |   BankAccountSnelStartLink.cs
+|   |   GoDutchImportRun.cs
+|   |   SnelStartAdministration.cs
+|   |   Tenant.cs
+|   |   TenantGoDutchConnection.cs
+|   |   
+|   +---MyPos
+|   |       MyPosExportBatch.cs
+|   |       MyPosExportBatchLine.cs
+|   |       MyPosRawTransaction.cs
+|   |       MyPosTransactionTypeMapping.cs
+|   |       TenantMyPosConnection.cs
+|   |       
+|   \---SnelStart
+|           TenantSnelStartConnection.cs
+|           
+\---obj
+    |   GoDutchSnelStartWebApp.Domain.csproj.nuget.dgspec.json
+    |   GoDutchSnelStartWebApp.Domain.csproj.nuget.g.props
+    |   GoDutchSnelStartWebApp.Domain.csproj.nuget.g.targets
+    |   project.assets.json
+    |   project.nuget.cache
+    |   
+    \---Debug
+        \---net10.0
+            |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+            |   GoDutchSnelStartWebApp.Domain.AssemblyInfo.cs
+            |   GoDutchSnelStartWebApp.Domain.AssemblyInfoInputs.cache
+            |   GoDutchSnelStartWebApp.Domain.assets.cache
+            |   GoDutchSnelStartWebApp.Domain.csproj.BuildWithSkipAnalyzers
+            |   GoDutchSnelStartWebApp.Domain.csproj.CoreCompileInputs.cache
+            |   GoDutchSnelStartWebApp.Domain.csproj.FileListAbsolute.txt
+            |   GoDutchSnelStartWebApp.Domain.dll
+            |   GoDutchSnelStartWebApp.Domain.GeneratedMSBuildEditorConfig.editorconfig
+            |   GoDutchSnelStartWebApp.Domain.GlobalUsings.g.cs
+            |   GoDutchSnelStartWebApp.Domain.pdb
+            |   
+            +---ref
+            |       GoDutchSnelStartWebApp.Domain.dll
+            |       
+            \---refint
+                    GoDutchSnelStartWebApp.Domain.dll
+                    
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Infrastructure
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.INFRASTRUCTURE
+|   GoDutchSnelStartWebApp.Infrastructure.csproj
+|   
++---bin
+|   \---Debug
+|       \---net10.0
+|               GoDutchSnelStartWebApp.Application.dll
+|               GoDutchSnelStartWebApp.Application.pdb
+|               GoDutchSnelStartWebApp.Domain.dll
+|               GoDutchSnelStartWebApp.Domain.pdb
+|               GoDutchSnelStartWebApp.Infrastructure.deps.json
+|               GoDutchSnelStartWebApp.Infrastructure.dll
+|               GoDutchSnelStartWebApp.Infrastructure.pdb
+|               
++---Configuration
+|       DatabaseOptions.cs
+|       
++---DependencyInjection
+|       InfrastructureServiceRegistration.cs
+|       
++---ExternalServices
+|   |   SnelStartConnectionTestClient.cs
+|   |   
+|   +---BackgroundWorkers
+|   |       GoDutchAutoSyncBackgroundWorker.cs
+|   |       
+|   +---Generators
+|   |       Camt053Generator.cs
+|   |       Mt940Generator.cs
+|   |       
+|   +---GoDutch
+|   |       GoDutchAccountLookupService.cs
+|   |       GoDutchTransactionService.cs
+|   |       
+|   +---MyPos
+|   |       MyPosExportBatchExportService.cs
+|   |       MyPosTransactionImportService.cs
+|   |       
+|   \---SnelStart
+|           SnelStartBankStatementImporter.cs
+|           SnelStartLatestBookingDateService.cs
+|           SnelStartLookupService.cs
+|           SnelStartUploadSettings.cs
+|           SnelStartUploadSettingsLoader.cs
+|           
++---Models
+|   \---GoDutchApi
+|           AmountApiModel.cs
+|           TransactionApiModel.cs
+|           TransactionsResponse.cs
+|           
++---obj
+|   |   GoDutchSnelStartWebApp.Infrastructure.csproj.nuget.dgspec.json
+|   |   GoDutchSnelStartWebApp.Infrastructure.csproj.nuget.g.props
+|   |   GoDutchSnelStartWebApp.Infrastructure.csproj.nuget.g.targets
+|   |   project.assets.json
+|   |   project.nuget.cache
+|   |   
+|   \---Debug
+|       \---net10.0
+|           |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+|           |   GoDutchS.C4640AFE.Up2Date
+|           |   GoDutchSnelStartWebApp.Infrastructure.AssemblyInfo.cs
+|           |   GoDutchSnelStartWebApp.Infrastructure.AssemblyInfoInputs.cache
+|           |   GoDutchSnelStartWebApp.Infrastructure.assets.cache
+|           |   GoDutchSnelStartWebApp.Infrastructure.csproj.AssemblyReference.cache
+|           |   GoDutchSnelStartWebApp.Infrastructure.csproj.BuildWithSkipAnalyzers
+|           |   GoDutchSnelStartWebApp.Infrastructure.csproj.CoreCompileInputs.cache
+|           |   GoDutchSnelStartWebApp.Infrastructure.csproj.FileListAbsolute.txt
+|           |   GoDutchSnelStartWebApp.Infrastructure.dll
+|           |   GoDutchSnelStartWebApp.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+|           |   GoDutchSnelStartWebApp.Infrastructure.GlobalUsings.g.cs
+|           |   GoDutchSnelStartWebApp.Infrastructure.pdb
+|           |   
+|           +---ref
+|           |       GoDutchSnelStartWebApp.Infrastructure.dll
+|           |       
+|           \---refint
+|                   GoDutchSnelStartWebApp.Infrastructure.dll
+|                   
++---Persistence
+|       ISqlConnectionFactory.cs
+|       SqlConnectionFactory.cs
+|       
++---Repositories
+|   |   BankAccountRepository.cs
+|   |   BankAccountSettingsRepository.cs
+|   |   BankAccountSnelStartLinkRepository.cs
+|   |   GoDutchImportRunRepository.cs
+|   |   SnelStartAdministrationRepository.cs
+|   |   TenantGoDutchConnectionRepository.cs
+|   |   TenantRepository.cs
+|   |   
+|   +---MyPos
+|   |       MyPosExportBatchRepository.cs
+|   |       MyPosRawTransactionRepository.cs
+|   |       MyPosTransactionTypeMappingRepository.cs
+|   |       TenantMyPosConnectionRepository.cs
+|   |       
+|   \---SnelStart
+|           TenantSnelStartConnectionRepository.cs
+|           
+\---Security
+        DpapiSecretEncryptionService.cs
+        
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Portal
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.PORTAL
+|   appsettings.Development.json
+|   appsettings.json
+|   GoDutchSnelStartWebApp.Portal.csproj
+|   GoDutchSnelStartWebApp.Portal.csproj.user
+|   Program.cs
+|   
++---Api
+|   +---Interfaces
+|   |       IBackendApiClient.cs
+|   |       IGoDutchBackendApiClient.cs
+|   |       
+|   \---Services
+|           BackendApiClient.cs
+|           GoDutchBackendApiClient.cs
+|           
++---bin
+|   \---Debug
+|       \---net10.0
+|               appsettings.Development.json
+|               appsettings.json
+|               GoDutchSnelStartWebApp.Portal.deps.json
+|               GoDutchSnelStartWebApp.Portal.dll
+|               GoDutchSnelStartWebApp.Portal.exe
+|               GoDutchSnelStartWebApp.Portal.pdb
+|               GoDutchSnelStartWebApp.Portal.runtimeconfig.json
+|               GoDutchSnelStartWebApp.Portal.staticwebassets.endpoints.json
+|               GoDutchSnelStartWebApp.Portal.staticwebassets.runtime.json
+|               
++---Components
+|   |   App.razor
+|   |   Routes.razor
+|   |   _Imports.razor
+|   |   
+|   +---Layout
+|   |       MainLayout.razor
+|   |       MainLayout.razor.css
+|   |       NavMenu.razor
+|   |       ReconnectModal.razor
+|   |       ReconnectModal.razor.css
+|   |       ReconnectModal.razor.js
+|   |       
+|   +---Pages
+|   |   |   BankAccountDetails.razor
+|   |   |   BankAccounts.razor
+|   |   |   Error.razor
+|   |   |   Home.razor
+|   |   |   NotFound.razor
+|   |   |   
+|   |   \---MyPos
+|   |           MyPosConnection.razor
+|   |           MyPosImport.razor
+|   |           MyPosMappings.razor
+|   |           
+|   \---Shared
+|           ProgressOverlay.razor
+|           
++---Configuration
+|       PortalTenantOptions.cs
+|       
++---Models
+|   |   BankAccountResyncResultViewModel.cs
+|   |   BankAccountSettingsViewModel.cs
+|   |   BankAccountSnelStartLinkViewModel.cs
+|   |   BankAccountSyncStatusViewModel.cs
+|   |   BankAccountViewModel.cs
+|   |   ConnectionTestResultViewModel.cs
+|   |   CreateBankAccountRequestViewModel.cs
+|   |   CreateBankAccountResponseViewModel.cs
+|   |   CreateBankAccountSnelStartLinkRequestViewModel.cs
+|   |   CreateSnelStartAdministrationRequestViewModel.cs
+|   |   CreateSnelStartGrootboekRequestViewModel.cs
+|   |   ForceResyncRequestViewModel.cs
+|   |   GoDutchAccountLookupViewModel.cs
+|   |   SnelStartAdministrationViewModel.cs
+|   |   SnelStartBtwTariefLookupViewModel.cs
+|   |   SnelStartDagboekLookupViewModel.cs
+|   |   SnelStartGrootboekLookupViewModel.cs
+|   |   TenantGoDutchConnectionViewModel.cs
+|   |   UpdateBankAccountSnelStartLinkRequestViewModel.cs
+|   |   UpdateBankAccountSnelStartSettingsRequestViewModel.cs
+|   |   UpdateSnelStartAdministrationRequestViewModel.cs
+|   |   
+|   \---MyPos
+|           CreateMyPosExportBatchRequestViewModel.cs
+|           MyPosExportBatchExportResultViewModel.cs
+|           MyPosExportBatchLineViewModel.cs
+|           MyPosExportBatchViewModel.cs
+|           MyPosRawTransactionViewModel.cs
+|           MyPosTransactionImportResultViewModel.cs
+|           MyPosTransactionTotalViewModel.cs
+|           MyPosTransactionTypeMappingViewModel.cs
+|           TenantMyPosConnectionViewModel.cs
+|           UpdateTenantMyPosConnectionRequestViewModel.cs
+|           UpsertMyPosTransactionTypeMappingRequestViewModel.cs
+|           
++---obj
+|   |   GoDutchSnelStartWebApp.Portal.csproj.nuget.dgspec.json
+|   |   GoDutchSnelStartWebApp.Portal.csproj.nuget.g.props
+|   |   GoDutchSnelStartWebApp.Portal.csproj.nuget.g.targets
+|   |   project.assets.json
+|   |   project.nuget.cache
+|   |   
+|   \---Debug
+|       \---net10.0
+|           |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+|           |   ApiEndpoints.json
+|           |   apphost.exe
+|           |   EmbeddedAttribute.cs
+|           |   GoDutchSnelStartWebApp.Portal.AssemblyInfo.cs
+|           |   GoDutchSnelStartWebApp.Portal.AssemblyInfoInputs.cache
+|           |   GoDutchSnelStartWebApp.Portal.assets.cache
+|           |   GoDutchSnelStartWebApp.Portal.csproj.BuildWithSkipAnalyzers
+|           |   GoDutchSnelStartWebApp.Portal.csproj.CoreCompileInputs.cache
+|           |   GoDutchSnelStartWebApp.Portal.csproj.FileListAbsolute.txt
+|           |   GoDutchSnelStartWebApp.Portal.dll
+|           |   GoDutchSnelStartWebApp.Portal.GeneratedMSBuildEditorConfig.editorconfig
+|           |   GoDutchSnelStartWebApp.Portal.genruntimeconfig.cache
+|           |   GoDutchSnelStartWebApp.Portal.GlobalUsings.g.cs
+|           |   GoDutchSnelStartWebApp.Portal.MvcApplicationPartsAssemblyInfo.cache
+|           |   GoDutchSnelStartWebApp.Portal.pdb
+|           |   rbcswa.dswa.cache.json
+|           |   rjimswa.dswa.cache.json
+|           |   rjsmcshtml.dswa.cache.json
+|           |   rjsmrazor.dswa.cache.json
+|           |   rpswa.dswa.cache.json
+|           |   staticwebassets.build.endpoints.json
+|           |   staticwebassets.build.json
+|           |   staticwebassets.build.json.cache
+|           |   staticwebassets.development.json
+|           |   staticwebassets.references.upToDateCheck.txt
+|           |   staticwebassets.removed.txt
+|           |   staticwebassets.upToDateCheck.txt
+|           |   swae.build.ex.cache
+|           |   ValidatableTypeAttribute.cs
+|           |   
+|           +---compressed
+|           |       66azclspfp-{0}-x1bql0we7a-x1bql0we7a.gz
+|           |       a1sr560er1-{0}-ig5xotzpx5-ig5xotzpx5.gz
+|           |       al5r9ti5jb-{0}-abdmv1u4y3-abdmv1u4y3.gz
+|           |       ko7z9al6xj-{0}-x1bql0we7a-x1bql0we7a.gz
+|           |       q4o7t6jnus-{0}-ne14ti1q68-ne14ti1q68.gz
+|           |       wysz89kz97-{0}-4kywy7iv6g-4kywy7iv6g.gz
+|           |       
+|           +---ref
+|           |       GoDutchSnelStartWebApp.Portal.dll
+|           |       
+|           +---refint
+|           |       GoDutchSnelStartWebApp.Portal.dll
+|           |       
+|           +---scopedcss
+|           |   +---bundle
+|           |   |       GoDutchSnelStartWebApp.Portal.styles.css
+|           |   |       
+|           |   +---Components
+|           |   |   \---Layout
+|           |   |           MainLayout.razor.rz.scp.css
+|           |   |           ReconnectModal.razor.rz.scp.css
+|           |   |           
+|           |   \---projectbundle
+|           |           GoDutchSnelStartWebApp.Portal.bundle.scp.css
+|           |           
+|           \---staticwebassets
++---Properties
+|       launchSettings.json
+|       
+\---wwwroot
+        app.css
+        
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Tests
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.TESTS
+|   GoDutchSnelStartWebApp.Tests.csproj
+|   
++---bin
+|   \---Debug
+|       \---net10.0
+|           |   .msCoverageSourceRootsMapping_GoDutchSnelStartWebApp.Tests
+|           |   Castle.Core.dll
+|           |   CoverletSourceRootsMapping_GoDutchSnelStartWebApp.Tests
+|           |   GoDutchSnelStartWebApp.Application.dll
+|           |   GoDutchSnelStartWebApp.Application.pdb
+|           |   GoDutchSnelStartWebApp.Domain.dll
+|           |   GoDutchSnelStartWebApp.Domain.pdb
+|           |   GoDutchSnelStartWebApp.Tests.deps.json
+|           |   GoDutchSnelStartWebApp.Tests.dll
+|           |   GoDutchSnelStartWebApp.Tests.pdb
+|           |   GoDutchSnelStartWebApp.Tests.runtimeconfig.json
+|           |   Microsoft.Extensions.DependencyInjection.Abstractions.dll
+|           |   Microsoft.Extensions.DependencyInjection.dll
+|           |   Microsoft.Extensions.Logging.Abstractions.dll
+|           |   Microsoft.Extensions.Logging.dll
+|           |   Microsoft.Extensions.Options.dll
+|           |   Microsoft.Extensions.Primitives.dll
+|           |   Microsoft.TestPlatform.CommunicationUtilities.dll
+|           |   Microsoft.TestPlatform.CoreUtilities.dll
+|           |   Microsoft.TestPlatform.CrossPlatEngine.dll
+|           |   Microsoft.TestPlatform.PlatformAbstractions.dll
+|           |   Microsoft.TestPlatform.Utilities.dll
+|           |   Microsoft.VisualStudio.CodeCoverage.Shim.dll
+|           |   Microsoft.VisualStudio.TestPlatform.Common.dll
+|           |   Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
+|           |   Moq.dll
+|           |   Newtonsoft.Json.dll
+|           |   System.Diagnostics.EventLog.dll
+|           |   testhost.dll
+|           |   testhost.exe
+|           |   xunit.abstractions.dll
+|           |   xunit.assert.dll
+|           |   xunit.core.dll
+|           |   xunit.execution.dotnet.dll
+|           |   xunit.runner.visualstudio.testadapter.dll
+|           |   
+|           +---cs
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---de
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---es
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---fr
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---it
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---ja
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---ko
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---pl
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---pt-BR
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---ru
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---runtimes
+|           |   \---win
+|           |       \---lib
+|           |           \---net6.0
+|           |                   System.Diagnostics.EventLog.dll
+|           |                   System.Diagnostics.EventLog.Messages.dll
+|           |                   
+|           +---tr
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           +---zh-Hans
+|           |       Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CoreUtilities.resources.dll
+|           |       Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|           |       Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|           |       
+|           \---zh-Hant
+|                   Microsoft.TestPlatform.CommunicationUtilities.resources.dll
+|                   Microsoft.TestPlatform.CoreUtilities.resources.dll
+|                   Microsoft.TestPlatform.CrossPlatEngine.resources.dll
+|                   Microsoft.VisualStudio.TestPlatform.Common.resources.dll
+|                   Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll
+|                   
++---GoDutchTransactions
+|       BalanceCalculationServiceTests.cs
+|       GoDutchAutoSyncServiceTests.cs
+|       GoDutchSnelStartImportServiceTests.cs
+|       GoDutchSyncPeriodCalculatorTests.cs
+|       
+\---obj
+    |   GoDutchSnelStartWebApp.Tests.csproj.nuget.dgspec.json
+    |   GoDutchSnelStartWebApp.Tests.csproj.nuget.g.props
+    |   GoDutchSnelStartWebApp.Tests.csproj.nuget.g.targets
+    |   project.assets.json
+    |   project.nuget.cache
+    |   
+    \---Debug
+        \---net10.0
+            |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+            |   GoDutchS.A8869793.Up2Date
+            |   GoDutchSnelStartWebApp.Tests.AssemblyInfo.cs
+            |   GoDutchSnelStartWebApp.Tests.AssemblyInfoInputs.cache
+            |   GoDutchSnelStartWebApp.Tests.assets.cache
+            |   GoDutchSnelStartWebApp.Tests.csproj.AssemblyReference.cache
+            |   GoDutchSnelStartWebApp.Tests.csproj.CoreCompileInputs.cache
+            |   GoDutchSnelStartWebApp.Tests.csproj.FileListAbsolute.txt
+            |   GoDutchSnelStartWebApp.Tests.dll
+            |   GoDutchSnelStartWebApp.Tests.GeneratedMSBuildEditorConfig.editorconfig
+            |   GoDutchSnelStartWebApp.Tests.genruntimeconfig.cache
+            |   GoDutchSnelStartWebApp.Tests.GlobalUsings.g.cs
+            |   GoDutchSnelStartWebApp.Tests.pdb
+            |   
+            +---ref
+            |       GoDutchSnelStartWebApp.Tests.dll
+            |       
+            \---refint
+                    GoDutchSnelStartWebApp.Tests.dll
+                    
+
+==================================================
+Projectmap: C:\__VS2026\GoDutchSnelStartWeb\GoDutchSnelStartWebApp\GoDutchSnelStartWebApp.Web
+==================================================
+Folder PATH listing
+Volume serial number is 8C18-0D75
+C:\__VS2026\GODUTCHSNELSTARTWEB\GODUTCHSNELSTARTWEBAPP\GODUTCHSNELSTARTWEBAPP.WEB
+|   appsettings.json
+|   GoDutchSnelStartWebApp.Web.csproj
+|   GoDutchSnelStartWebApp.Web.csproj.user
+|   GoDutchSnelStartWebApp.Web.http
+|   Program.cs
+|   
++---bin
+|   \---Debug
+|       \---net10.0
+|           |   appsettings.json
+|           |   GoDutchSnelStartWebApp.Application.dll
+|           |   GoDutchSnelStartWebApp.Application.pdb
+|           |   GoDutchSnelStartWebApp.Domain.dll
+|           |   GoDutchSnelStartWebApp.Domain.pdb
+|           |   GoDutchSnelStartWebApp.Infrastructure.dll
+|           |   GoDutchSnelStartWebApp.Infrastructure.pdb
+|           |   GoDutchSnelStartWebApp.Web.deps.json
+|           |   GoDutchSnelStartWebApp.Web.dll
+|           |   GoDutchSnelStartWebApp.Web.exe
+|           |   GoDutchSnelStartWebApp.Web.pdb
+|           |   GoDutchSnelStartWebApp.Web.runtimeconfig.json
+|           |   GoDutchSnelStartWebApp.Web.staticwebassets.endpoints.json
+|           |   Microsoft.AspNetCore.OpenApi.dll
+|           |   Microsoft.Bcl.Cryptography.dll
+|           |   Microsoft.Data.SqlClient.dll
+|           |   Microsoft.Data.SqlClient.Extensions.Abstractions.dll
+|           |   Microsoft.Data.SqlClient.Internal.Logging.dll
+|           |   Microsoft.Extensions.DependencyModel.dll
+|           |   Microsoft.IdentityModel.Abstractions.dll
+|           |   Microsoft.IdentityModel.JsonWebTokens.dll
+|           |   Microsoft.IdentityModel.Logging.dll
+|           |   Microsoft.IdentityModel.Protocols.dll
+|           |   Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+|           |   Microsoft.IdentityModel.Tokens.dll
+|           |   Microsoft.OpenApi.dll
+|           |   Microsoft.SqlServer.Server.dll
+|           |   Serilog.AspNetCore.dll
+|           |   Serilog.dll
+|           |   Serilog.Extensions.Hosting.dll
+|           |   Serilog.Extensions.Logging.dll
+|           |   Serilog.Formatting.Compact.dll
+|           |   Serilog.Settings.Configuration.dll
+|           |   Serilog.Sinks.Console.dll
+|           |   Serilog.Sinks.Debug.dll
+|           |   Serilog.Sinks.File.dll
+|           |   Swashbuckle.AspNetCore.Swagger.dll
+|           |   Swashbuckle.AspNetCore.SwaggerGen.dll
+|           |   Swashbuckle.AspNetCore.SwaggerUI.dll
+|           |   System.Configuration.ConfigurationManager.dll
+|           |   System.IdentityModel.Tokens.Jwt.dll
+|           |   System.Security.Cryptography.ProtectedData.dll
+|           |   
+|           +---cs
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---de
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---es
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---fr
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---it
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---ja
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---ko
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---logs
+|           |       app-20260618.txt
+|           |       app-20260619.txt
+|           |       bootstrap-20260618.txt
+|           |       bootstrap-20260619.txt
+|           |       
+|           +---pl
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---pt-BR
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---ru
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---runtimes
+|           |   +---unix
+|           |   |   \---lib
+|           |   |       \---net9.0
+|           |   |               Microsoft.Data.SqlClient.dll
+|           |   |               
+|           |   +---win
+|           |   |   \---lib
+|           |   |       \---net9.0
+|           |   |               Microsoft.Data.SqlClient.dll
+|           |   |               
+|           |   +---win-arm64
+|           |   |   \---native
+|           |   |           Microsoft.Data.SqlClient.SNI.dll
+|           |   |           
+|           |   +---win-x64
+|           |   |   \---native
+|           |   |           Microsoft.Data.SqlClient.SNI.dll
+|           |   |           
+|           |   \---win-x86
+|           |       \---native
+|           |               Microsoft.Data.SqlClient.SNI.dll
+|           |               
+|           +---tr
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           +---zh-Hans
+|           |       Microsoft.Data.SqlClient.resources.dll
+|           |       
+|           \---zh-Hant
+|                   Microsoft.Data.SqlClient.resources.dll
+|                   
++---Controllers
+|   |   BankAccountsController.cs
+|   |   BankAccountSettingsController.cs
+|   |   BankAccountSnelStartLinksController.cs
+|   |   ConnectionTestsController.cs
+|   |   DebugController.cs
+|   |   GoDutchTransactionsController.cs
+|   |   GoDutchWebhooksController.cs
+|   |   HealthController.cs
+|   |   SnelStartAdministrationsController.cs
+|   |   SnelStartLookupsController.cs
+|   |   TenantGoDutchAccountsController.cs
+|   |   TenantGoDutchConnectionsController.cs
+|   |   TenantsController.cs
+|   |   
+|   +---MyPos
+|   |       MyPosExportBatchesController.cs
+|   |       MyPosTransactionsController.cs
+|   |       MyPosTransactionTotalsController.cs
+|   |       MyPosTransactionTypeMappingsController.cs
+|   |       TenantMyPosConnectionsController.cs
+|   |       
+|   \---SnelStart
+|           TenantSnelStartConnectionsController.cs
+|           TenantSnelStartLookupsController.cs
+|           
++---Extensions
++---logs
+|       log-20260325.txt
+|       
++---Middleware
+|       ApiExceptionMiddleware.cs
+|       ExceptionMiddlewareExtensions.cs
+|       
++---Models
++---obj
+|   |   GoDutchSnelStartWebApp.Web.csproj.nuget.dgspec.json
+|   |   GoDutchSnelStartWebApp.Web.csproj.nuget.g.props
+|   |   GoDutchSnelStartWebApp.Web.csproj.nuget.g.targets
+|   |   project.assets.json
+|   |   project.nuget.cache
+|   |   
+|   \---Debug
+|       \---net10.0
+|           |   .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+|           |   ApiEndpoints.json
+|           |   apphost.exe
+|           |   GoDutchS.E513B864.Up2Date
+|           |   GoDutchSnelStartWebApp.Web.AssemblyInfo.cs
+|           |   GoDutchSnelStartWebApp.Web.AssemblyInfoInputs.cache
+|           |   GoDutchSnelStartWebApp.Web.assets.cache
+|           |   GoDutchSnelStartWebApp.Web.csproj.AssemblyReference.cache
+|           |   GoDutchSnelStartWebApp.Web.csproj.BuildWithSkipAnalyzers
+|           |   GoDutchSnelStartWebApp.Web.csproj.CoreCompileInputs.cache
+|           |   GoDutchSnelStartWebApp.Web.csproj.FileListAbsolute.txt
+|           |   GoDutchSnelStartWebApp.Web.dll
+|           |   GoDutchSnelStartWebApp.Web.GeneratedMSBuildEditorConfig.editorconfig
+|           |   GoDutchSnelStartWebApp.Web.genruntimeconfig.cache
+|           |   GoDutchSnelStartWebApp.Web.GlobalUsings.g.cs
+|           |   GoDutchSnelStartWebApp.Web.MvcApplicationPartsAssemblyInfo.cache
+|           |   GoDutchSnelStartWebApp.Web.MvcApplicationPartsAssemblyInfo.cs
+|           |   GoDutchSnelStartWebApp.Web.pdb
+|           |   rjsmcshtml.dswa.cache.json
+|           |   rjsmrazor.dswa.cache.json
+|           |   rpswa.dswa.cache.json
+|           |   staticwebassets.build.endpoints.json
+|           |   staticwebassets.build.json
+|           |   staticwebassets.build.json.cache
+|           |   staticwebassets.references.upToDateCheck.txt
+|           |   staticwebassets.removed.txt
+|           |   swae.build.ex.cache
+|           |   
+|           +---EndpointInfo
+|           |       GoDutchSnelStartWebApp.Web.json
+|           |       GoDutchSnelStartWebApp.Web.OpenApiFiles.cache
+|           |       
+|           +---ref
+|           |       GoDutchSnelStartWebApp.Web.dll
+|           |       
+|           +---refint
+|           |       GoDutchSnelStartWebApp.Web.dll
+|           |       
+|           \---staticwebassets
+\---Properties
+        launchSettings.json
+        
+

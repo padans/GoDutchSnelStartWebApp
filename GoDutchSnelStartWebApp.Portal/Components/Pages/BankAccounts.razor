@@ -1,0 +1,805 @@
+﻿@page "/bankaccounts"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
+@using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@inject IBackendApiClient BackendApiClient
+@inject IGoDutchBackendApiClient GoDutchBackendApiClient
+@inject ILogger<BankAccounts> Logger
+@inject IOptions<PortalTenantOptions> TenantOptions
+
+<PageTitle>Bankaccounts</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Bankaccounts</h1>
+            <p class="text-muted mb-0">Beheer tenant-GoDutch credentials en maak lokale bankaccounts aan vanuit GoDutch.</p>
+        </div>
+
+        <div class="text-end">
+            <button class="btn btn-outline-primary"
+                    @onclick="ReloadAsync"
+                    disabled="@(isLoading || isRefreshingStatuses)">
+                @(isLoading ? "Laden..." : isRefreshingStatuses ? "Verversen..." : "Vernieuwen")
+            </button>
+
+            @if (lastStatusRefreshUtc.HasValue)
+            {
+                <div class="small text-muted mt-2">
+                    Status laatst ververst: @FormatDateTime(lastStatusRefreshUtc)
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccessMessage"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearErrorMessage"></button>
+        </div>
+    }
+
+    <div class="alert alert-info py-2 small" role="alert">
+        De sync-status wordt automatisch ververst. Direct na het opstarten kan kort nog de vorige status zichtbaar zijn terwijl de background worker bezig is.
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>GoDutch credentials op tenantniveau</span>
+            <span class="@(tenantGoDutchConnection.HasPassword ? "badge text-bg-success" : "badge text-bg-warning")">
+                @(tenantGoDutchConnection.HasPassword ? "Wachtwoord opgeslagen" : "Geen wachtwoord opgeslagen")
+            </span>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">GoDutch API base URL</label>
+                    <InputText class="form-control"
+                               @bind-Value="tenantGoDutchConnection.ApiBaseUrl" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">GoDutch gebruikersnaam</label>
+                    <InputText class="form-control"
+                               @bind-Value="tenantGoDutchConnection.Username" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">GoDutch wachtwoord</label>
+                    <InputText class="form-control"
+                               type="password"
+                               @bind-Value="tenantGoDutchConnection.Password" />
+                    <div class="form-text">
+                        @(tenantGoDutchConnection.HasPassword ? "Laat leeg om ongewijzigd te laten." : "Vul het wachtwoord in om te activeren.")
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-md-4 pt-md-2">
+                        <InputCheckbox class="form-check-input"
+                                       id="tenantGoDutchIsActive"
+                                       @bind-Value="tenantGoDutchConnection.IsActive" />
+                        <label class="form-check-label" for="tenantGoDutchIsActive">
+                            GoDutch koppeling actief
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary"
+                                @onclick="SaveTenantGoDutchConnectionAsync"
+                                disabled="@isSavingTenantGoDutchConnection">
+                            @(isSavingTenantGoDutchConnection ? "Opslaan..." : "GoDutch credentials opslaan")
+                        </button>
+
+                        <button class="btn btn-outline-success"
+                                @onclick="() => LoadGoDutchAccountsAsync()"
+                                disabled="@(isLoadingGoDutchAccounts || !CanLoadGoDutchAccounts())">
+                            @(isLoadingGoDutchAccounts ? "Ophalen..." : "GoDutch bankrekeningen ophalen")
+                        </button>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Deze gegevens gelden voor de hele tenant. Bankaccount-instellingen bevatten straks alleen nog SnelStart/configuratie.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (goDutchAccounts.Count > 0)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Nieuwe bankrekening aanmaken vanuit GoDutch</span>
+                <span class="badge text-bg-secondary">@goDutchAccounts.Count gevonden</span>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label">GoDutch bankrekening</label>
+                        <select class="form-select" @bind="selectedGoDutchAccountId">
+                            <option value="">Selecteer een GoDutch bankrekening...</option>
+                            @foreach (var account in goDutchAccounts)
+                            {
+                                <option value="@account.GoDutchAccountId" disabled="@account.AlreadyExists">
+                                    @account.DisplayName @(account.AlreadyExists ? "(bestaat al lokaal)" : string.Empty)
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100"
+                                @onclick="CreateBankAccountFromGoDutchAsync"
+                                disabled="@(isCreatingBankAccountFromGoDutch || !IsSelectedGoDutchAccountCreatable())">
+                            @(isCreatingBankAccountFromGoDutch ? "Aanmaken..." : "Bankaccount aanmaken")
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Naam</th>
+                                <th>IBAN</th>
+                                <th>Status</th>
+                                <th>Lokaal BankAccountId</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var account in goDutchAccounts)
+                            {
+                                <tr>
+                                    <td>@DisplayAccountName(account)</td>
+                                    <td>@account.Iban</td>
+                                    <td>
+                                        <span class="@GetGoDutchAccountStatusBadgeClass(account)">
+                                            @(account.AlreadyExists ? "Bestaat al" : "Nieuw")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (account.ExistingBankAccountId.HasValue)
+                                        {
+                                            <a href="@($"/bankaccounts/{account.ExistingBankAccountId.Value}")">
+                                                @account.ExistingBankAccountId.Value
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="alert alert-info">
+            Bankaccounts worden geladen...
+        </div>
+    }
+    else if (rows.Count == 0)
+    {
+        <div class="alert alert-warning">
+            Er zijn geen lokale bankaccounts gevonden. Haal hierboven de GoDutch bankrekeningen op om er één aan te maken.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Lokale bankaccounts
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Accountnaam</th>
+                                <th>IBAN</th>
+                                <th>Status</th>
+                                <th>Laatste sync</th>
+                                <th>Transacties</th>
+                                <th>Trigger</th>
+                                <th>Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in rows)
+                            {
+                                <tr>
+                                    <td>@row.BankAccount.AccountName</td>
+                                    <td>@row.BankAccount.Iban</td>
+                                    <td>
+                                        <span class="@GetStatusBadgeClass(row.SyncStatus?.Status)">
+                                            @(row.SyncStatus?.Status ?? "NeverRun")
+                                        </span>
+                                    </td>
+                                    <td>@FormatDateTime(row.SyncStatus?.LastRunAt)</td>
+                                    <td>@(row.SyncStatus?.TransactionCount ?? 0)</td>
+                                    <td>@(row.SyncStatus?.TriggerSource ?? "-")</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a class="btn btn-sm btn-outline-secondary"
+                                                   href="@($"/bankaccounts/{row.BankAccount.Id}")">
+                                                Details
+                                            </a>
+
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => ToggleResync(row.BankAccount.Id)"
+                                                    disabled="@isLoading">
+                                                Resync
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                @if (resyncBankAccountId == row.BankAccount.Id)
+                                {
+                                    <tr>
+                                        <td colspan="7" class="bg-light">
+                                            <div class="p-3">
+                                                <div class="row g-3 align-items-end">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Vanaf datum/tijd (lokale tijd)</label>
+                                                        <InputDate @bind-Value="resyncFromUtc"
+                                                                   class="form-control"
+                                                                   Type="InputDateType.DateTimeLocal" />
+                                                    </div>
+
+                                                    <div class="col-auto">
+                                                        <button class="btn btn-primary"
+                                                                @onclick="() => ExecuteResyncAsync(row.BankAccount.Id)"
+                                                                disabled="@isResyncing">
+                                                            @(isResyncing ? "Bezig..." : "Resync uitvoeren")
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="col-auto">
+                                                        <button class="btn btn-outline-secondary"
+                                                                @onclick="CancelResync"
+                                                                disabled="@isResyncing">
+                                                            Annuleren
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(row.SyncStatus?.Message))
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-muted small bg-light">
+                                            @row.SyncStatus!.Message
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Guid TenantId => TenantOptions.Value.TenantId;
+    private readonly List<BankAccountRowViewModel> rows = [];
+    private readonly List<GoDutchAccountLookupViewModel> goDutchAccounts = [];
+
+    private TenantGoDutchConnectionViewModel tenantGoDutchConnection = CreateDefaultTenantGoDutchConnection();
+
+    private bool isLoading;
+    private bool isResyncing;
+    private bool isRefreshingStatuses;
+    private bool isSavingTenantGoDutchConnection;
+    private bool isLoadingGoDutchAccounts;
+    private bool isCreatingBankAccountFromGoDutch;
+
+    private CancellationTokenSource? autoRefreshCts;
+    private Task? autoRefreshTask;
+    private DateTime? lastStatusRefreshUtc;
+
+    private string? errorMessage;
+    private string? successMessage;
+    private string selectedGoDutchAccountId = string.Empty;
+
+    private Guid? resyncBankAccountId;
+    private DateTime? resyncFromUtc = DateTime.UtcNow.AddDays(-1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        StartAutoRefresh();
+    }
+
+    private void StartAutoRefresh()
+    {
+        if (autoRefreshTask is not null)
+        {
+            return;
+        }
+
+        autoRefreshCts = new CancellationTokenSource();
+        autoRefreshTask = AutoRefreshLoopAsync(autoRefreshCts.Token);
+    }
+
+    private async Task AutoRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (isLoading || isResyncing || isRefreshingStatuses || rows.Count == 0)
+                    {
+                        return;
+                    }
+
+                    await RefreshSyncStatusesAsync(showErrors: false);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed.
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            rows.Clear();
+
+            var tenantId = TenantId;
+
+            Logger.LogInformation("Laden bankaccounts gestart voor tenant {TenantId}", tenantId);
+
+            var connection = await GoDutchBackendApiClient.GetTenantGoDutchConnectionAsync(tenantId);
+            tenantGoDutchConnection = connection ?? CreateDefaultTenantGoDutchConnection();
+            tenantGoDutchConnection.TenantId = tenantId;
+            tenantGoDutchConnection.Password = string.Empty;
+
+            var bankAccounts = await BackendApiClient.GetBankAccountsAsync(tenantId);
+
+            foreach (var bankAccount in bankAccounts)
+            {
+                BankAccountSyncStatusViewModel? syncStatus = null;
+
+                try
+                {
+                    syncStatus = await BackendApiClient.GetSyncStatusAsync(
+                        tenantId,
+                        bankAccount.Id);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(
+                        ex,
+                        "Sync-status ophalen mislukt voor BankAccountId {BankAccountId}",
+                        bankAccount.Id);
+                }
+
+                rows.Add(new BankAccountRowViewModel
+                {
+                    BankAccount = bankAccount,
+                    SyncStatus = syncStatus
+                });
+            }
+
+            lastStatusRefreshUtc = DateTime.UtcNow;
+            Logger.LogInformation("Laden bankaccounts afgerond. Count: {Count}", rows.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Laden van bankaccounts is mislukt.");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshSyncStatusesAsync(bool showErrors = true)
+    {
+        try
+        {
+            isRefreshingStatuses = true;
+            if (showErrors)
+            {
+                errorMessage = null;
+            }
+
+            foreach (var row in rows)
+            {
+                try
+                {
+                    row.SyncStatus = await BackendApiClient.GetSyncStatusAsync(
+                        TenantId,
+                        row.BankAccount.Id);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(
+                        ex,
+                        "Sync-status verversen mislukt voor BankAccountId {BankAccountId}",
+                        row.BankAccount.Id);
+                }
+            }
+
+            lastStatusRefreshUtc = DateTime.UtcNow;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Automatisch verversen van sync-statussen is mislukt.");
+            if (showErrors)
+            {
+                errorMessage = $"Sync-status verversen is mislukt: {ex.Message}";
+            }
+        }
+        finally
+        {
+            isRefreshingStatuses = false;
+        }
+    }
+
+    private async Task SaveTenantGoDutchConnectionAsync()
+    {
+        try
+        {
+            isSavingTenantGoDutchConnection = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (string.IsNullOrWhiteSpace(tenantGoDutchConnection.ApiBaseUrl))
+            {
+                errorMessage = "GoDutch API base URL is verplicht.";
+                return;
+            }
+
+            if (!Uri.TryCreate(tenantGoDutchConnection.ApiBaseUrl, UriKind.Absolute, out _))
+            {
+                errorMessage = "GoDutch API base URL moet een geldige absolute URL zijn.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(tenantGoDutchConnection.Username))
+            {
+                errorMessage = "GoDutch gebruikersnaam is verplicht.";
+                return;
+            }
+
+            if (!tenantGoDutchConnection.HasPassword && string.IsNullOrWhiteSpace(tenantGoDutchConnection.Password))
+            {
+                errorMessage = "GoDutch wachtwoord is verplicht zolang er nog geen wachtwoord opgeslagen is.";
+                return;
+            }
+
+            await GoDutchBackendApiClient.SaveTenantGoDutchConnectionAsync(
+                TenantId,
+                tenantGoDutchConnection);
+
+            var refreshedConnection = await GoDutchBackendApiClient.GetTenantGoDutchConnectionAsync(TenantId);
+            tenantGoDutchConnection = refreshedConnection ?? CreateDefaultTenantGoDutchConnection();
+            tenantGoDutchConnection.TenantId = TenantId;
+            tenantGoDutchConnection.Password = string.Empty;
+
+            goDutchAccounts.Clear();
+            selectedGoDutchAccountId = string.Empty;
+
+            successMessage = "GoDutch credentials zijn opgeslagen op tenantniveau.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Opslaan tenant GoDutch credentials mislukt voor tenant {TenantId}", TenantId);
+            errorMessage = $"Opslaan van GoDutch credentials is mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSavingTenantGoDutchConnection = false;
+        }
+    }
+
+    private async Task LoadGoDutchAccountsAsync(bool showSuccessMessage = true)
+    {
+        try
+        {
+            isLoadingGoDutchAccounts = true;
+            errorMessage = null;
+            if (showSuccessMessage)
+            {
+                successMessage = null;
+            }
+
+            goDutchAccounts.Clear();
+            selectedGoDutchAccountId = string.Empty;
+
+            var accounts = await GoDutchBackendApiClient.GetGoDutchAccountsAsync(TenantId);
+
+            goDutchAccounts.AddRange(
+                accounts
+                    .OrderBy(account => account.AlreadyExists)
+                    .ThenBy(account => account.DisplayName));
+
+            selectedGoDutchAccountId = goDutchAccounts
+                .FirstOrDefault(account => !account.AlreadyExists)
+                ?.GoDutchAccountId ?? string.Empty;
+
+            if (showSuccessMessage)
+            {
+                successMessage = $"{goDutchAccounts.Count} GoDutch bankrekening(en) opgehaald.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "GoDutch bankrekeningen ophalen mislukt voor tenant {TenantId}", TenantId);
+            errorMessage = $"GoDutch bankrekeningen ophalen is mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingGoDutchAccounts = false;
+        }
+    }
+
+    private async Task CreateBankAccountFromGoDutchAsync()
+    {
+        try
+        {
+            isCreatingBankAccountFromGoDutch = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var selectedAccount = GetSelectedGoDutchAccount();
+            if (selectedAccount is null)
+            {
+                errorMessage = "Selecteer eerst een GoDutch bankrekening.";
+                return;
+            }
+
+            if (selectedAccount.AlreadyExists)
+            {
+                errorMessage = "Deze GoDutch bankrekening bestaat al lokaal.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedAccount.Iban))
+            {
+                errorMessage = "De geselecteerde GoDutch bankrekening heeft geen IBAN.";
+                return;
+            }
+
+            var accountName = !string.IsNullOrWhiteSpace(selectedAccount.AccountName)
+                ? selectedAccount.AccountName
+                : !string.IsNullOrWhiteSpace(selectedAccount.AccountHolderName)
+                    ? selectedAccount.AccountHolderName
+                    : $"GoDutch {selectedAccount.Iban}";
+
+            var newBankAccountId = await BackendApiClient.CreateBankAccountAsync(
+                TenantId,
+                new CreateBankAccountRequestViewModel
+                {
+                    Iban = selectedAccount.Iban,
+                    AccountName = accountName,
+                    IsActive = true
+                });
+
+            await LoadAsync();
+            await LoadGoDutchAccountsAsync(showSuccessMessage: false);
+
+            successMessage = $"Bankaccount {accountName} ({selectedAccount.Iban}) is aangemaakt.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Bankaccount aanmaken vanuit GoDutch mislukt voor tenant {TenantId}", TenantId);
+            errorMessage = $"Bankaccount aanmaken vanuit GoDutch is mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isCreatingBankAccountFromGoDutch = false;
+        }
+    }
+
+    private void ToggleResync(Guid bankAccountId)
+    {
+        if (resyncBankAccountId == bankAccountId)
+        {
+            CancelResync();
+            return;
+        }
+
+        resyncBankAccountId = bankAccountId;
+        resyncFromUtc = DateTime.UtcNow.AddDays(-1);
+        successMessage = null;
+    }
+
+    private void CancelResync()
+    {
+        resyncBankAccountId = null;
+        isResyncing = false;
+    }
+
+    private async Task ExecuteResyncAsync(Guid bankAccountId)
+    {
+        try
+        {
+            isResyncing = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var tenantId = TenantId;
+
+            if (!resyncFromUtc.HasValue)
+            {
+                errorMessage = "De opgegeven datum/tijd is ongeldig.";
+                return;
+            }
+
+            var fromUtc = DateTime.SpecifyKind(resyncFromUtc.Value, DateTimeKind.Local).ToUniversalTime();
+
+            await BackendApiClient.ForceResyncAsync(
+                tenantId,
+                bankAccountId,
+                fromUtc);
+
+            successMessage = $"Resync opgeslagen vanaf {fromUtc:dd-MM-yyyy HH:mm:ss} UTC.";
+            resyncBankAccountId = null;
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Force resync mislukt voor BankAccountId {BankAccountId}", bankAccountId);
+            errorMessage = $"Force resync mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isResyncing = false;
+        }
+    }
+
+    private bool CanLoadGoDutchAccounts()
+    {
+        return tenantGoDutchConnection.IsActive &&
+               !string.IsNullOrWhiteSpace(tenantGoDutchConnection.ApiBaseUrl) &&
+               !string.IsNullOrWhiteSpace(tenantGoDutchConnection.Username) &&
+               (tenantGoDutchConnection.HasPassword || !string.IsNullOrWhiteSpace(tenantGoDutchConnection.Password));
+    }
+
+    private bool IsSelectedGoDutchAccountCreatable()
+    {
+        var selectedAccount = GetSelectedGoDutchAccount();
+        return selectedAccount is not null &&
+               !selectedAccount.AlreadyExists &&
+               !string.IsNullOrWhiteSpace(selectedAccount.Iban);
+    }
+
+    private GoDutchAccountLookupViewModel? GetSelectedGoDutchAccount()
+    {
+        if (string.IsNullOrWhiteSpace(selectedGoDutchAccountId))
+        {
+            return null;
+        }
+
+        return goDutchAccounts.FirstOrDefault(
+            account => string.Equals(
+                account.GoDutchAccountId,
+                selectedGoDutchAccountId,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static TenantGoDutchConnectionViewModel CreateDefaultTenantGoDutchConnection()
+    {
+        return new TenantGoDutchConnectionViewModel
+        {
+            ApiBaseUrl = "https://backend.godutch.com/",
+            IsActive = true
+        };
+    }
+
+    private static string DisplayAccountName(GoDutchAccountLookupViewModel account)
+    {
+        if (!string.IsNullOrWhiteSpace(account.AccountName))
+        {
+            return account.AccountName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(account.AccountHolderName))
+        {
+            return account.AccountHolderName;
+        }
+
+        return "-";
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = null;
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = null;
+    }
+
+    private static string FormatDateTime(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")
+            : "-";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (autoRefreshCts is not null)
+        {
+            await autoRefreshCts.CancelAsync();
+            autoRefreshCts.Dispose();
+        }
+    }
+
+    private static string GetStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Succeeded" => "badge text-bg-success",
+            "Skipped" => "badge text-bg-warning",
+            "Failed" => "badge text-bg-danger",
+            _ => "badge text-bg-secondary"
+        };
+    }
+
+    private static string GetGoDutchAccountStatusBadgeClass(GoDutchAccountLookupViewModel account)
+    {
+        return account.AlreadyExists
+            ? "badge text-bg-secondary"
+            : "badge text-bg-success";
+    }
+
+    private sealed class BankAccountRowViewModel
+    {
+        public BankAccountViewModel BankAccount { get; set; } = new();
+        public BankAccountSyncStatusViewModel? SyncStatus { get; set; }
+    }
+}

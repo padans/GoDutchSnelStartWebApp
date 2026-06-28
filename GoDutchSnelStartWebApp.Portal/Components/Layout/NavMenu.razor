@@ -1,0 +1,63 @@
+﻿<nav class="app-nav">
+    <div class="app-brand">
+        <div class="app-brand-title">GoDutch SnelStart</div>
+        <div class="app-brand-subtitle">Koppelingen & exports</div>
+    </div>
+
+    <div class="app-nav-section">
+        <div class="app-nav-heading-dark">Overzicht</div>
+
+        <NavLink class="app-nav-link" href="" Match="NavLinkMatch.All">
+            <span class="app-nav-link-icon">🏠</span>
+            <span>Start</span>
+        </NavLink>
+    </div>
+
+    <div class="app-nav-section">
+        <div class="app-nav-heading-dark">GoDutch</div>
+        
+        <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🏦</span>
+            <span>Bankaccounts</span>
+        </NavLink>
+
+        <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🔁</span>
+            <span>Sync & resync</span>
+        </NavLink>
+    </div>
+
+    @* <div class="app-nav-section">
+        <div class="app-nav-heading">SnelStart</div>
+
+        <NavLink class="app-nav-link" href="mypos/mappings" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">📘</span>
+            <span>Grootboeken & mappings</span>
+        </NavLink>
+
+        <div class="app-nav-note">
+            Tenantgerichte SnelStart-koppeling wordt gebruikt door myPOS en straks OAuth.
+        </div>
+    </div> *@
+
+    <div class="app-nav-section">
+        <div class="app-nav-heading-dark">myPOS</div>
+
+        <NavLink class="app-nav-link" href="mypos/mappings" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🧾</span>
+            <span>Transactietype mappings</span>
+        </NavLink>
+
+        <NavLink class="app-nav-link" href="mypos/import" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">⬇️</span>
+            <span>Transacties ophalen</span>
+        </NavLink>
+
+       
+
+        <NavLink class="app-nav-link" href="mypos/connection" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🔌</span>
+            <span>myPOS koppeling</span>
+        </NavLink>
+    </div>
+</nav>

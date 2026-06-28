@@ -1,0 +1,831 @@
+﻿@page "/mypos/mappings"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Components.Web
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosMappings> Logger
+
+<PageTitle>myPOS mappings</PageTitle>
+
+<h1>myPOS transactietype mappings</h1>
+<p class="text-muted">
+    Koppel myPOS transactietypes aan SnelStart grootboekrekeningen. De grootboeken en btw-tarieven worden opgehaald via de tenantgerichte SnelStart-koppeling.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success" role="alert">@successMessage</div>
+}
+
+@if (isLoading)
+{
+    <div class="mypos-loading-backdrop">
+        <div class="mypos-loading-dialog">
+            <div class="mypos-loading-header">
+                <h5 class="mb-0">myPOS mappings laden</h5>
+                <span class="badge bg-primary">@loadingProgressPercentage%</span>
+            </div>
+
+            <div class="mypos-loading-subtitle">@loadingProgressTitle</div>
+
+            <div class="progress mypos-loading-progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     role="progressbar"
+                     style="@LoadingProgressStyle"
+                     aria-valuenow="@loadingProgressPercentage"
+                     aria-valuemin="0"
+                     aria-valuemax="100">
+                    @loadingProgressPercentage%
+                </div>
+            </div>
+
+            <div class="mypos-loading-details">@loadingProgressDetails</div>
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">SnelStart grootboeken</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary" @onclick="LoadDataAsync" disabled="@isLoading">
+                @(isLoading ? "Laden..." : "Vernieuwen")
+            </button>
+
+            <button type="button" class="btn btn-outline-success" @onclick="ToggleCreateGrootboek" disabled="@isLoading">
+                @(showCreateGrootboek ? "Nieuw grootboek verbergen" : "Nieuw SnelStart grootboek")
+            </button>
+
+            <span class="text-muted">
+                @grootboeken.Count grootboek(en), @btwTarieven.Count actuele btw-tarief/tarieven), @mappings.Count myPOS code(s).
+            </span>
+        </div>
+
+        @if (showCreateGrootboek)
+        {
+            <div class="border rounded p-3 bg-light">
+                <h5>Nieuw SnelStart grootboek aanmaken</h5>
+
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Nummer</label>
+                        <input class="form-control" type="number" @bind="newGrootboek.Nummer" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Omschrijving</label>
+                        <input class="form-control" @bind="newGrootboek.Omschrijving" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Rekeningcode</label>
+                        <select class="form-select" @bind="newGrootboek.RekeningCode">
+                            <option value="WinstEnVerlies">Winst en verlies</option>
+                            <option value="Balans">Balans</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Grootboekfunctie</label>
+                        <select class="form-select" @bind="newGrootboek.Grootboekfunctie">
+                            <option value="Diversen">Diversen</option>
+                            <option value="DagboekMemoriaal">Dagboek memoriaal</option>
+                            <option value="DagboekBalans">Dagboek balans</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" @bind="newGrootboek.KostenplaatsVerplicht" />
+                            <label class="form-check-label">Kostenplaats verplicht</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" @bind="newGrootboek.Nonactief" />
+                            <label class="form-check-label">Non-actief</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 text-end align-self-end">
+                        <button type="button" class="btn btn-success" @onclick="CreateGrootboekAsync" disabled="@isCreatingGrootboek">
+                            @(isCreatingGrootboek ? "Aanmaken..." : "Aanmaken in SnelStart")
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-text mt-2">
+                    Gebruik voor myPOS mappings meestal gewone grootboekrekeningen met functie <strong>Diversen</strong>.
+                    De uiteindelijke myPOS export gaat later via het virtuele myPOS-bankboek.
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Zoeken en filteren</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Zoeken</label>
+                <input class="form-control" placeholder="Code, omschrijving, grootboek of btw..." @bind="searchText" @bind:event="oninput" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Filter</label>
+                <select class="form-select" @bind="mappingFilter">
+                    <option value="All">Alles</option>
+                    <option value="Mapped">Alleen gekoppeld</option>
+                    <option value="Unmapped">Alleen niet gekoppeld</option>
+                    <option value="Inactive">Alleen non-actief</option>
+                </select>
+            </div>
+
+            <div class="col-md-4 align-self-end text-muted">
+                @FilteredMappings.Count() zichtbaar.
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-info">
+        Even geduld. De myPOS mappings en SnelStart gegevens worden opgehaald.
+    </div>
+}
+else if (mappings.Count == 0)
+{
+    <div class="alert alert-warning">
+        Geen myPOS mappings gevonden. Voer eerst het seed-script uit voor deze tenant.
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">Mappings</div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Code</th>
+                        <th>Omschrijving</th>
+                        <th style="width: 340px;">SnelStart grootboek</th>
+                        <th style="width: 220px;">Huidige koppeling</th>
+                        <th style="width: 170px;">Btw-berekening</th>
+                        <th style="width: 170px;">Btw-soort</th>
+                        <th style="width: 100px;">Actief</th>
+                        <th style="width: 170px;">Actie</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var mapping in FilteredMappings)
+                    {
+                        <tr>
+                            <td><strong>@mapping.TransactionCode</strong></td>
+                            <td>@mapping.Description</td>
+
+                            <td>
+                                <select class="form-select form-select-sm"
+                                        value="@FormatGuid(mapping.SelectedGrootboekId)"
+                                        @onchange="args => OnGrootboekChanged(mapping, args.Value?.ToString())">
+                                    <option value="">-- Kies een grootboek --</option>
+
+                                    @foreach (var grootboek in grootboeken)
+                                    {
+                                        <option value="@grootboek.Id">@grootboek.DisplayName</option>
+                                    }
+                                </select>
+                            </td>
+
+                            <td>@mapping.GrootboekDisplayName</td>
+
+                            <td>
+                                <select class="form-select form-select-sm"
+                                        value="@mapping.BtwBerekening"
+                                        @onchange="args => OnBtwBerekeningChanged(mapping, args.Value?.ToString())">
+                                    <option value="Geen">Geen</option>
+                                    <option value="InclusiefBtw">Inclusief btw</option>
+                                    <option value="ExclusiefBtw">Exclusief btw</option>
+                                </select>
+                            </td>
+
+                            <td>
+                                <select class="form-select form-select-sm"
+                                        value="@FormatBtwTariefValue(mapping.BtwSoort, mapping.BtwPercentage)"
+                                        @onchange="args => OnBtwTariefChanged(mapping, args.Value?.ToString())"
+                                        disabled="@IsBtwDisabled(mapping)">
+                                    <option value="">-- Kies btw --</option>
+
+                                    @foreach (var tarief in btwTarieven)
+                                    {
+                                        <option value="@FormatBtwTariefValue(tarief.BtwSoort, tarief.BtwPercentage)">
+                                            @tarief.DisplayName
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+
+                            <td>
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       checked="@mapping.IsActive"
+                                       @onchange="args => mapping.IsActive = args.Value is bool b && b" />
+                            </td>
+
+                            <td>
+                                <button class="btn btn-primary btn-sm me-1"
+                                        @onclick="() => SaveMappingAsync(mapping)"
+                                        disabled="@isSaving">
+                                    Opslaan
+                                </button>
+
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="() => ClearMappingAsync(mapping)"
+                                        disabled="@isSaving">
+                                    Leeg
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer text-muted">
+            Btw-instelling alleen gebruiken wanneer alle transacties binnen dit myPOS-type onder één btw-tarief vallen.
+            Bij gemengde btw-tarieven moet de uitsplitsing uit het kassasysteem, artikelenbestand of verkoopadministratie komen.
+        </div>
+    </div>
+}
+
+<style>
+    .mypos-loading-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.22);
+    }
+
+    .mypos-loading-dialog {
+        width: min(560px, calc(100vw - 2rem));
+        border-radius: 12px;
+        background: #fff;
+        padding: 1.25rem 1.25rem 1.15rem;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+    }
+
+    .mypos-loading-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: .75rem;
+    }
+
+    .mypos-loading-subtitle {
+        margin-bottom: .75rem;
+        color: #495057;
+    }
+
+    .mypos-loading-progress {
+        height: 22px;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .mypos-loading-details {
+        margin-top: .75rem;
+        color: #495057;
+        font-size: .92rem;
+    }
+</style>
+
+@code {
+    private Guid tenantId;
+    private bool isLoading;
+    private bool isSaving;
+    private bool isCreatingGrootboek;
+    private bool showCreateGrootboek;
+    private bool hasLoadedData;
+
+    private int loadingProgressPercentage;
+    private string loadingProgressTitle = string.Empty;
+    private string loadingProgressDetails = string.Empty;
+
+    private string? errorMessage;
+    private string? successMessage;
+    private string searchText = string.Empty;
+    private string mappingFilter = "All";
+
+    private List<MyPosTransactionTypeMappingViewModel> mappings = [];
+    private List<SnelStartGrootboekLookupViewModel> grootboeken = [];
+    private List<SnelStartBtwTariefLookupViewModel> btwTarieven = [];
+    private CreateSnelStartGrootboekRequestViewModel newGrootboek = new();
+
+    private string LoadingProgressStyle => $"width: {loadingProgressPercentage}%";
+
+    private IEnumerable<MyPosTransactionTypeMappingViewModel> FilteredMappings
+    {
+        get
+        {
+            var query = mappings.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var search = searchText.Trim();
+
+                query = query.Where(x =>
+                    Contains(x.TransactionCode, search) ||
+                    Contains(x.Description, search) ||
+                    Contains(x.SnelStartGrootboekNummer, search) ||
+                    Contains(x.SnelStartGrootboekNaam, search) ||
+                    Contains(x.BtwBerekening, search) ||
+                    Contains(x.BtwSoort, search));
+            }
+
+            query = mappingFilter switch
+            {
+                "Mapped" => query.Where(x => x.SnelStartGrootboekId.HasValue),
+                "Unmapped" => query.Where(x => !x.SnelStartGrootboekId.HasValue),
+                "Inactive" => query.Where(x => !x.IsActive),
+                _ => query
+            };
+
+            return query.OrderBy(x => x.TransactionCode);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        tenantId = TenantOptions.Value.TenantId;
+
+        if (tenantId == Guid.Empty)
+        {
+            errorMessage = "TenantId ontbreekt in de Portal configuratie.";
+            isLoading = false;
+            return;
+        }
+
+        isLoading = true;
+        loadingProgressPercentage = 1;
+        loadingProgressTitle = "Laden gestart";
+        loadingProgressDetails = "De pagina wordt voorbereid.";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || hasLoadedData || tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        hasLoadedData = true;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isLoading = true;
+        loadingProgressPercentage = 1;
+        loadingProgressTitle = "Laden gestart";
+        loadingProgressDetails = "De pagina wordt voorbereid.";
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            await UpdateLoadingProgressAsync(5,
+                "Laden gestart",
+                "De tenantgegevens worden gecontroleerd.");
+
+            await UpdateLoadingProgressAsync(15,
+                "myPOS mappings ophalen...",
+                "Stap 1 van 4: de bestaande myPOS transactietype mappings worden opgehaald.");
+
+            var mappingResult = await BackendApiClient.GetMyPosTransactionTypeMappingsAsync(tenantId);
+
+            await UpdateLoadingProgressAsync(45,
+                "SnelStart grootboeken ophalen...",
+                "Stap 2 van 4: de grootboekrekeningen worden via de tenantgerichte SnelStart-koppeling opgehaald. Dit kan even duren.");
+
+            var grootboekResult = await BackendApiClient.GetTenantSnelStartGrootboekenAsync(tenantId);
+
+            await UpdateLoadingProgressAsync(75,
+                "SnelStart btw-tarieven ophalen...",
+                "Stap 3 van 4: de actuele btw-tarieven worden opgehaald bij SnelStart.");
+
+            var btwTariefResult = await BackendApiClient.GetTenantSnelStartBtwTarievenAsync(tenantId);
+
+            await UpdateLoadingProgressAsync(92,
+                "Gegevens verwerken...",
+                "Stap 4 van 4: de mappings, grootboeken en btw-tarieven worden voorbereid voor weergave.");
+
+            mappings = mappingResult
+                .OrderBy(x => x.TransactionCode)
+                .ToList();
+
+            grootboeken = grootboekResult
+                .OrderBy(x => x.Nummer)
+                .ThenBy(x => x.Omschrijving)
+                .ToList();
+
+            btwTarieven = btwTariefResult
+                .Where(IsActueelBtwTarief)
+                .OrderBy(x => x.BtwSoort)
+                .ThenBy(x => x.BtwPercentage)
+                .ToList();
+
+            foreach (var mapping in mappings)
+            {
+                mapping.SelectedGrootboekId = mapping.SnelStartGrootboekId;
+                NormalizeBtwForDisplay(mapping);
+            }
+
+            await UpdateLoadingProgressAsync(100,
+                "Gereed",
+                "Alle gegevens zijn geladen.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS mappings laden mislukt.");
+            errorMessage = $"myPOS mappings laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task UpdateLoadingProgressAsync(
+        int percentage,
+        string title,
+        string details)
+    {
+        loadingProgressPercentage = Math.Clamp(percentage, 0, 100);
+        loadingProgressTitle = title;
+        loadingProgressDetails = details;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+    }
+
+    private void ToggleCreateGrootboek()
+    {
+        errorMessage = null;
+        successMessage = null;
+        showCreateGrootboek = !showCreateGrootboek;
+    }
+
+    private async Task CreateGrootboekAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (newGrootboek.Nummer <= 0)
+        {
+            errorMessage = "Vul een geldig grootboeknummer in.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newGrootboek.Omschrijving))
+        {
+            errorMessage = "Vul een omschrijving in.";
+            return;
+        }
+
+        var existingGrootboek = FindExistingGrootboekByNumber(newGrootboek.Nummer);
+
+        if (existingGrootboek is not null)
+        {
+            successMessage =
+                $"SnelStart grootboek {existingGrootboek.DisplayName} is al aanwezig. " +
+                "Kies dit grootboek uit de lijst of gebruik een ander nummer.";
+
+            showCreateGrootboek = false;
+            return;
+        }
+
+        isCreatingGrootboek = true;
+
+        try
+        {
+            var created = await BackendApiClient.CreateTenantSnelStartGrootboekAsync(
+                tenantId,
+                newGrootboek);
+
+            await RefreshGrootboekenAsync();
+
+            successMessage = $"SnelStart grootboek {created.DisplayName} aangemaakt.";
+            newGrootboek = new CreateSnelStartGrootboekRequestViewModel();
+            showCreateGrootboek = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "SnelStart grootboek aanmaken mislukt. Nummer: {Nummer}, Omschrijving: {Omschrijving}",
+                newGrootboek.Nummer,
+                newGrootboek.Omschrijving);
+
+            await RefreshGrootboekenSafeAsync();
+
+            var existingAfterRefresh = FindExistingGrootboekByNumber(newGrootboek.Nummer);
+
+            if (existingAfterRefresh is not null)
+            {
+                errorMessage = null;
+                successMessage =
+                    $"SnelStart grootboek {existingAfterRefresh.DisplayName} is al aanwezig. " +
+                    "Kies dit grootboek uit de lijst of gebruik een ander nummer.";
+
+                showCreateGrootboek = false;
+                return;
+            }
+
+            if (IsBadGatewayOrDuplicateLikeError(ex))
+            {
+                errorMessage =
+                    $"SnelStart grootboek {newGrootboek.Nummer} kon niet worden aangemaakt. " +
+                    "Controleer of dit nummer al bestaat in SnelStart. Vernieuw eventueel de grootboekenlijst of gebruik een ander nummer.";
+            }
+            else
+            {
+                errorMessage = $"SnelStart grootboek aanmaken mislukt: {ex.Message}";
+            }
+        }
+        finally
+        {
+            isCreatingGrootboek = false;
+        }
+    }
+
+    private async Task RefreshGrootboekenAsync()
+    {
+        var refreshed = await BackendApiClient.GetTenantSnelStartGrootboekenAsync(tenantId);
+
+        grootboeken = refreshed
+            .OrderBy(x => x.Nummer)
+            .ThenBy(x => x.Omschrijving)
+            .ToList();
+    }
+
+    private async Task RefreshGrootboekenSafeAsync()
+    {
+        try
+        {
+            await RefreshGrootboekenAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SnelStart grootboeken verversen na fout is mislukt.");
+        }
+    }
+
+    private SnelStartGrootboekLookupViewModel? FindExistingGrootboekByNumber(int nummer)
+    {
+        var nummerText = nummer.ToString();
+
+        return grootboeken.FirstOrDefault(x =>
+            string.Equals(
+                x.Nummer?.Trim(),
+                nummerText,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsBadGatewayOrDuplicateLikeError(Exception ex)
+    {
+        var message = ex.Message ?? string.Empty;
+
+        return message.Contains("502", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("Bad Gateway", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("already", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("bestaat", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("aanwezig", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnGrootboekChanged(MyPosTransactionTypeMappingViewModel mapping, string? rawValue)
+    {
+        mapping.SelectedGrootboekId = Guid.TryParse(rawValue, out var grootboekId)
+            ? grootboekId
+            : null;
+    }
+
+    private void OnBtwBerekeningChanged(MyPosTransactionTypeMappingViewModel mapping, string? value)
+    {
+        mapping.BtwBerekening = NormalizeBtwBerekening(value);
+
+        if (string.Equals(mapping.BtwBerekening, "Geen", StringComparison.OrdinalIgnoreCase))
+        {
+            mapping.BtwSoort = "Geen";
+            mapping.BtwPercentage = 0m;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(mapping.BtwSoort) ||
+            string.Equals(mapping.BtwSoort, "Geen", StringComparison.OrdinalIgnoreCase))
+        {
+            var defaultTarief = btwTarieven.FirstOrDefault(x =>
+                string.Equals(x.BtwSoort, "Laag", StringComparison.OrdinalIgnoreCase));
+
+            defaultTarief ??= btwTarieven.FirstOrDefault(x =>
+                string.Equals(x.BtwSoort, "Hoog", StringComparison.OrdinalIgnoreCase));
+
+            if (defaultTarief is not null)
+            {
+                mapping.BtwSoort = defaultTarief.BtwSoort;
+                mapping.BtwPercentage = defaultTarief.BtwPercentage;
+            }
+        }
+    }
+
+    private void OnBtwTariefChanged(MyPosTransactionTypeMappingViewModel mapping, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            mapping.BtwSoort = null;
+            mapping.BtwPercentage = null;
+            return;
+        }
+
+        var parts = rawValue.Split('|', StringSplitOptions.TrimEntries);
+
+        if (parts.Length != 2)
+        {
+            mapping.BtwSoort = null;
+            mapping.BtwPercentage = null;
+            return;
+        }
+
+        mapping.BtwSoort = parts[0];
+
+        mapping.BtwPercentage = decimal.TryParse(
+            parts[1],
+            System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var percentage)
+            ? percentage
+            : null;
+    }
+
+    private async Task ClearMappingAsync(MyPosTransactionTypeMappingViewModel mapping)
+    {
+        mapping.SelectedGrootboekId = null;
+        await SaveMappingAsync(mapping);
+    }
+
+    private async Task SaveMappingAsync(MyPosTransactionTypeMappingViewModel mapping)
+    {
+        errorMessage = null;
+        successMessage = null;
+        isSaving = true;
+
+        try
+        {
+            NormalizeBtwForSave(mapping);
+
+            var selectedGrootboek = grootboeken.FirstOrDefault(x => x.Id == mapping.SelectedGrootboekId);
+
+            var request = new UpsertMyPosTransactionTypeMappingRequestViewModel
+            {
+                TransactionCode = mapping.TransactionCode,
+                Description = mapping.Description,
+                SnelStartGrootboekId = selectedGrootboek?.Id,
+                SnelStartGrootboekNummer = selectedGrootboek?.Nummer,
+                SnelStartGrootboekNaam = selectedGrootboek?.Omschrijving,
+                BtwBerekening = mapping.BtwBerekening,
+                BtwSoort = mapping.BtwSoort,
+                BtwPercentage = mapping.BtwPercentage,
+                IsActive = mapping.IsActive
+            };
+
+            var saved = await BackendApiClient.UpsertMyPosTransactionTypeMappingAsync(
+                tenantId,
+                request);
+
+            var index = mappings.FindIndex(x => x.Id == saved.Id || x.TransactionCode == saved.TransactionCode);
+
+            if (index >= 0)
+            {
+                saved.SelectedGrootboekId = saved.SnelStartGrootboekId;
+                NormalizeBtwForDisplay(saved);
+                mappings[index] = saved;
+            }
+
+            successMessage = $"Mapping {mapping.TransactionCode} opgeslagen.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS mapping opslaan mislukt voor code {TransactionCode}.", mapping.TransactionCode);
+            errorMessage = $"Mapping opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string FormatGuid(Guid? value)
+    {
+        return value.HasValue && value.Value != Guid.Empty
+            ? value.Value.ToString()
+            : string.Empty;
+    }
+
+    private static bool Contains(string? value, string search)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               value.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsActueelBtwTarief(SnelStartBtwTariefLookupViewModel tarief)
+    {
+        var now = DateTime.UtcNow;
+
+        var vanaf = tarief.DatumVanaf?.ToUniversalTime() ?? DateTime.MinValue;
+        var tot = tarief.DatumTotEnMet?.ToUniversalTime() ?? DateTime.MaxValue;
+
+        return vanaf <= now && now <= tot;
+    }
+
+    private static string FormatBtwTariefValue(string? btwSoort, decimal? btwPercentage)
+    {
+        if (string.IsNullOrWhiteSpace(btwSoort) || !btwPercentage.HasValue)
+        {
+            return string.Empty;
+        }
+
+        return $"{btwSoort.Trim()}|{btwPercentage.Value:0.####}";
+    }
+
+    private static bool IsBtwDisabled(MyPosTransactionTypeMappingViewModel mapping)
+    {
+        return string.Equals(mapping.BtwBerekening, "Geen", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void NormalizeBtwForSave(MyPosTransactionTypeMappingViewModel mapping)
+    {
+        mapping.BtwBerekening = NormalizeBtwBerekening(mapping.BtwBerekening);
+
+        if (string.Equals(mapping.BtwBerekening, "Geen", StringComparison.OrdinalIgnoreCase))
+        {
+            mapping.BtwSoort = "Geen";
+            mapping.BtwPercentage = 0m;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(mapping.BtwSoort))
+        {
+            mapping.BtwSoort = null;
+        }
+    }
+
+    private static void NormalizeBtwForDisplay(MyPosTransactionTypeMappingViewModel mapping)
+    {
+        mapping.BtwBerekening = NormalizeBtwBerekening(mapping.BtwBerekening);
+
+        if (string.Equals(mapping.BtwBerekening, "Geen", StringComparison.OrdinalIgnoreCase))
+        {
+            mapping.BtwSoort = "Geen";
+            mapping.BtwPercentage = 0m;
+        }
+    }
+
+    private static string NormalizeBtwBerekening(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Geen";
+        }
+
+        return value.Trim() switch
+        {
+            "InclusiefBtw" => "InclusiefBtw",
+            "ExclusiefBtw" => "ExclusiefBtw",
+            _ => "Geen"
+        };
+    }
+}

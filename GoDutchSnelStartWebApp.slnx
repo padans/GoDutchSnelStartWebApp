@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="GoDutchSnelStartWebApp.Application/GoDutchSnelStartWebApp.Application.csproj" Id="768a8912-02ac-440e-8cd6-a1515e8c5fc0" />
+  <Project Path="GoDutchSnelStartWebApp.Domain/GoDutchSnelStartWebApp.Domain.csproj" Id="c3362d57-e944-46c1-a422-3a5730f0e24b" />
+  <Project Path="GoDutchSnelStartWebApp.Infrastructure/GoDutchSnelStartWebApp.Infrastructure.csproj" Id="56660f7f-6516-4163-ba80-ebf0b22b3593" />
+  <Project Path="GoDutchSnelStartWebApp.Portal/GoDutchSnelStartWebApp.Portal.csproj" Id="18e26540-84a9-4e40-9210-4a01b880bc07" />
+  <Project Path="GoDutchSnelStartWebApp.Tests/GoDutchSnelStartWebApp.Tests.csproj" Id="3b63c6ce-7fe1-492b-8ad8-eebbfe9f63fd" />
+  <Project Path="GoDutchSnelStartWebApp.Web/GoDutchSnelStartWebApp.Web.csproj" Id="79292c7b-5402-446a-ae12-7147325a2b6f" />
+</Solution>
