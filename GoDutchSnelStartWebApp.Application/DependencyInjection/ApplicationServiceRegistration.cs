@@ -48,6 +48,7 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IMyPosTransactionTypeMappingService, MyPosTransactionTypeMappingService>();
         services.AddScoped<IMyPosTransactionTotalService, MyPosTransactionTotalService>();
         services.AddScoped<IMyPosExportBatchService, MyPosExportBatchService>();
+        services.AddScoped<IMyPosAutoSyncService, MyPosAutoSyncService>();
 
         services.AddScoped<IBankAccountResyncService, BankAccountResyncService>();
 

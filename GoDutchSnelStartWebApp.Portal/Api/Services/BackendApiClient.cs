@@ -923,4 +923,56 @@ public sealed class BackendApiClient : IBackendApiClient
         return result;
     }
 
+    public async Task<MyPosAutoSyncSettingsViewModel> GetMyPosAutoSyncSettingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/mypos/auto-sync/settings";
+
+        _logger.LogInformation("myPOS auto-sync instellingen ophalen via {Url}", url);
+
+        var result = await ExecuteWithRetryAsync(
+            ct => _httpClient.GetFromJsonAsync<MyPosAutoSyncSettingsViewModel>(url, ct),
+            operationName: "myPOS auto-sync instellingen ophalen",
+            cancellationToken);
+
+        return result ?? throw new InvalidOperationException("myPOS auto-sync instellingen response was leeg.");
+    }
+
+    public async Task UpdateMyPosAutoSyncSettingsAsync(
+        MyPosAutoSyncSettingsViewModel settings,
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/mypos/auto-sync/settings";
+
+        _logger.LogInformation("myPOS auto-sync instellingen opslaan via {Url}", url);
+
+        await ExecuteWithRetryAsync<object?>(
+            async ct =>
+            {
+                using var response = await _httpClient.PutAsJsonAsync(url, settings, ct);
+                response.EnsureSuccessStatusCode();
+                return null;
+            },
+            operationName: "myPOS auto-sync instellingen opslaan",
+            cancellationToken);
+    }
+
+    public async Task TriggerMyPosAutoSyncAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/mypos/auto-sync/run";
+
+        _logger.LogInformation("myPOS auto-sync handmatig triggeren via {Url}", url);
+
+        await ExecuteWithRetryAsync<object?>(
+            async ct =>
+            {
+                using var response = await _httpClient.PostAsync(url, content: null, ct);
+                response.EnsureSuccessStatusCode();
+                return null;
+            },
+            operationName: "myPOS auto-sync handmatig uitvoeren",
+            cancellationToken);
+    }
+
 }

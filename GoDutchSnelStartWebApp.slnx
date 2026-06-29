@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Capture.PNG" />
+    <File Path="GoDutchSnelStartWebApp_Swagger.json" />
+    <File Path="MyPos_Swagger.json" />
+    <File Path="___SnelStartAPI.json" />
+  </Folder>
   <Project Path="GoDutchSnelStartWebApp.Application/GoDutchSnelStartWebApp.Application.csproj" Id="768a8912-02ac-440e-8cd6-a1515e8c5fc0" />
   <Project Path="GoDutchSnelStartWebApp.Domain/GoDutchSnelStartWebApp.Domain.csproj" Id="c3362d57-e944-46c1-a422-3a5730f0e24b" />
   <Project Path="GoDutchSnelStartWebApp.Infrastructure/GoDutchSnelStartWebApp.Infrastructure.csproj" Id="56660f7f-6516-4163-ba80-ebf0b22b3593" />

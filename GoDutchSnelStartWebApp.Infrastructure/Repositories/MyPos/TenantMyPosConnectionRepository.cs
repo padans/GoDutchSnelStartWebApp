@@ -77,6 +77,30 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         return null;
     }
 
+    public async Task<IReadOnlyList<TenantMyPosConnection>> GetAllActiveAsync(
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Executing dbo.TenantMyPosConnections_GetAllActive");
+
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand("dbo.TenantMyPosConnections_GetAllActive", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var results = new List<TenantMyPosConnection>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(Map(reader));
+        }
+
+        return results;
+    }
+
     public async Task CreateAsync(
         TenantMyPosConnection connection,
         CancellationToken cancellationToken = default)

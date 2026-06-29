@@ -37,6 +37,8 @@ public static class InfrastructureServiceRegistration
 
         services.Configure<GoDutchAutoSyncOptions>(
             configuration.GetSection(GoDutchAutoSyncOptions.SectionName));
+        services.Configure<MyPosAutoSyncOptions>(
+            configuration.GetSection(MyPosAutoSyncOptions.SectionName));
         services.Configure<SnelStartImportRetryOptions>(
             configuration.GetSection(SnelStartImportRetryOptions.SectionName));
         services.Configure<GoDutchApiRetryOptions>(
@@ -81,8 +83,11 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IMt940Generator, Mt940Generator>();
         services.AddScoped<ICamt053Generator, Camt053Generator>();
 
-        // Background worker
+        services.AddScoped<IMyPosAutoSyncSettingsRepository, MyPosAutoSyncSettingsRepository>();
+
+        // Background workers
         services.AddHostedService<GoDutchAutoSyncBackgroundWorker>();
+        services.AddHostedService<MyPosAutoSyncBackgroundWorker>();
 
         return services;
     }

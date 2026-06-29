@@ -1,0 +1,197 @@
+@page "/mypos/auto-sync"
+@rendermode InteractiveServer
+
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject ILogger<MyPosAutoSync> Logger
+
+<PageTitle>myPOS auto-sync</PageTitle>
+
+<h1>myPOS auto-sync</h1>
+<p class="text-muted">
+    Stel het synchronisatie-interval in en voer de sync handmatig uit voor alle actieve myPOS-koppelingen.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success" role="alert">@successMessage</div>
+}
+
+@if (isLoading)
+{
+    <p>Instellingen laden...</p>
+}
+else if (settings is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">Instellingen</div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="enabled"
+                               @bind="settings.Enabled" />
+                        <label class="form-check-label" for="enabled">
+                            Auto-sync ingeschakeld
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Interval (minuten)</label>
+                    <input type="number"
+                           class="form-control"
+                           min="1"
+                           max="1440"
+                           @bind="settings.IntervalMinutes" />
+                    <div class="form-text">Minimaal 1, maximaal 1440 (24 uur).</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Lookback (uren)</label>
+                    <input type="number"
+                           class="form-control"
+                           min="1"
+                           max="720"
+                           @bind="settings.LookbackHours" />
+                    <div class="form-text">Hoeveel uur terug per importronde.</div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="button"
+                        class="btn btn-primary"
+                        @onclick="SaveSettingsAsync"
+                        disabled="@isSaving">
+                    @(isSaving ? "Opslaan..." : "Opslaan")
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary ms-2"
+                        @onclick="LoadSettingsAsync"
+                        disabled="@isSaving">
+                    Annuleren
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Handmatig uitvoeren</div>
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                Voer de auto-sync nu direct uit voor alle actieve myPOS-koppelingen,
+                met de lookback-periode uit de instellingen hierboven.
+            </p>
+
+            <button type="button"
+                    class="btn btn-outline-primary"
+                    @onclick="RunSyncAsync"
+                    disabled="@isRunning">
+                @(isRunning ? "Bezig met synchroniseren..." : "Nu uitvoeren")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private MyPosAutoSyncSettingsViewModel? settings;
+    private bool isLoading;
+    private bool isSaving;
+    private bool isRunning;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsAsync();
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            settings = await BackendApiClient.GetMyPosAutoSyncSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS auto-sync instellingen laden mislukt.");
+            errorMessage = $"Instellingen laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (settings is null) return;
+
+        errorMessage = null;
+        successMessage = null;
+
+        if (settings.IntervalMinutes < 1)
+        {
+            errorMessage = "Interval moet minimaal 1 minuut zijn.";
+            return;
+        }
+
+        if (settings.LookbackHours < 1)
+        {
+            errorMessage = "Lookback moet minimaal 1 uur zijn.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            await BackendApiClient.UpdateMyPosAutoSyncSettingsAsync(settings);
+            successMessage = "Instellingen opgeslagen. De background worker gebruikt het nieuwe interval bij de volgende cyclus.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS auto-sync instellingen opslaan mislukt.");
+            errorMessage = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task RunSyncAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isRunning = true;
+
+        try
+        {
+            await BackendApiClient.TriggerMyPosAutoSyncAsync();
+            successMessage = "myPOS auto-sync is uitgevoerd voor alle actieve koppelingen.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS auto-sync handmatig uitvoeren mislukt.");
+            errorMessage = $"Auto-sync uitvoeren mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+}

@@ -161,4 +161,14 @@ public interface IBackendApiClient
     Guid batchId,
     CancellationToken cancellationToken = default);
 
+    Task<MyPosAutoSyncSettingsViewModel> GetMyPosAutoSyncSettingsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task UpdateMyPosAutoSyncSettingsAsync(
+        MyPosAutoSyncSettingsViewModel settings,
+        CancellationToken cancellationToken = default);
+
+    Task TriggerMyPosAutoSyncAsync(
+        CancellationToken cancellationToken = default);
+
 }
