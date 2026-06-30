@@ -238,4 +238,25 @@ public sealed class MyPosRawTransactionRepository : IMyPosRawTransactionReposito
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<string>> GetDistinctTransactionTypesAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("dbo.MyPosRawTransactions_GetDistinctTransactionTypesByTenant", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+        command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = tenantId });
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var result = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var type = reader.IsDBNull(0) ? null : reader.GetString(0);
+            if (!string.IsNullOrWhiteSpace(type))
+                result.Add(type);
+        }
+        return result;
+    }
 }

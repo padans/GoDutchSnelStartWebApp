@@ -36,6 +36,14 @@ public sealed class Tenant
     /// </summary>
     public string? Phone { get; set; }
 
+    public string? Address { get; set; }
+    public string? PostalCode { get; set; }
+    public string? City { get; set; }
+    public string? KvkNumber { get; set; }
+
+    public bool GoDutchEnabled { get; set; }
+    public bool MyPosEnabled { get; set; }
+
     /// <summary>
     /// Legacy veld - wordt uitgefaseerd. Gebruik BankAccount.Iban.
     /// Nog niet verwijderen zolang bestaande code of mappings dit gebruiken.

@@ -90,7 +90,13 @@ public sealed class TenantRepository : ITenantRepository
         command.Parameters.Add(new SqlParameter("@ContactName", SqlDbType.NVarChar, 200) { Value = (object?)tenant.ContactName ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@Email", SqlDbType.NVarChar, 256) { Value = (object?)tenant.Email ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@Phone", SqlDbType.NVarChar, 50) { Value = (object?)tenant.Phone ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@Address", SqlDbType.NVarChar, 200) { Value = (object?)tenant.Address ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@PostalCode", SqlDbType.NVarChar, 20) { Value = (object?)tenant.PostalCode ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@City", SqlDbType.NVarChar, 100) { Value = (object?)tenant.City ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@KvkNumber", SqlDbType.NVarChar, 20) { Value = (object?)tenant.KvkNumber ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@DefaultIban", SqlDbType.NVarChar, 34) { Value = (object?)tenant.DefaultIban ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@GoDutchEnabled", SqlDbType.Bit) { Value = tenant.GoDutchEnabled });
+        command.Parameters.Add(new SqlParameter("@MyPosEnabled", SqlDbType.Bit) { Value = tenant.MyPosEnabled });
         command.Parameters.Add(new SqlParameter("@Status", SqlDbType.NVarChar, 50) { Value = tenant.Status.ToString() });
         command.Parameters.Add(new SqlParameter("@IsActive", SqlDbType.Bit) { Value = tenant.IsActive });
         command.Parameters.Add(new SqlParameter("@TrialStartsUtc", SqlDbType.DateTime2) { Value = tenant.TrialStartsUtc ?? (object)DBNull.Value });
@@ -123,7 +129,13 @@ public sealed class TenantRepository : ITenantRepository
         command.Parameters.Add(new SqlParameter("@ContactName", SqlDbType.NVarChar, 200) { Value = (object?)tenant.ContactName ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@Email", SqlDbType.NVarChar, 256) { Value = (object?)tenant.Email ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@Phone", SqlDbType.NVarChar, 50) { Value = (object?)tenant.Phone ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@Address", SqlDbType.NVarChar, 200) { Value = (object?)tenant.Address ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@PostalCode", SqlDbType.NVarChar, 20) { Value = (object?)tenant.PostalCode ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@City", SqlDbType.NVarChar, 100) { Value = (object?)tenant.City ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@KvkNumber", SqlDbType.NVarChar, 20) { Value = (object?)tenant.KvkNumber ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@DefaultIban", SqlDbType.NVarChar, 34) { Value = (object?)tenant.DefaultIban ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@GoDutchEnabled", SqlDbType.Bit) { Value = tenant.GoDutchEnabled });
+        command.Parameters.Add(new SqlParameter("@MyPosEnabled", SqlDbType.Bit) { Value = tenant.MyPosEnabled });
         command.Parameters.Add(new SqlParameter("@Status", SqlDbType.NVarChar, 50) { Value = tenant.Status.ToString() });
         command.Parameters.Add(new SqlParameter("@IsActive", SqlDbType.Bit) { Value = tenant.IsActive });
         command.Parameters.Add(new SqlParameter("@TrialStartsUtc", SqlDbType.DateTime2) { Value = tenant.TrialStartsUtc ?? (object)DBNull.Value });
@@ -176,9 +188,23 @@ public sealed class TenantRepository : ITenantRepository
             Phone = reader.IsDBNull(reader.GetOrdinal("Phone"))
                 ? null
                 : reader.GetString(reader.GetOrdinal("Phone")),
+            Address = reader.IsDBNull(reader.GetOrdinal("Address"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("Address")),
+            PostalCode = reader.IsDBNull(reader.GetOrdinal("PostalCode"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("PostalCode")),
+            City = reader.IsDBNull(reader.GetOrdinal("City"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("City")),
+            KvkNumber = reader.IsDBNull(reader.GetOrdinal("KvkNumber"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("KvkNumber")),
             DefaultIban = reader.IsDBNull(reader.GetOrdinal("DefaultIban"))
                 ? null
                 : reader.GetString(reader.GetOrdinal("DefaultIban")),
+            GoDutchEnabled = reader.GetBoolean(reader.GetOrdinal("GoDutchEnabled")),
+            MyPosEnabled = reader.GetBoolean(reader.GetOrdinal("MyPosEnabled")),
             Status = reader.IsDBNull(reader.GetOrdinal("Status"))
                 ? TenantStatus.Draft
                 : Enum.Parse<TenantStatus>(reader.GetString(reader.GetOrdinal("Status")), ignoreCase: true),

@@ -1,0 +1,28 @@
+@rendermode InteractiveServer
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject ILogger<NotificationBadge> Logger
+
+@if (unreadCount > 0)
+{
+    <span class="badge text-bg-danger ms-1">@unreadCount</span>
+}
+
+@code {
+    private int unreadCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            unreadCount = await BackendApiClient.GetUnreadNotificationCountAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Notificatieaantal ophalen mislukt.");
+        }
+    }
+}

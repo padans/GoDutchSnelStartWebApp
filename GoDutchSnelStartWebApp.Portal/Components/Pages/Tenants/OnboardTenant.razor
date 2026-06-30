@@ -1,0 +1,174 @@
+@page "/tenants/onboard"
+@rendermode InteractiveServer
+
+@using GoDutchSnelStartWebApp.Portal.Models
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject NavigationManager Navigation
+@inject ILogger<OnboardTenant> Logger
+
+<PageTitle>Nieuwe klant aanmelden</PageTitle>
+
+<h1>Nieuwe klant aanmelden</h1>
+<p class="text-muted">Vul de gegevens van de nieuwe klant in. De klant wordt aangemaakt en ontvangt een proefperiode indien aangegeven.</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+<EditForm Model="form" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+
+    <div class="card mb-3">
+        <div class="card-header">Bedrijfsgegevens</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Bedrijfsnaam <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="form.CompanyName" placeholder="Officiële bedrijfsnaam" />
+                    <ValidationMessage For="() => form.CompanyName" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Contactpersoon</label>
+                    <InputText class="form-control" @bind-Value="form.ContactName" placeholder="Voor- en achternaam" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">E-mailadres</label>
+                    <InputText class="form-control" type="email" @bind-Value="form.Email" placeholder="contact@bedrijf.nl" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Telefoonnummer</label>
+                    <InputText class="form-control" @bind-Value="form.Phone" placeholder="+31 6 12345678" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">KvK-nummer</label>
+                    <InputText class="form-control" @bind-Value="form.KvkNumber" placeholder="12345678" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">Adres</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Straat en huisnummer</label>
+                    <InputText class="form-control" @bind-Value="form.Address" placeholder="Hoofdstraat 1" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Postcode</label>
+                    <InputText class="form-control" @bind-Value="form.PostalCode" placeholder="1234 AB" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Plaats</label>
+                    <InputText class="form-control" @bind-Value="form.City" placeholder="Amsterdam" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">Modules</div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Selecteer welke modules voor deze klant worden geactiveerd.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <InputCheckbox class="form-check-input" @bind-Value="form.GoDutchEnabled" id="godutch" />
+                        <label class="form-check-label" for="godutch">
+                            <strong>GoDutch → SnelStart</strong>
+                            <div class="text-muted small">Bankafschriften automatisch importeren</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <InputCheckbox class="form-check-input" @bind-Value="form.MyPosEnabled" id="mypos" />
+                        <label class="form-check-label" for="mypos">
+                            <strong>myPOS → SnelStart</strong>
+                            <div class="text-muted small">Pinbetalingen automatisch boeken</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Proefperiode</div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <InputCheckbox class="form-check-input" @bind-Value="form.IsTrial" id="istrial" />
+                <label class="form-check-label" for="istrial">Klant start met proefperiode</label>
+            </div>
+
+            @if (form.IsTrial)
+            {
+                <div class="col-md-3">
+                    <label class="form-label">Duur (dagen)</label>
+                    <InputNumber class="form-control" @bind-Value="form.TrialDurationDays" min="1" max="365" />
+                    <div class="form-text">
+                        Proefperiode loopt tot:
+                        <strong>@DateTime.Now.AddDays(form.TrialDurationDays).ToString("dd-MM-yyyy")</strong>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+        @(isSaving ? "Opslaan..." : "Klant aanmelden")
+    </button>
+
+    <a href="/" class="btn btn-outline-secondary ms-2">Annuleren</a>
+</EditForm>
+
+@code {
+    private readonly OnboardTenantRequestViewModel form = new();
+    private bool isSaving;
+    private string? errorMessage;
+
+    private async Task SubmitAsync()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(form.CompanyName))
+        {
+            errorMessage = "Bedrijfsnaam is verplicht.";
+            return;
+        }
+
+        if (!form.GoDutchEnabled && !form.MyPosEnabled)
+        {
+            errorMessage = "Selecteer minimaal één module.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var id = await BackendApiClient.OnboardTenantAsync(form);
+            Logger.LogInformation("Nieuwe tenant aangemaakt: {TenantId}", id);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Tenant aanmaken mislukt.");
+            errorMessage = $"Aanmelden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

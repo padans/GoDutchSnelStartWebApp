@@ -1,4 +1,4 @@
-﻿using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
+using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
 using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
@@ -12,13 +12,16 @@ public sealed class MyPosTransactionTypeMappingService : IMyPosTransactionTypeMa
 {
     private readonly ITenantRepository _tenantRepository;
     private readonly IMyPosTransactionTypeMappingRepository _mappingRepository;
+    private readonly IMyPosRawTransactionRepository _rawTransactionRepository;
 
     public MyPosTransactionTypeMappingService(
         ITenantRepository tenantRepository,
-        IMyPosTransactionTypeMappingRepository mappingRepository)
+        IMyPosTransactionTypeMappingRepository mappingRepository,
+        IMyPosRawTransactionRepository rawTransactionRepository)
     {
         _tenantRepository = tenantRepository;
         _mappingRepository = mappingRepository;
+        _rawTransactionRepository = rawTransactionRepository;
     }
 
     public async Task<IReadOnlyList<MyPosTransactionTypeMappingDto>> GetByTenantAsync(
@@ -98,6 +101,53 @@ public sealed class MyPosTransactionTypeMappingService : IMyPosTransactionTypeMa
         }
 
         await _mappingRepository.DeleteAsync(id, DateTime.UtcNow, cancellationToken);
+    }
+
+    public async Task<MyPosTransactionTypeStatusResultDto> GetTransactionTypeStatusAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureTenantExistsAsync(tenantId, cancellationToken);
+
+        var knownTypesTask = _rawTransactionRepository.GetDistinctTransactionTypesAsync(tenantId, cancellationToken);
+        var mappingsTask = _mappingRepository.GetByTenantAsync(tenantId, cancellationToken);
+
+        await Task.WhenAll(knownTypesTask, mappingsTask);
+
+        var knownTypes = knownTypesTask.Result;
+        var mappings = mappingsTask.Result;
+
+        var mappingLookup = mappings
+            .Where(m => m.SnelStartGrootboek is not null)
+            .ToDictionary(m => m.TransactionCode, StringComparer.OrdinalIgnoreCase);
+
+        var allMappingsByCode = mappings
+            .ToDictionary(m => m.TransactionCode, StringComparer.OrdinalIgnoreCase);
+
+        var typeStatuses = knownTypes
+            .OrderBy(t => t)
+            .Select(t =>
+            {
+                allMappingsByCode.TryGetValue(t, out var mapping);
+                mappingLookup.TryGetValue(t, out var activeMapping);
+                return new MyPosTransactionTypeStatusDto
+                {
+                    TransactionType = t,
+                    IsMapped = mapping is not null,
+                    HasActiveMapping = activeMapping is not null && activeMapping.IsActive,
+                    SnelStartGrootboekNummer = activeMapping?.SnelStartGrootboek?.Nummer,
+                    SnelStartGrootboekNaam = activeMapping?.SnelStartGrootboek?.Naam
+                };
+            })
+            .ToList();
+
+        var unmappedCount = typeStatuses.Count(s => !s.HasActiveMapping);
+
+        return new MyPosTransactionTypeStatusResultDto
+        {
+            Types = typeStatuses,
+            UnmappedCount = unmappedCount
+        };
     }
 
     private async Task EnsureTenantExistsAsync(Guid tenantId, CancellationToken cancellationToken)

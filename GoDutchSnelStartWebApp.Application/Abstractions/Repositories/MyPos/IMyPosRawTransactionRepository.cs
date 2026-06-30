@@ -19,4 +19,6 @@ public interface IMyPosRawTransactionRepository
      DateTime toUtc,
      DateTime importedUtc,
      CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> GetDistinctTransactionTypesAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

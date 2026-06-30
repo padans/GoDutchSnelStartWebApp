@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="Capture.PNG" />
+    <File Path="Capture01.PNG" />
+    <File Path="Capture02.PNG" />
     <File Path="GoDutchSnelStartWebApp_Swagger.json" />
     <File Path="MyPos_Swagger.json" />
     <File Path="___SnelStartAPI.json" />

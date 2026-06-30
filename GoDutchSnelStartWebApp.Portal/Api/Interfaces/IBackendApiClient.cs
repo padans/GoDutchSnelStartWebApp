@@ -171,4 +171,24 @@ public interface IBackendApiClient
     Task TriggerMyPosAutoSyncAsync(
         CancellationToken cancellationToken = default);
 
+    Task<Guid> OnboardTenantAsync(
+        OnboardTenantRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
+    Task<int> GetUnreadNotificationCountAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<NotificationViewModel>> GetUnreadNotificationsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task MarkNotificationAsReadAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task MarkAllNotificationsAsReadAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<MyPosTransactionTypeStatusResultViewModel> GetMyPosTransactionTypeStatusAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
 }

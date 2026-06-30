@@ -7,6 +7,9 @@ using GoDutchSnelStartWebApp.Application.ConnectivityTests.Interfaces;
 using GoDutchSnelStartWebApp.Application.GoDutchAccounts.Interfaces;
 using GoDutchSnelStartWebApp.Application.GoDutchTransactions.Interfaces;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
+using GoDutchSnelStartWebApp.Application.Notifications.Interfaces;
+using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.Email;
+using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Application.SnelStartLookups.Interfaces;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.BackgroundWorkers;
@@ -15,7 +18,6 @@ using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.GoDutch;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.MyPos;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.SnelStart;
 using GoDutchSnelStartWebApp.Infrastructure.Persistence;
-using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Infrastructure.Repositories.MyPos;
 using GoDutchSnelStartWebApp.Infrastructure.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Infrastructure.Security;
@@ -43,6 +45,8 @@ public static class InfrastructureServiceRegistration
             configuration.GetSection(SnelStartImportRetryOptions.SectionName));
         services.Configure<GoDutchApiRetryOptions>(
             configuration.GetSection(GoDutchApiRetryOptions.SectionName));
+        services.Configure<EmailOptions>(
+            configuration.GetSection(EmailOptions.SectionName));
 
         // Repositories
         services.AddScoped<ITenantRepository, TenantRepository>();
@@ -84,6 +88,8 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<ICamt053Generator, Camt053Generator>();
 
         services.AddScoped<IMyPosAutoSyncSettingsRepository, MyPosAutoSyncSettingsRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IEmailNotificationService, SmtpEmailNotificationService>();
 
         // Background workers
         services.AddHostedService<GoDutchAutoSyncBackgroundWorker>();

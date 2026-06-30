@@ -1,0 +1,154 @@
+@page "/mypos/type-status"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosTransactionTypeStatus> Logger
+
+<PageTitle>myPOS transactietype status</PageTitle>
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <h1 class="mb-0">myPOS transactietype status</h1>
+    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadAsync" disabled="@isLoading">
+        @(isLoading ? "Laden..." : "Vernieuwen")
+    </button>
+</div>
+
+<p class="text-muted">
+    Overzicht van alle transactietypes die ooit vanuit myPOS zijn opgehaald, inclusief of ze gekoppeld zijn aan een SnelStart grootboekrekening.
+    Ontbrekende koppelingen blokkeren de automatische export.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (result is not null)
+{
+    @if (!result.AllMapped)
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <span style="font-size:1.3rem;">⚠️</span>
+            <div>
+                <strong>@result.UnmappedCount transactietype(s) niet gekoppeld!</strong><br />
+                Zolang er ongekoppelde types zijn, stopt de auto-sync vóór het exporteren en stuur je een melding.
+                Ga naar <a href="mypos/mappings">Transactietype mappings</a> om de koppeling in te stellen.
+            </div>
+        </div>
+    }
+    else if (result.Types.Count > 0)
+    {
+        <div class="alert alert-success">
+            Alle @result.Types.Count transactietype(s) zijn actief gekoppeld aan een SnelStart grootboekrekening.
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            Er zijn nog geen myPOS transacties opgehaald. Importeer eerst transacties via
+            <a href="mypos/import">Transacties ophalen</a>.
+        </div>
+    }
+
+    @if (result.Types.Count > 0)
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Transactietypes (@result.Types.Count)</span>
+                <span class="text-muted small">
+                    @result.Types.Count(t => t.HasActiveMapping) gekoppeld &nbsp;|&nbsp;
+                    <span class="@(result.UnmappedCount > 0 ? "text-danger fw-bold" : "")">
+                        @result.UnmappedCount niet gekoppeld
+                    </span>
+                </span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Status</th>
+                            <th>Transactietype</th>
+                            <th>SnelStart grootboek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var type in result.Types.OrderBy(t => t.HasActiveMapping ? 1 : 0).ThenBy(t => t.TransactionType))
+                        {
+                            <tr class="@(type.HasActiveMapping ? "" : "table-danger")">
+                                <td class="align-middle">
+                                    @if (type.HasActiveMapping)
+                                    {
+                                        <span class="badge bg-success">Gekoppeld</span>
+                                    }
+                                    else if (type.IsMapped)
+                                    {
+                                        <span class="badge bg-warning text-dark">Inactief</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Niet gekoppeld</span>
+                                    }
+                                </td>
+                                <td class="align-middle font-monospace">@type.TransactionType</td>
+                                <td class="align-middle">
+                                    @if (type.HasActiveMapping)
+                                    {
+                                        <span>@type.SnelStartGrootboekNummer — @type.SnelStartGrootboekNaam</span>
+                                    }
+                                    else
+                                    {
+                                        <a href="mypos/mappings" class="text-danger text-decoration-none">
+                                            Koppeling instellen →
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+else if (isLoading)
+{
+    <p class="text-muted">Laden...</p>
+}
+
+@code {
+    private MyPosTransactionTypeStatusResultViewModel? result;
+    private bool isLoading;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        result = null;
+
+        try
+        {
+            var tenantId = TenantOptions.Value.TenantId;
+            result = await BackendApiClient.GetMyPosTransactionTypeStatusAsync(tenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Transactietype status ophalen mislukt.");
+            errorMessage = $"Ophalen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

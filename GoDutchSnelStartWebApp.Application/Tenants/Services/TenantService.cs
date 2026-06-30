@@ -57,6 +57,23 @@ public sealed class TenantService : ITenantService
             throw new ArgumentException("Tenant name is required.", nameof(request.Name));
         }
 
+        var now = DateTime.UtcNow;
+        DateTime? trialStartsUtc = null;
+        DateTime? trialEndsUtc = null;
+        var status = Enum.TryParse<TenantStatus>(request.Status?.Trim(), ignoreCase: true, out var cs) ? cs : TenantStatus.Draft;
+
+        if (request.IsTrial)
+        {
+            status = TenantStatus.Trial;
+            trialStartsUtc = now;
+            trialEndsUtc = now.AddDays(request.TrialDurationDays > 0 ? request.TrialDurationDays : 7);
+        }
+        else
+        {
+            trialStartsUtc = request.TrialStartsUtc;
+            trialEndsUtc = request.TrialEndsUtc;
+        }
+
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
@@ -66,13 +83,19 @@ public sealed class TenantService : ITenantService
             ContactName = Normalize(request.ContactName),
             Email = Normalize(request.Email),
             Phone = Normalize(request.Phone),
+            Address = Normalize(request.Address),
+            PostalCode = Normalize(request.PostalCode),
+            City = Normalize(request.City),
+            KvkNumber = Normalize(request.KvkNumber),
+            GoDutchEnabled = request.GoDutchEnabled,
+            MyPosEnabled = request.MyPosEnabled,
             DefaultIban = Normalize(request.DefaultIban),
-            Status = Enum.TryParse<TenantStatus>(request.Status?.Trim(), ignoreCase: true, out var cs) ? cs : TenantStatus.Draft,
+            Status = status,
             IsActive = request.IsActive ?? true,
-            TrialStartsUtc = request.TrialStartsUtc,
-            TrialEndsUtc = request.TrialEndsUtc,
+            TrialStartsUtc = trialStartsUtc,
+            TrialEndsUtc = trialEndsUtc,
             OnboardingCompletedUtc = request.OnboardingCompletedUtc,
-            CreatedUtc = DateTime.UtcNow,
+            CreatedUtc = now,
             ModifiedUtc = null
         };
 
@@ -112,6 +135,12 @@ public sealed class TenantService : ITenantService
         existingTenant.ContactName = Normalize(request.ContactName);
         existingTenant.Email = Normalize(request.Email);
         existingTenant.Phone = Normalize(request.Phone);
+        existingTenant.Address = Normalize(request.Address);
+        existingTenant.PostalCode = Normalize(request.PostalCode);
+        existingTenant.City = Normalize(request.City);
+        existingTenant.KvkNumber = Normalize(request.KvkNumber);
+        existingTenant.GoDutchEnabled = request.GoDutchEnabled;
+        existingTenant.MyPosEnabled = request.MyPosEnabled;
         existingTenant.DefaultIban = Normalize(request.DefaultIban);
         existingTenant.Status = Enum.TryParse<TenantStatus>(request.Status?.Trim(), ignoreCase: true, out var us) ? us : TenantStatus.Draft;
         existingTenant.IsActive = request.IsActive;
@@ -157,6 +186,12 @@ public sealed class TenantService : ITenantService
             ContactName = tenant.ContactName,
             Email = tenant.Email,
             Phone = tenant.Phone,
+            Address = tenant.Address,
+            PostalCode = tenant.PostalCode,
+            City = tenant.City,
+            KvkNumber = tenant.KvkNumber,
+            GoDutchEnabled = tenant.GoDutchEnabled,
+            MyPosEnabled = tenant.MyPosEnabled,
             DefaultIban = tenant.DefaultIban,
             Status = tenant.Status.ToString(),
             IsActive = tenant.IsActive,

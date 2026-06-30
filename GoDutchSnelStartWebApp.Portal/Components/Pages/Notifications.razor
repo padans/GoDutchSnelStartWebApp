@@ -1,0 +1,123 @@
+@page "/notifications"
+@rendermode InteractiveServer
+
+@using GoDutchSnelStartWebApp.Portal.Models
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject ILogger<Notifications> Logger
+
+<PageTitle>Meldingen</PageTitle>
+
+<h1>Meldingen</h1>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (isLoading)
+{
+    <p>Meldingen laden...</p>
+}
+else if (notifications.Count == 0)
+{
+    <div class="alert alert-success">Geen ongelezen meldingen.</div>
+}
+else
+{
+    <div class="mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="MarkAllAsReadAsync" disabled="@isMarkingAll">
+            @(isMarkingAll ? "Bezig..." : "Alles als gelezen markeren")
+        </button>
+    </div>
+
+    @foreach (var n in notifications)
+    {
+        var alertClass = n.Severity switch
+        {
+            "Error" => "alert-danger",
+            "Warning" => "alert-warning",
+            _ => "alert-info"
+        };
+
+        <div class="alert @alertClass d-flex justify-content-between align-items-start" role="alert">
+            <div>
+                <strong>@n.Title</strong>
+                <div class="mt-1" style="white-space: pre-wrap;">@n.Message</div>
+                <small class="text-muted mt-1 d-block">@n.CreatedUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</small>
+            </div>
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                    @onclick="() => MarkAsReadAsync(n.Id)">
+                Gelezen
+            </button>
+        </div>
+    }
+}
+
+@code {
+    private List<NotificationViewModel> notifications = [];
+    private bool isLoading;
+    private bool isMarkingAll;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await BackendApiClient.GetUnreadNotificationsAsync();
+            notifications = [.. result];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Notificaties laden mislukt.");
+            errorMessage = $"Meldingen laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task MarkAsReadAsync(Guid id)
+    {
+        try
+        {
+            await BackendApiClient.MarkNotificationAsReadAsync(id);
+            notifications.RemoveAll(n => n.Id == id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Notificatie {Id} als gelezen markeren mislukt.", id);
+            errorMessage = $"Markeren mislukt: {ex.Message}";
+        }
+    }
+
+    private async Task MarkAllAsReadAsync()
+    {
+        isMarkingAll = true;
+
+        try
+        {
+            await BackendApiClient.MarkAllNotificationsAsReadAsync();
+            notifications.Clear();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Alle notificaties als gelezen markeren mislukt.");
+            errorMessage = $"Markeren mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isMarkingAll = false;
+        }
+    }
+}

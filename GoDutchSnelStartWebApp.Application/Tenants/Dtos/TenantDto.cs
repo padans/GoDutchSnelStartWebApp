@@ -11,6 +11,13 @@ public sealed class TenantDto
     public string? ContactName { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public string? PostalCode { get; set; }
+    public string? City { get; set; }
+    public string? KvkNumber { get; set; }
+
+    public bool GoDutchEnabled { get; set; }
+    public bool MyPosEnabled { get; set; }
 
     public string? DefaultIban { get; set; }
 

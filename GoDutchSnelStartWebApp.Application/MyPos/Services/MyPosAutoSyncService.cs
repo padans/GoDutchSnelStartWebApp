@@ -2,6 +2,8 @@ using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
 using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
+using GoDutchSnelStartWebApp.Application.Notifications.Dtos;
+using GoDutchSnelStartWebApp.Application.Notifications.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +17,8 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
     private readonly IMyPosExportBatchExportService _exportService;
     private readonly IMyPosAutoSyncSettingsRepository _settingsRepository;
     private readonly IMyPosTransactionTypeMappingRepository _mappingRepository;
+    private readonly INotificationRepository _notificationRepository;
+    private readonly IEmailNotificationService _emailNotificationService;
     private readonly ILogger<MyPosAutoSyncService> _logger;
     private readonly MyPosAutoSyncOptions _options;
 
@@ -25,6 +29,8 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         IMyPosExportBatchExportService exportService,
         IMyPosAutoSyncSettingsRepository settingsRepository,
         IMyPosTransactionTypeMappingRepository mappingRepository,
+        INotificationRepository notificationRepository,
+        IEmailNotificationService emailNotificationService,
         ILogger<MyPosAutoSyncService> logger,
         IOptions<MyPosAutoSyncOptions> options)
     {
@@ -34,6 +40,8 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         _exportService = exportService;
         _settingsRepository = settingsRepository;
         _mappingRepository = mappingRepository;
+        _notificationRepository = notificationRepository;
+        _emailNotificationService = emailNotificationService;
         _logger = logger;
         _options = options.Value;
     }
@@ -87,6 +95,11 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
                         unmappedTypes.Count,
                         string.Join(", ", unmappedTypes));
 
+                    await SendUnmappedTypesNotificationAsync(
+                        connection.TenantId,
+                        unmappedTypes,
+                        cancellationToken);
+
                     continue;
                 }
 
@@ -103,6 +116,41 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         }
 
         _logger.LogInformation("myPOS auto sync pollronde afgerond.");
+    }
+
+    private async Task SendUnmappedTypesNotificationAsync(
+        Guid tenantId,
+        IReadOnlyList<string> unmappedTypes,
+        CancellationToken cancellationToken)
+    {
+        var typesList = string.Join(", ", unmappedTypes);
+        var title = $"myPOS: {unmappedTypes.Count} ongemapte transactietype(s)";
+        var message =
+            $"De myPOS auto-sync voor tenant {tenantId} is gestopt omdat de volgende transactietypes " +
+            $"niet gekoppeld zijn aan een SnelStart-grootboekrekening:\n\n{typesList}\n\n" +
+            $"Koppel deze types via het portal onder myPOS > Transactietype mappings.";
+
+        try
+        {
+            await _notificationRepository.InsertAsync(new NotificationDto
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                Severity = "Warning",
+                Title = title,
+                Message = message,
+                CreatedUtc = DateTime.UtcNow
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "In-app notificatie opslaan mislukt voor tenant {TenantId}.", tenantId);
+        }
+
+        await _emailNotificationService.SendAsync(
+            subject: $"[Actie vereist] {title}",
+            body: message,
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<string>> GetUnmappedTransactionTypesAsync(

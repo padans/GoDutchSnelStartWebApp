@@ -1,0 +1,332 @@
+@page "/godutch/sync"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<GoDutchSync> Logger
+
+<PageTitle>GoDutch synchronisatie</PageTitle>
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <h1 class="mb-0">GoDutch synchronisatie</h1>
+    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadAsync" disabled="@isLoading">
+        @(isLoading ? "Laden..." : "Vernieuwen")
+    </button>
+</div>
+
+<p class="text-muted">
+    Bekijk de synchronisatiestatus per bankrekening, pas instellingen aan en start handmatig een sync.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(pageError))
+{
+    <div class="alert alert-danger">@pageError</div>
+}
+
+@if (isLoading)
+{
+    <p class="text-muted">Laden...</p>
+}
+else if (rows.Count == 0)
+{
+    <div class="alert alert-info">Geen bankrekeningen gevonden voor deze tenant.</div>
+}
+else
+{
+    @foreach (var row in rows)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fw-bold font-monospace">@row.BankAccount.Iban</span>
+                    <span class="ms-2 text-muted">@row.BankAccount.AccountName</span>
+                    @if (!row.BankAccount.IsActive)
+                    {
+                        <span class="badge bg-secondary ms-2">Inactief</span>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary"
+                            @onclick="() => ToggleSettings(row)"
+                            disabled="@(row.Link is null)">
+                        @(row.ShowSettings ? "Verbergen" : "Instellingen")
+                    </button>
+                    <button class="btn btn-sm btn-primary"
+                            @onclick="() => SyncNowAsync(row)"
+                            disabled="@(row.IsSyncing || !row.BankAccount.IsActive)">
+                        @(row.IsSyncing ? "Bezig..." : "Nu synchroniseren")
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="text-muted small">Laatste sync</div>
+                        @if (row.SyncStatus?.LastRunAt is not null)
+                        {
+                            <div>@row.SyncStatus.LastRunAt.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">Nog nooit</div>
+                        }
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="text-muted small">Status</div>
+                        <span class="badge @GetStatusBadgeClass(row.SyncStatus?.Status)">
+                            @(row.SyncStatus?.Status ?? "Onbekend")
+                        </span>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="text-muted small">Auto-sync</div>
+                        @if (row.Link is not null)
+                        {
+                            <span class="badge @(row.Link.AutoSyncEnabled ? "bg-success" : "bg-secondary")">
+                                @(row.Link.AutoSyncEnabled ? "Aan" : "Uit")
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">Niet geconfigureerd</span>
+                        }
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="text-muted small">Interval</div>
+                        @if (row.Link is not null)
+                        {
+                            <div>@row.Link.SyncIntervalMinutes min</div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">—</div>
+                        }
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="text-muted small">Volgende sync</div>
+                        @if (row.Link?.NextRunUtc is not null)
+                        {
+                            <div>@row.Link.NextRunUtc.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">—</div>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(row.ActionMessage))
+                {
+                    <div class="alert @(row.ActionSuccess ? "alert-success" : "alert-danger") mt-3 mb-0 py-2">
+                        @row.ActionMessage
+                    </div>
+                }
+
+                @if (row.ShowSettings && row.Link is not null)
+                {
+                    <hr />
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Auto-sync</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       checked="@row.EditAutoSyncEnabled"
+                                       @onchange="e => row.EditAutoSyncEnabled = (bool)(e.Value ?? false)" />
+                                <label class="form-check-label">
+                                    @(row.EditAutoSyncEnabled ? "Ingeschakeld" : "Uitgeschakeld")
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Interval (minuten)</label>
+                            <input type="number" class="form-control" min="1" max="1440"
+                                   value="@row.EditIntervalMinutes"
+                                   @onchange="e => row.EditIntervalMinutes = int.TryParse(e.Value?.ToString(), out var v) ? v : row.EditIntervalMinutes" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Export formaat</label>
+                            <select class="form-select" value="@row.EditExportFormat"
+                                    @onchange="e => row.EditExportFormat = e.Value?.ToString() ?? row.EditExportFormat">
+                                <option value="Mt940">MT940</option>
+                                <option value="Camt053">CAMT053</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <button class="btn btn-success w-100"
+                                    @onclick="() => SaveSettingsAsync(row)"
+                                    disabled="@row.IsSaving">
+                                @(row.IsSaving ? "Opslaan..." : "Instellingen opslaan")
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<SyncRow> rows = [];
+    private bool isLoading;
+    private string? pageError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        rows = [];
+
+        try
+        {
+            var tenantId = TenantOptions.Value.TenantId;
+            var bankAccounts = await BackendApiClient.GetBankAccountsAsync(tenantId);
+
+            var loadTasks = bankAccounts.Select(async ba =>
+            {
+                var syncTask = BackendApiClient.GetSyncStatusAsync(tenantId, ba.Id);
+                var linkTask = BackendApiClient.GetBankAccountSnelStartLinkByBankAccountIdAsync(ba.Id);
+                await Task.WhenAll(syncTask, linkTask);
+
+                var link = linkTask.Result;
+                return new SyncRow
+                {
+                    BankAccount = ba,
+                    SyncStatus = syncTask.Result,
+                    Link = link,
+                    EditAutoSyncEnabled = link?.AutoSyncEnabled ?? true,
+                    EditIntervalMinutes = link?.SyncIntervalMinutes ?? 15,
+                    EditExportFormat = link?.ExportFormat ?? "Mt940"
+                };
+            });
+
+            rows = (await Task.WhenAll(loadTasks))
+                .OrderBy(r => r.BankAccount.AccountName)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Sync overzicht laden mislukt.");
+            pageError = $"Laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SyncNowAsync(SyncRow row)
+    {
+        row.IsSyncing = true;
+        row.ActionMessage = null;
+
+        try
+        {
+            var tenantId = TenantOptions.Value.TenantId;
+            var fromUtc = row.SyncStatus?.LastRunAt?.AddMinutes(-5) ?? DateTime.UtcNow.AddDays(-30);
+            var result = await BackendApiClient.ForceResyncAsync(tenantId, row.BankAccount.Id, fromUtc);
+
+            row.ActionSuccess = result.DownloadSucceeded;
+            row.ActionMessage = result.DownloadSucceeded
+                ? $"Sync geslaagd: {result.GoDutchTransactionCount} transacties verwerkt."
+                : $"Sync mislukt: {result.Message}";
+
+            var newStatus = await BackendApiClient.GetSyncStatusAsync(tenantId, row.BankAccount.Id);
+            row.SyncStatus = newStatus;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Handmatige sync mislukt voor bankrekening {BankAccountId}.", row.BankAccount.Id);
+            row.ActionSuccess = false;
+            row.ActionMessage = $"Sync mislukt: {ex.Message}";
+        }
+        finally
+        {
+            row.IsSyncing = false;
+        }
+    }
+
+    private async Task SaveSettingsAsync(SyncRow row)
+    {
+        if (row.Link is null) return;
+
+        row.IsSaving = true;
+        row.ActionMessage = null;
+
+        try
+        {
+            await BackendApiClient.UpdateBankAccountSnelStartLinkAsync(
+                row.Link.Id,
+                new UpdateBankAccountSnelStartLinkRequestViewModel
+                {
+                    Id = row.Link.Id,
+                    BankAccountId = row.Link.BankAccountId,
+                    SnelStartAdministrationId = row.Link.SnelStartAdministrationId,
+                    ExportFormat = row.EditExportFormat,
+                    IsActive = row.Link.IsActive,
+                    AutoSyncEnabled = row.EditAutoSyncEnabled,
+                    SyncIntervalMinutes = row.EditIntervalMinutes
+                });
+
+            row.Link.AutoSyncEnabled = row.EditAutoSyncEnabled;
+            row.Link.SyncIntervalMinutes = row.EditIntervalMinutes;
+            row.Link.ExportFormat = row.EditExportFormat;
+            row.ShowSettings = false;
+            row.ActionSuccess = true;
+            row.ActionMessage = "Instellingen opgeslagen.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Instellingen opslaan mislukt voor bankrekening {BankAccountId}.", row.BankAccount.Id);
+            row.ActionSuccess = false;
+            row.ActionMessage = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            row.IsSaving = false;
+        }
+    }
+
+    private static void ToggleSettings(SyncRow row)
+    {
+        row.ShowSettings = !row.ShowSettings;
+    }
+
+    private static string GetStatusBadgeClass(string? status) => status switch
+    {
+        "Succeeded" => "bg-success",
+        "Failed"    => "bg-danger",
+        "Skipped"   => "bg-warning text-dark",
+        "Started"   => "bg-info text-dark",
+        _           => "bg-secondary"
+    };
+
+    private sealed class SyncRow
+    {
+        public BankAccountViewModel BankAccount { get; set; } = new();
+        public BankAccountSyncStatusViewModel? SyncStatus { get; set; }
+        public BankAccountSnelStartLinkViewModel? Link { get; set; }
+
+        public bool ShowSettings { get; set; }
+        public bool IsSyncing { get; set; }
+        public bool IsSaving { get; set; }
+        public string? ActionMessage { get; set; }
+        public bool ActionSuccess { get; set; }
+
+        public bool EditAutoSyncEnabled { get; set; } = true;
+        public int EditIntervalMinutes { get; set; } = 15;
+        public string EditExportFormat { get; set; } = "Mt940";
+    }
+}

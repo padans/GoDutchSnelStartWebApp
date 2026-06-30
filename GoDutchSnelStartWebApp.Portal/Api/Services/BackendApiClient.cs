@@ -975,4 +975,118 @@ public sealed class BackendApiClient : IBackendApiClient
             cancellationToken);
     }
 
+    public async Task<Guid> OnboardTenantAsync(
+        OnboardTenantRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/tenants";
+
+        _logger.LogInformation("Nieuwe tenant aanmaken via {Url}", url);
+
+        var payload = new
+        {
+            Name          = request.CompanyName,
+            CompanyName   = request.CompanyName,
+            ContactName   = request.ContactName,
+            Email         = request.Email,
+            Phone         = request.Phone,
+            Address       = request.Address,
+            PostalCode    = request.PostalCode,
+            City          = request.City,
+            KvkNumber     = request.KvkNumber,
+            GoDutchEnabled = request.GoDutchEnabled,
+            MyPosEnabled  = request.MyPosEnabled,
+            IsTrial       = request.IsTrial,
+            TrialDurationDays = request.TrialDurationDays
+        };
+
+        var result = await ExecuteWithRetryAsync<Guid>(
+            async ct =>
+            {
+                using var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+                response.EnsureSuccessStatusCode();
+
+                var location = response.Headers.Location?.ToString() ?? string.Empty;
+                var idSegment = location.Split('/').LastOrDefault();
+                return Guid.TryParse(idSegment, out var id) ? id : Guid.Empty;
+            },
+            operationName: "tenant aanmaken",
+            cancellationToken);
+
+        return result;
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/notifications/count";
+
+        return await ExecuteWithRetryAsync(
+            ct => _httpClient.GetFromJsonAsync<int>(url, ct),
+            operationName: "ongelezen notificaties tellen",
+            cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<NotificationViewModel>> GetUnreadNotificationsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/notifications";
+
+        var result = await ExecuteWithRetryAsync(
+            ct => _httpClient.GetFromJsonAsync<List<NotificationViewModel>>(url, ct),
+            operationName: "notificaties ophalen",
+            cancellationToken);
+
+        return result ?? [];
+    }
+
+    public async Task MarkNotificationAsReadAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/notifications/{id}/read";
+
+        await ExecuteWithRetryAsync<object?>(
+            async ct =>
+            {
+                using var response = await _httpClient.PutAsync(url, content: null, ct);
+                response.EnsureSuccessStatusCode();
+                return null;
+            },
+            operationName: "notificatie als gelezen markeren",
+            cancellationToken);
+    }
+
+    public async Task MarkAllNotificationsAsReadAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string url = "api/notifications/read-all";
+
+        await ExecuteWithRetryAsync<object?>(
+            async ct =>
+            {
+                using var response = await _httpClient.PutAsync(url, content: null, ct);
+                response.EnsureSuccessStatusCode();
+                return null;
+            },
+            operationName: "alle notificaties als gelezen markeren",
+            cancellationToken);
+    }
+
+    public async Task<MyPosTransactionTypeStatusResultViewModel> GetMyPosTransactionTypeStatusAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/mypos/transaction-types/status";
+
+        _logger.LogInformation("myPOS transactietype status ophalen via {Url}", url);
+
+        var result = await ExecuteWithRetryAsync(
+            ct => _httpClient.GetFromJsonAsync<MyPosTransactionTypeStatusResultViewModel>(url, ct),
+            operationName: $"myPOS transactietype status ophalen voor tenant {tenantId}",
+            cancellationToken);
+
+        return result ?? new MyPosTransactionTypeStatusResultViewModel();
+    }
+
 }

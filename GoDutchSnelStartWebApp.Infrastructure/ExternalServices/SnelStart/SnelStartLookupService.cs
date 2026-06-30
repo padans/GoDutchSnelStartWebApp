@@ -500,7 +500,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
                 "application/x-www-form-urlencoded")
         };
 
-        using var tokenResponse = await _httpClient.SendAsync(tokenRequest, cancellationToken);
+         using var tokenResponse = await _httpClient.SendAsync(tokenRequest, cancellationToken);
         var tokenBody = await tokenResponse.Content.ReadAsStringAsync(cancellationToken);
 
         if (!tokenResponse.IsSuccessStatusCode)

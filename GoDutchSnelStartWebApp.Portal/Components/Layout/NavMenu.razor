@@ -11,6 +11,17 @@
             <span class="app-nav-link-icon">🏠</span>
             <span>Start</span>
         </NavLink>
+
+        <NavLink class="app-nav-link" href="notifications" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🔔</span>
+            <span>Meldingen</span>
+            <NotificationBadge />
+        </NavLink>
+
+        <NavLink class="app-nav-link" href="tenants/onboard" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">➕</span>
+            <span>Klant aanmelden</span>
+        </NavLink>
     </div>
 
     <div class="app-nav-section">
@@ -21,9 +32,9 @@
             <span>Bankaccounts</span>
         </NavLink>
 
-        <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
+        <NavLink class="app-nav-link" href="godutch/sync" Match="NavLinkMatch.Prefix">
             <span class="app-nav-link-icon">🔁</span>
-            <span>Sync & resync</span>
+            <span>Sync & instellingen</span>
         </NavLink>
     </div>
 
@@ -46,6 +57,11 @@
         <NavLink class="app-nav-link" href="mypos/mappings" Match="NavLinkMatch.Prefix">
             <span class="app-nav-link-icon">🧾</span>
             <span>Transactietype mappings</span>
+        </NavLink>
+
+        <NavLink class="app-nav-link" href="mypos/type-status" Match="NavLinkMatch.Prefix">
+            <span class="app-nav-link-icon">🔍</span>
+            <span>Transactietype status</span>
         </NavLink>
 
         <NavLink class="app-nav-link" href="mypos/import" Match="NavLinkMatch.Prefix">
