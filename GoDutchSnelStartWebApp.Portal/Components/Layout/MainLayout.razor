@@ -42,7 +42,7 @@
     .app-shell {
         min-height: 100vh;
         display: flex;
-        background: var(--app-page-bg);
+        background: var(--app-blue-darker);
     }
 
     .app-sidebar {
@@ -55,6 +55,7 @@
         top: 0;
         align-self: flex-start;
         box-shadow: 4px 0 18px rgba(0, 68, 136, .18);
+        border-bottom-left-radius: 16px;
     }
 
     .app-main {
@@ -66,6 +67,7 @@
         min-height: 86px;
         background: var(--app-blue);
         border-bottom: 1px solid var(--app-blue-dark);
+        border-top-right-radius: 16px;
         display: flex;
         align-items: center;
         padding: 0 28px;
@@ -88,6 +90,9 @@
 
     .app-content {
         padding: 28px;
+        background: #ffffff;
+        border-radius: 16px;
+        min-height: calc(100vh - 86px);
     }
 
     .app-nav {
