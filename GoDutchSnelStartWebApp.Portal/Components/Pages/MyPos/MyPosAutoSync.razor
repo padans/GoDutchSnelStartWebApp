@@ -39,8 +39,10 @@ else if (settings is not null)
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Controle-interval (minuten)</label>
-                    <input type="number" class="form-control" min="1" max="1440" @bind="settings.IntervalMinutes" />
+                    <label class="form-label @(!settings.Enabled ? "text-muted" : "")">Controle-interval (minuten)</label>
+                    <input type="number" class="form-control" min="1" max="1440"
+                           @bind="settings.IntervalMinutes"
+                           disabled="@(!settings.Enabled)" />
                     <div class="form-text">Hoe vaak de achtergrondtaak controleert of er gesynchroniseerd moet worden.</div>
                 </div>
             </div>
