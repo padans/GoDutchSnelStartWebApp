@@ -43,7 +43,9 @@ public sealed class MyPosAutoSyncSettingsRepository : IMyPosAutoSyncSettingsRepo
         {
             Enabled = reader.GetBoolean(reader.GetOrdinal("Enabled")),
             IntervalMinutes = reader.GetInt32(reader.GetOrdinal("IntervalMinutes")),
-            LookbackHours = reader.GetInt32(reader.GetOrdinal("LookbackHours"))
+            SyncMode = reader.IsDBNull(reader.GetOrdinal("SyncMode")) ? "Lookback" : reader.GetString(reader.GetOrdinal("SyncMode")),
+            LookbackHours = reader.GetInt32(reader.GetOrdinal("LookbackHours")),
+            PeriodType = reader.IsDBNull(reader.GetOrdinal("PeriodType")) ? "Day" : reader.GetString(reader.GetOrdinal("PeriodType"))
         };
     }
 
@@ -61,7 +63,9 @@ public sealed class MyPosAutoSyncSettingsRepository : IMyPosAutoSyncSettingsRepo
 
         command.Parameters.Add(new SqlParameter("@Enabled", SqlDbType.Bit) { Value = settings.Enabled });
         command.Parameters.Add(new SqlParameter("@IntervalMinutes", SqlDbType.Int) { Value = settings.IntervalMinutes });
+        command.Parameters.Add(new SqlParameter("@SyncMode", SqlDbType.NVarChar, 20) { Value = settings.SyncMode ?? "Lookback" });
         command.Parameters.Add(new SqlParameter("@LookbackHours", SqlDbType.Int) { Value = settings.LookbackHours });
+        command.Parameters.Add(new SqlParameter("@PeriodType", SqlDbType.NVarChar, 20) { Value = settings.PeriodType ?? "Day" });
         command.Parameters.Add(new SqlParameter("@ModifiedUtc", SqlDbType.DateTime2) { Value = DateTime.UtcNow });
 
         await command.ExecuteNonQueryAsync(cancellationToken);

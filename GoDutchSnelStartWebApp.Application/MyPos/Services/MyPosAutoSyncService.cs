@@ -48,9 +48,8 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
 
     public async Task RunOnceAsync(CancellationToken cancellationToken = default)
     {
-        var lookbackHours = await GetLookbackHoursAsync(cancellationToken);
-        var toUtc = DateTime.UtcNow;
-        var fromUtc = toUtc.AddHours(-lookbackHours);
+        var dbSettings = await GetSettingsAsync(cancellationToken);
+        var (fromUtc, toUtc) = ResolveRange(dbSettings);
 
         var connections = await _connectionRepository.GetAllActiveAsync(cancellationToken);
 
@@ -252,21 +251,84 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         }
     }
 
-    private async Task<int> GetLookbackHoursAsync(CancellationToken cancellationToken)
+    private async Task<MyPosAutoSyncSettingsDto> GetSettingsAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var dbSettings = await _settingsRepository.GetAsync(cancellationToken);
-            if (dbSettings is not null)
-            {
-                return dbSettings.LookbackHours < 1 ? 1 : dbSettings.LookbackHours;
-            }
+            var db = await _settingsRepository.GetAsync(cancellationToken);
+            if (db is not null) return db;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "myPOS LookbackHours uit database ophalen mislukt, appsettings-waarde wordt gebruikt.");
+            _logger.LogWarning(ex, "myPOS auto-sync instellingen uit database ophalen mislukt, appsettings-waarde wordt gebruikt.");
         }
 
-        return _options.LookbackHours < 1 ? 1 : _options.LookbackHours;
+        return new MyPosAutoSyncSettingsDto
+        {
+            Enabled = _options.Enabled,
+            IntervalMinutes = _options.IntervalMinutes < 1 ? 1 : _options.IntervalMinutes,
+            SyncMode = "Lookback",
+            LookbackHours = _options.LookbackHours < 1 ? 1 : _options.LookbackHours,
+            PeriodType = "Day"
+        };
+    }
+
+    private (DateTime FromUtc, DateTime ToUtc) ResolveRange(MyPosAutoSyncSettingsDto settings)
+    {
+        if (string.Equals(settings.SyncMode, "Period", StringComparison.OrdinalIgnoreCase))
+        {
+            return CalculatePeriodRange(settings.PeriodType);
+        }
+
+        var toUtc = DateTime.UtcNow;
+        var hours = settings.LookbackHours < 1 ? 1 : settings.LookbackHours;
+        return (toUtc.AddHours(-hours), toUtc);
+    }
+
+    private static (DateTime FromUtc, DateTime ToUtc) CalculatePeriodRange(string periodType)
+    {
+        var nlZone = TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
+        var nowNl = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, nlZone);
+
+        DateTime fromNl, toNl;
+
+        switch (periodType?.ToUpperInvariant())
+        {
+            case "WEEK":
+                // Vorige maandag t/m vorige zondag
+                var daysFromMonday = ((int)nowNl.DayOfWeek + 6) % 7;
+                var thisMonday = nowNl.Date.AddDays(-daysFromMonday);
+                fromNl = thisMonday.AddDays(-7);
+                toNl   = thisMonday.AddTicks(-1);
+                break;
+
+            case "MONTH":
+                var firstThisMonth = new DateTime(nowNl.Year, nowNl.Month, 1);
+                fromNl = firstThisMonth.AddMonths(-1);
+                toNl   = firstThisMonth.AddTicks(-1);
+                break;
+
+            case "QUARTER":
+                var currentQ = (nowNl.Month - 1) / 3;
+                var firstThisQ = new DateTime(nowNl.Year, currentQ * 3 + 1, 1);
+                fromNl = firstThisQ.AddMonths(-3);
+                toNl   = firstThisQ.AddTicks(-1);
+                break;
+
+            case "YEAR":
+                fromNl = new DateTime(nowNl.Year - 1, 1, 1);
+                toNl   = new DateTime(nowNl.Year, 1, 1).AddTicks(-1);
+                break;
+
+            default: // DAY
+                fromNl = nowNl.Date.AddDays(-1);
+                toNl   = nowNl.Date.AddTicks(-1);
+                break;
+        }
+
+        return (
+            TimeZoneInfo.ConvertTimeToUtc(fromNl, nlZone),
+            TimeZoneInfo.ConvertTimeToUtc(toNl, nlZone)
+        );
     }
 }
