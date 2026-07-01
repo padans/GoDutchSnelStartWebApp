@@ -10,14 +10,13 @@
 
 <h1 class="mb-1">myPOS auto-sync</h1>
 <p class="text-muted mb-4">
-    Stel de synchronisatiemethode in: een rollend terugkijkvenster of een vaste afgesloten kalenderperiode.
+    Kies de synchronisatiemethode en sla de instellingen op. De achtergrondtaak gebruikt deze bij de volgende cyclus.
 </p>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage))
 {
     <div class="alert alert-danger" role="alert">@errorMessage</div>
 }
-
 @if (!string.IsNullOrWhiteSpace(successMessage))
 {
     <div class="alert alert-success" role="alert">@successMessage</div>
@@ -29,83 +28,105 @@
 }
 else if (settings is not null)
 {
-    <div class="card mb-3">
-        <div class="card-header fw-bold">Instellingen</div>
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Algemeen</div>
         <div class="card-body">
-
-            <div class="row g-3 mb-3 align-items-end">
+            <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="enabled" @bind="settings.Enabled" />
-                        <label class="form-check-label" for="enabled">Auto-sync ingeschakeld</label>
+                        <label class="form-check-label fw-semibold" for="enabled">Auto-sync ingeschakeld</label>
                     </div>
                 </div>
-
                 <div class="col-md-3">
-                    <label class="form-label">Interval (minuten)</label>
+                    <label class="form-label">Controle-interval (minuten)</label>
                     <input type="number" class="form-control" min="1" max="1440" @bind="settings.IntervalMinutes" />
-                    <div class="form-text">Hoe vaak de auto-sync wordt gecontroleerd.</div>
+                    <div class="form-text">Hoe vaak de achtergrondtaak controleert of er gesynchroniseerd moet worden.</div>
                 </div>
-            </div>
-
-            <hr />
-            <div class="row g-3 mb-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Synchronisatiemethode</label>
-                    <select class="form-select" @bind="settings.SyncMode">
-                        <option value="Lookback">Terugkijkvenster (rollend, in uren)</option>
-                        <option value="Period">Kalenderperiode (dag / week / maand / kwartaal / jaar)</option>
-                    </select>
-                </div>
-            </div>
-
-            @if (settings.SyncMode == "Lookback")
-            {
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Terugkijkvenster (uren)</label>
-                        <input type="number" class="form-control" min="1" max="720" @bind="settings.LookbackHours" />
-                        <div class="form-text">Hoeveel uur terug per importronde (rollend venster).</div>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3 mb-0">
-                    <strong>Terugkijkvenster:</strong> bij elke ronde worden transacties van de afgelopen
-                    <strong>@settings.LookbackHours uur</strong> opgehaald en verwerkt.
-                    Geschikt voor realtime verwerking van pintransacties.
-                </div>
-            }
-            else
-            {
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Periode</label>
-                        <select class="form-select" @bind="settings.PeriodType">
-                            <option value="Day">Dag (gisteren)</option>
-                            <option value="Week">Week (vorige week ma–zo)</option>
-                            <option value="Month">Maand (vorige kalendermaand)</option>
-                            <option value="Quarter">Kwartaal (vorig kwartaal)</option>
-                            <option value="Year">Jaar (vorig kalenderjaar)</option>
-                        </select>
-                        <div class="form-text">Altijd de laatste <em>afgesloten</em> periode in NL-tijdzone.</div>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3 mb-0">
-                    <strong>Kalenderperiode:</strong> bij elke ronde worden transacties van de
-                    <strong>@PeriodLabel(settings.PeriodType)</strong> gesommeerd per transactietype
-                    en als één journaalpost naar SnelStart gestuurd.
-                    Transacties die al eerder zijn geëxporteerd worden niet dubbel verwerkt.
-                </div>
-            }
-
-            <div class="mt-4">
-                <button type="button" class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@isSaving">
-                    @(isSaving ? "Opslaan..." : "Opslaan")
-                </button>
-                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="LoadSettingsAsync" disabled="@isSaving">
-                    Annuleren
-                </button>
             </div>
         </div>
+    </div>
+
+    <h5 class="mb-3">Synchronisatiemethode — klik op een optie om deze te activeren</h5>
+
+    <div class="row g-3 mb-4">
+
+        @* Kaart: Terugkijkvenster *@
+        <div class="col-md-6">
+            <div class="card h-100 mode-card @(IsLookback ? "mode-active" : "mode-inactive")"
+                 @onclick="SelectLookback" style="cursor:pointer;">
+                <div class="card-header d-flex justify-content-between align-items-center
+                            @(IsLookback ? "bg-primary text-white" : "bg-light text-muted")">
+                    <span class="fw-bold">⏱ Terugkijkvenster</span>
+                    @if (IsLookback)
+                    {
+                        <span class="badge bg-success">Actief</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactief — klik om te activeren</span>
+                    }
+                </div>
+                <div class="card-body @(IsLookback ? "" : "text-muted")">
+                    <p class="small mb-3">
+                        Bij elke controle worden transacties van de afgelopen <strong>X uur</strong> opgehaald.
+                        Geschikt voor realtime verwerking van pintransacties.
+                    </p>
+                    <label class="form-label">Terugkijkvenster (uren)</label>
+                    <input type="number" class="form-control" min="1" max="720"
+                           @bind="settings.LookbackHours"
+                           disabled="@(!IsLookback)"
+                           @onclick:stopPropagation="true" />
+                    <div class="form-text">Hoeveel uur terug per importronde.</div>
+                </div>
+            </div>
+        </div>
+
+        @* Kaart: Kalenderperiode *@
+        <div class="col-md-6">
+            <div class="card h-100 mode-card @(IsPeriod ? "mode-active" : "mode-inactive")"
+                 @onclick="SelectPeriod" style="cursor:pointer;">
+                <div class="card-header d-flex justify-content-between align-items-center
+                            @(IsPeriod ? "bg-primary text-white" : "bg-light text-muted")">
+                    <span class="fw-bold">📅 Kalenderperiode</span>
+                    @if (IsPeriod)
+                    {
+                        <span class="badge bg-success">Actief</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactief — klik om te activeren</span>
+                    }
+                </div>
+                <div class="card-body @(IsPeriod ? "" : "text-muted")">
+                    <p class="small mb-3">
+                        Transacties worden per afgesloten kalenderperiode gesommeerd per type
+                        en als één journaalpost naar SnelStart gestuurd.
+                    </p>
+                    <label class="form-label">Periode</label>
+                    <select class="form-select" @bind="settings.PeriodType"
+                            disabled="@(!IsPeriod)"
+                            @onclick:stopPropagation="true">
+                        <option value="Day">Dag — gisteren (00:00–23:59)</option>
+                        <option value="Week">Week — vorige week (ma t/m zo)</option>
+                        <option value="Month">Maand — vorige kalendermaand</option>
+                        <option value="Quarter">Kwartaal — vorig kwartaal</option>
+                        <option value="Year">Jaar — vorig kalenderjaar</option>
+                    </select>
+                    <div class="form-text">Altijd de laatste <em>afgesloten</em> periode in NL-tijdzone.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@isSaving">
+            @(isSaving ? "Opslaan..." : "Opslaan")
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="LoadSettingsAsync" disabled="@isSaving">
+            Annuleren
+        </button>
     </div>
 
     <div class="card">
@@ -121,6 +142,26 @@ else if (settings is not null)
     </div>
 }
 
+<style>
+    .mode-card {
+        transition: box-shadow .15s ease, opacity .15s ease;
+        border-width: 2px;
+    }
+    .mode-active {
+        border-color: #0066CC !important;
+        box-shadow: 0 0 0 3px rgba(0,102,204,.2);
+        opacity: 1;
+    }
+    .mode-inactive {
+        border-color: #dee2e6 !important;
+        opacity: .65;
+    }
+    .mode-inactive:hover {
+        opacity: .85;
+        box-shadow: 0 0 0 2px rgba(0,102,204,.15);
+    }
+</style>
+
 @code {
     private MyPosAutoSyncSettingsViewModel? settings;
     private bool isLoading;
@@ -129,7 +170,13 @@ else if (settings is not null)
     private string? errorMessage;
     private string? successMessage;
 
+    private bool IsLookback => settings?.SyncMode == "Lookback";
+    private bool IsPeriod   => settings?.SyncMode == "Period";
+
     protected override async Task OnInitializedAsync() => await LoadSettingsAsync();
+
+    private void SelectLookback() { if (settings is not null) settings.SyncMode = "Lookback"; }
+    private void SelectPeriod()   { if (settings is not null) settings.SyncMode = "Period"; }
 
     private async Task LoadSettingsAsync()
     {
@@ -161,11 +208,11 @@ else if (settings is not null)
 
         if (settings.IntervalMinutes < 1)
         {
-            errorMessage = "Interval moet minimaal 1 minuut zijn.";
+            errorMessage = "Controle-interval moet minimaal 1 minuut zijn.";
             return;
         }
 
-        if (settings.SyncMode == "Lookback" && settings.LookbackHours < 1)
+        if (IsLookback && settings.LookbackHours < 1)
         {
             errorMessage = "Terugkijkvenster moet minimaal 1 uur zijn.";
             return;
@@ -210,13 +257,4 @@ else if (settings is not null)
             isRunning = false;
         }
     }
-
-    private static string PeriodLabel(string periodType) => periodType switch
-    {
-        "Week"    => "vorige week (maandag t/m zondag)",
-        "Month"   => "vorige kalendermaand",
-        "Quarter" => "vorig kwartaal",
-        "Year"    => "vorig kalenderjaar",
-        _         => "gisteren (volledige dag)"
-    };
 }
