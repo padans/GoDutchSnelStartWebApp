@@ -49,25 +49,13 @@ else if (settings is not null)
             </div>
 
             <hr />
-            <h6 class="mb-3">Synchronisatiemethode</h6>
-
-            <div class="row g-3 mb-3">
-                <div class="col-12">
-                    <div class="btn-group" role="group">
-                        <input type="radio" class="btn-check" name="syncmode" id="modeLookback"
-                               checked="@(settings.SyncMode == "Lookback")"
-                               @onchange="SetModeLookback" />
-                        <label class="btn btn-outline-primary" for="modeLookback">
-                            Terugkijkvenster (uren)
-                        </label>
-
-                        <input type="radio" class="btn-check" name="syncmode" id="modePeriod"
-                               checked="@(settings.SyncMode == "Period")"
-                               @onchange="SetModePeriod" />
-                        <label class="btn btn-outline-primary" for="modePeriod">
-                            Kalenderperiode
-                        </label>
-                    </div>
+            <div class="row g-3 mb-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Synchronisatiemethode</label>
+                    <select class="form-select" @bind="settings.SyncMode">
+                        <option value="Lookback">Terugkijkvenster (rollend, in uren)</option>
+                        <option value="Period">Kalenderperiode (dag / week / maand / kwartaal / jaar)</option>
+                    </select>
                 </div>
             </div>
 
@@ -222,9 +210,6 @@ else if (settings is not null)
             isRunning = false;
         }
     }
-
-    private void SetModeLookback(ChangeEventArgs _) { if (settings is not null) settings.SyncMode = "Lookback"; }
-    private void SetModePeriod(ChangeEventArgs _)   { if (settings is not null) settings.SyncMode = "Period"; }
 
     private static string PeriodLabel(string periodType) => periodType switch
     {
