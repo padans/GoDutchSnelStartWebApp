@@ -4,43 +4,137 @@
 
 <h1 class="mb-1">GoDutch SnelStart Portal</h1>
 <p class="text-muted mb-4">
-    Beheer koppelingen, controleer synchronisaties en begeleid klanten stap voor stap door de onboarding.
+    Automatisch banktransacties en betaalterminaltransacties verwerken naar SnelStart — per klant, per koppeling.
 </p>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card h-100">
+<div class="row g-4 mb-5">
+
+    @* GoDutch *@
+    <div class="col-lg-6">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header fw-bold" style="background:#0066CC; color:#fff;">
+                <span class="me-2">🏦</span> GoDutch → SnelStart
+            </div>
             <div class="card-body">
-                <h5 class="card-title">Onboarding</h5>
-                <p class="card-text text-muted">
-                    Begeleid nieuwe klanten bij het invoeren van instellingen en het testen van koppelingen.
+                <p class="text-muted small mb-3">
+                    Banktransacties vanuit het GoDutch-betaalplatform worden automatisch opgehaald en als bankafschrift geïmporteerd in SnelStart.
                 </p>
-                <a class="btn btn-outline-primary btn-sm" href="/tenants/onboard">Klant aanmelden</a>
+                <ul class="list-unstyled feature-list">
+                    <li><span class="badge bg-success me-2">✓</span> Transacties ophalen per bankrekening (IBAN) en datumperiode</li>
+                    <li><span class="badge bg-success me-2">✓</span> Export naar SnelStart in <strong>MT940</strong> of <strong>CAMT053</strong> formaat</li>
+                    <li><span class="badge bg-success me-2">✓</span> Automatische berekening van openings- en eindsaldo per exportperiode</li>
+                    <li><span class="badge bg-success me-2">✓</span> Auto-sync via achtergrondworker met instelbaar interval per bankrekening</li>
+                    <li><span class="badge bg-success me-2">✓</span> Handmatige resync vanaf een zelfgekozen datum</li>
+                    <li><span class="badge bg-success me-2">✓</span> Webhook-ontvangst: SnelStart-import getriggerd door GoDutch-events</li>
+                    <li><span class="badge bg-success me-2">✓</span> Retry-mechanisme bij tijdelijke SnelStart-uploadfouten (exponential backoff)</li>
+                    <li><span class="badge bg-success me-2">✓</span> Elke sync-run vastgelegd met status, triggerobron en statistieken</li>
+                    <li><span class="badge bg-success me-2">✓</span> Syncperiode automatisch bepaald op basis van laatste succesvolle run</li>
+                    <li><span class="badge bg-success me-2">✓</span> GoDutch-rekeningen opvragen rechtstreeks vanuit de GoDutch API</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a class="btn btn-sm btn-primary" href="/godutch/sync">Sync &amp; instellingen</a>
+                <a class="btn btn-sm btn-outline-secondary ms-2" href="/bankaccounts">Bankrekeningen</a>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
+    @* myPOS *@
+    <div class="col-lg-6">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header fw-bold" style="background:#0057AD; color:#fff;">
+                <span class="me-2">💳</span> myPOS → SnelStart
+            </div>
             <div class="card-body">
-                <h5 class="card-title">GoDutch synchronisatie</h5>
-                <p class="card-text text-muted">
-                    Bekijk per bankrekening de laatste synchronisatiestatus en pas auto-sync instellingen aan.
+                <p class="text-muted small mb-3">
+                    Betaalterminal-transacties vanuit myPOS worden opgehaald, gecategoriseerd per transactietype en geëxporteerd naar het SnelStart-bankboek.
                 </p>
-                <a class="btn btn-outline-primary btn-sm" href="/godutch/sync">Sync & instellingen</a>
+                <ul class="list-unstyled feature-list">
+                    <li><span class="badge bg-success me-2">✓</span> Transacties ophalen van myPOS API en opslaan als raw JSON</li>
+                    <li><span class="badge bg-success me-2">✓</span> Upsert-logica: nieuwe transacties toevoegen, bestaande bijwerken</li>
+                    <li><span class="badge bg-success me-2">✓</span> Transactietype-mapping per type (bijv. SALE, REFUND) naar SnelStart grootboek</li>
+                    <li><span class="badge bg-success me-2">✓</span> BTW-configuratie per transactietype (soort, tarief, percentage)</li>
+                    <li><span class="badge bg-success me-2">✓</span> Statusoverzicht: welke transactietypes zijn gekoppeld, actief of ontbrekend</li>
+                    <li><span class="badge bg-success me-2">✓</span> Transacties <strong>per type gesommeerd</strong> over een vrij instelbare periode</li>
+                    <li>
+                        <span class="badge bg-success me-2">✓</span>
+                        Handmatig exporteren over elke gewenste periode:
+                        <span class="badge bg-light text-dark border ms-1">Dag</span>
+                        <span class="badge bg-light text-dark border ms-1">Week</span>
+                        <span class="badge bg-light text-dark border ms-1">Maand</span>
+                        <span class="badge bg-light text-dark border ms-1">Kwartaal</span>
+                        <span class="badge bg-light text-dark border ms-1">Jaar</span>
+                    </li>
+                    <li><span class="badge bg-success me-2">✓</span> Export naar SnelStart-bankboek gegroepeerd per type en valuta</li>
+                    <li><span class="badge bg-success me-2">✓</span> Exportbatch-workflow: Concept → Ready → geëxporteerd met SnelStart-referentie</li>
+                    <li><span class="badge bg-success me-2">✓</span> Boekjaarvalidatie: exportperiode beperkt tot één kalenderjaar</li>
+                    <li>
+                        <span class="badge bg-warning text-dark me-2">i</span>
+                        Auto-sync gebruikt een instelbaar <strong>terugkijkvenster in uren</strong> (geen vaste kalenderperiodes) — handmatige export biedt meer periodevrijheid
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a class="btn btn-sm btn-primary" href="/mypos/type-status">Transactietype status</a>
+                <a class="btn btn-sm btn-outline-secondary ms-2" href="/mypos/transactions">Transacties ophalen</a>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card h-100">
+</div>
+
+@* Tenantbeheer & Algemeen *@
+<div class="row g-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header fw-bold" style="background:#004A94; color:#fff;">
+                <span class="me-2">🏢</span> Tenantbeheer &amp; onboarding
+            </div>
             <div class="card-body">
-                <h5 class="card-title">myPOS transactietypes</h5>
-                <p class="card-text text-muted">
-                    Controleer of alle transactietypes gekoppeld zijn aan een SnelStart grootboekrekening.
-                </p>
-                <a class="btn btn-outline-primary btn-sm" href="/mypos/type-status">Status bekijken</a>
+                <ul class="list-unstyled feature-list mb-0">
+                    <li><span class="badge bg-success me-2">✓</span> Multi-tenant: elke klant heeft eigen koppelingen en instellingen</li>
+                    <li><span class="badge bg-success me-2">✓</span> Tenantstatussen: Draft, Trial, Active, Suspended, Cancelled</li>
+                    <li><span class="badge bg-success me-2">✓</span> Bankrekeningen beheren per tenant (IBAN-validatie inbegrepen)</li>
+                    <li><span class="badge bg-success me-2">✓</span> SnelStart-koppelingen: CustomKey of OAuth per tenant</li>
+                    <li><span class="badge bg-success me-2">✓</span> SnelStart-administraties beheren per tenant</li>
+                    <li><span class="badge bg-success me-2">✓</span> Connectiviteitstest voor SnelStart-verbinding</li>
+                    <li><span class="badge bg-success me-2">✓</span> Stapsgewijze onboarding voor nieuwe klanten</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a class="btn btn-sm btn-primary" href="/tenants/onboard">Klant aanmelden</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header fw-bold" style="background:#004A94; color:#fff;">
+                <span class="me-2">⚙️</span> Infrastructuur &amp; beveiliging
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled feature-list mb-0">
+                    <li><span class="badge bg-success me-2">✓</span> SnelStart-dagboeken en grootboeken opvragen en aanmaken</li>
+                    <li><span class="badge bg-success me-2">✓</span> BTW-tarieven ophalen rechtstreeks uit SnelStart</li>
+                    <li><span class="badge bg-success me-2">✓</span> Wachtwoordencryptie via DPAPI (Windows)</li>
+                    <li><span class="badge bg-success me-2">✓</span> E-mailnotificaties via SMTP</li>
+                    <li><span class="badge bg-success me-2">✓</span> Structured logging via Serilog</li>
+                    <li><span class="badge bg-success me-2">✓</span> ADO.NET met stored procedures — geen ORM</li>
+                    <li><span class="badge bg-success me-2">✓</span> Multi-tenant SQL Server database</li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .feature-list li {
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: .9rem;
+    }
+
+    .feature-list li:last-child {
+        border-bottom: none;
+    }
+</style>
