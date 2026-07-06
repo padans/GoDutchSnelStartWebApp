@@ -78,6 +78,9 @@ public sealed class MyPosAutoSyncBackgroundWorker : BackgroundService
 
             if (dbSettings is not null)
             {
+                if (dbSettings.SyncMode == "Period")
+                    return PeriodTypeToIntervalMinutes(dbSettings.PeriodType);
+
                 return dbSettings.IntervalMinutes < 1 ? 1 : dbSettings.IntervalMinutes;
             }
         }
@@ -89,4 +92,14 @@ public sealed class MyPosAutoSyncBackgroundWorker : BackgroundService
         var fallback = _options.Value.IntervalMinutes;
         return fallback < 1 ? 1 : fallback;
     }
+
+    private static int PeriodTypeToIntervalMinutes(string? periodType) => periodType switch
+    {
+        "Day"     => 1440,
+        "Week"    => 10080,
+        "Month"   => 44640,
+        "Quarter" => 133920,
+        "Year"    => 527040,
+        _         => 1440
+    };
 }

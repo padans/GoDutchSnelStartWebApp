@@ -48,7 +48,7 @@ else if (settings is not null)
                         <span class="badge bg-secondary">Inactief — klik om te activeren</span>
                     }
                 </div>
-                <div class="card-body @(IsLookback ? "" : "text-muted")">
+                <div class="card-body @(IsLookback ? "" : "text-muted") d-flex flex-column">
                     <p class="small mb-3">
                         Bij elke controle worden transacties van de afgelopen <strong>X uur</strong> opgehaald.
                         Geschikt voor realtime verwerking van pintransacties.
@@ -66,16 +66,26 @@ else if (settings is not null)
                             <input type="number" class="form-control form-control-sm" min="1" max="1440"
                                    @bind="settings.IntervalMinutes"
                                    disabled="@(!settings.Enabled)" />
-                            <div class="form-text">Hoe vaak de taak controleert.</div>
+                            <div class="form-text">Hoe vaak de taak controleert (max. 1440 min.).</div>
                         </div>
                     </div>
 
-                    <label class="form-label">Terugkijkvenster (uren)</label>
-                    <input type="number" class="form-control" min="1" max="720"
-                           @bind="settings.LookbackHours"
-                           disabled="@(!IsLookback)"
-                           @onclick:stopPropagation="true" />
-                    <div class="form-text">Hoeveel uur terug per importronde.</div>
+                    <div @onclick:stopPropagation="true">
+                        <label class="form-label">Terugkijkvenster (uren)</label>
+                        <input type="number" class="form-control mb-3" min="1" max="720"
+                               @bind="settings.LookbackHours"
+                               disabled="@(!IsLookback)" />
+                        <div class="form-text mb-3">Hoeveel uur terug per importronde.</div>
+                    </div>
+
+                    <div class="mt-auto d-flex gap-2" @onclick:stopPropagation="true">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveSettingsAsync" disabled="@isSaving">
+                            @(isSaving ? "Opslaan..." : "Opslaan")
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadSettingsAsync" disabled="@isSaving">
+                            Annuleren
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -96,7 +106,7 @@ else if (settings is not null)
                         <span class="badge bg-secondary">Inactief — klik om te activeren</span>
                     }
                 </div>
-                <div class="card-body @(IsPeriod ? "" : "text-muted")">
+                <div class="card-body @(IsPeriod ? "" : "text-muted") d-flex flex-column">
                     <p class="small mb-3">
                         Transacties worden per afgesloten kalenderperiode gesommeerd per type
                         en als één journaalpost naar SnelStart gestuurd.
@@ -110,38 +120,37 @@ else if (settings is not null)
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <label class="form-label @(!settings.Enabled ? "text-muted" : "")">Controle-interval (min.)</label>
-                            <input type="number" class="form-control form-control-sm" min="1"
-                                   @bind="settings.IntervalMinutes"
-                                   disabled="@(!settings.Enabled)" />
-                            <div class="form-text">Automatisch ingesteld op basis van periode.</div>
+                            <label class="form-label">Controle-interval</label>
+                            <div class="form-control-plaintext fw-semibold py-1">@PeriodIntervalDescription</div>
+                            <div class="form-text">Automatisch afgeleid van de gekozen periode.</div>
                         </div>
                     </div>
 
-                    <label class="form-label">Periode</label>
-                    <select class="form-select" @bind="settings.PeriodType" @bind:after="OnPeriodTypeChanged"
-                            disabled="@(!IsPeriod)"
-                            @onclick:stopPropagation="true">
-                        <option value="Day">Dag — gisteren (00:00–23:59)</option>
-                        <option value="Week">Week — vorige week (ma t/m zo)</option>
-                        <option value="Month">Maand — vorige kalendermaand</option>
-                        <option value="Quarter">Kwartaal — vorig kwartaal</option>
-                        <option value="Year">Jaar — vorig kalenderjaar</option>
-                    </select>
-                    <div class="form-text">Altijd de laatste <em>afgesloten</em> periode in NL-tijdzone.</div>
+                    <div @onclick:stopPropagation="true">
+                        <label class="form-label">Periode</label>
+                        <select class="form-select mb-1" @bind="settings.PeriodType"
+                                disabled="@(!IsPeriod)">
+                            <option value="Day">Dag — gisteren (00:00–23:59)</option>
+                            <option value="Week">Week — vorige week (ma t/m zo)</option>
+                            <option value="Month">Maand — vorige kalendermaand</option>
+                            <option value="Quarter">Kwartaal — vorig kwartaal</option>
+                            <option value="Year">Jaar — vorig kalenderjaar</option>
+                        </select>
+                        <div class="form-text mb-3">Altijd de laatste <em>afgesloten</em> periode in NL-tijdzone.</div>
+                    </div>
+
+                    <div class="mt-auto d-flex gap-2" @onclick:stopPropagation="true">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveSettingsAsync" disabled="@isSaving">
+                            @(isSaving ? "Opslaan..." : "Opslaan")
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadSettingsAsync" disabled="@isSaving">
+                            Annuleren
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-    </div>
-
-    <div class="mb-4">
-        <button type="button" class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@isSaving">
-            @(isSaving ? "Opslaan..." : "Opslaan")
-        </button>
-        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="LoadSettingsAsync" disabled="@isSaving">
-            Annuleren
-        </button>
     </div>
 
     <div class="card">
@@ -188,29 +197,20 @@ else if (settings is not null)
     private bool IsLookback => settings?.SyncMode == "Lookback";
     private bool IsPeriod   => settings?.SyncMode == "Period";
 
+    private string PeriodIntervalDescription => settings?.PeriodType switch
+    {
+        "Day"     => "Dagelijks",
+        "Week"    => "Wekelijks",
+        "Month"   => "Maandelijks",
+        "Quarter" => "Per kwartaal",
+        "Year"    => "Jaarlijks",
+        _         => "Dagelijks"
+    };
+
     protected override async Task OnInitializedAsync() => await LoadSettingsAsync();
 
     private void SelectLookback() { if (settings is not null) settings.SyncMode = "Lookback"; }
-    private void SelectPeriod()
-    {
-        if (settings is null) return;
-        settings.SyncMode = "Period";
-        OnPeriodTypeChanged();
-    }
-
-    private void OnPeriodTypeChanged()
-    {
-        if (settings is null) return;
-        settings.IntervalMinutes = settings.PeriodType switch
-        {
-            "Day"     => 1440,
-            "Week"    => 10080,
-            "Month"   => 44640,
-            "Quarter" => 133920,
-            "Year"    => 527040,
-            _         => 1440
-        };
-    }
+    private void SelectPeriod()   { if (settings is not null) settings.SyncMode = "Period"; }
 
     private async Task LoadSettingsAsync()
     {
@@ -243,12 +243,6 @@ else if (settings is not null)
         if (settings.IntervalMinutes < 1)
         {
             errorMessage = "Controle-interval moet minimaal 1 minuut zijn.";
-            return;
-        }
-
-        if (IsLookback && settings.IntervalMinutes > 1440)
-        {
-            errorMessage = "Controle-interval mag maximaal 1440 minuten zijn voor terugkijkvenster-modus.";
             return;
         }
 
