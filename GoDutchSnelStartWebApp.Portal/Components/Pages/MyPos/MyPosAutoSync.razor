@@ -28,27 +28,6 @@
 }
 else if (settings is not null)
 {
-    <div class="card mb-4">
-        <div class="card-header fw-bold">Algemeen</div>
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="enabled" @bind="settings.Enabled" />
-                        <label class="form-check-label fw-semibold" for="enabled">Auto-sync ingeschakeld</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label @(!settings.Enabled ? "text-muted" : "")">Controle-interval (minuten)</label>
-                    <input type="number" class="form-control" min="1" max="1440"
-                           @bind="settings.IntervalMinutes"
-                           disabled="@(!settings.Enabled)" />
-                    <div class="form-text">Hoe vaak de achtergrondtaak controleert of er gesynchroniseerd moet worden.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <h5 class="mb-3">Synchronisatiemethode — klik op een optie om deze te activeren</h5>
 
     <div class="row g-3 mb-4">
@@ -74,6 +53,23 @@ else if (settings is not null)
                         Bij elke controle worden transacties van de afgelopen <strong>X uur</strong> opgehaald.
                         Geschikt voor realtime verwerking van pintransacties.
                     </p>
+
+                    <div class="row g-3 mb-3" @onclick:stopPropagation="true">
+                        <div class="col-sm-6">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="enabled-lb" @bind="settings.Enabled" />
+                                <label class="form-check-label fw-semibold" for="enabled-lb">Auto-sync ingeschakeld</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label @(!settings.Enabled ? "text-muted" : "")">Controle-interval (min.)</label>
+                            <input type="number" class="form-control form-control-sm" min="1" max="1440"
+                                   @bind="settings.IntervalMinutes"
+                                   disabled="@(!settings.Enabled)" />
+                            <div class="form-text">Hoe vaak de taak controleert.</div>
+                        </div>
+                    </div>
+
                     <label class="form-label">Terugkijkvenster (uren)</label>
                     <input type="number" class="form-control" min="1" max="720"
                            @bind="settings.LookbackHours"
@@ -105,6 +101,23 @@ else if (settings is not null)
                         Transacties worden per afgesloten kalenderperiode gesommeerd per type
                         en als één journaalpost naar SnelStart gestuurd.
                     </p>
+
+                    <div class="row g-3 mb-3" @onclick:stopPropagation="true">
+                        <div class="col-sm-6">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="enabled-pd" @bind="settings.Enabled" />
+                                <label class="form-check-label fw-semibold" for="enabled-pd">Auto-sync ingeschakeld</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label @(!settings.Enabled ? "text-muted" : "")">Controle-interval (min.)</label>
+                            <input type="number" class="form-control form-control-sm" min="1" max="1440"
+                                   @bind="settings.IntervalMinutes"
+                                   disabled="@(!settings.Enabled)" />
+                            <div class="form-text">Hoe vaak de taak controleert.</div>
+                        </div>
+                    </div>
+
                     <label class="form-label">Periode</label>
                     <select class="form-select" @bind="settings.PeriodType"
                             disabled="@(!IsPeriod)"
