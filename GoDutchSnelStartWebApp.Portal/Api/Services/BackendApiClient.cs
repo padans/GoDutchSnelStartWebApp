@@ -1089,4 +1089,12 @@ public sealed class BackendApiClient : IBackendApiClient
         return result ?? new MyPosTransactionTypeStatusResultViewModel();
     }
 
+    public async Task SubmitGoDutchLeadAsync(
+        GoDutchLeadViewModel lead,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/godutch-leads", lead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
 }

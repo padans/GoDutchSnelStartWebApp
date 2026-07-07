@@ -191,4 +191,8 @@ public interface IBackendApiClient
     Task<MyPosTransactionTypeStatusResultViewModel> GetMyPosTransactionTypeStatusAsync(
         Guid tenantId,
         CancellationToken cancellationToken = default);
+
+    Task SubmitGoDutchLeadAsync(
+        GoDutchLeadViewModel lead,
+        CancellationToken cancellationToken = default);
 }

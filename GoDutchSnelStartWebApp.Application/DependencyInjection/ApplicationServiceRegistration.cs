@@ -1,5 +1,7 @@
 using GoDutchSnelStartWebApp.Application.BankAccounts.Interfaces;
 using GoDutchSnelStartWebApp.Application.BankAccounts.Services;
+using GoDutchSnelStartWebApp.Application.GoDutchLeads.Interfaces;
+using GoDutchSnelStartWebApp.Application.GoDutchLeads.Services;
 using GoDutchSnelStartWebApp.Application.BankAccountSettings.Interfaces;
 using GoDutchSnelStartWebApp.Application.BankAccountSettings.Services;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Interfaces;
@@ -51,6 +53,7 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IMyPosAutoSyncService, MyPosAutoSyncService>();
 
         services.AddScoped<IBankAccountResyncService, BankAccountResyncService>();
+        services.AddScoped<IGoDutchLeadService, GoDutchLeadService>();
 
         return services;
     }

@@ -1,5 +1,6 @@
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
+using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
 using GoDutchSnelStartWebApp.Application.Configuration;
@@ -87,6 +88,7 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IMt940Generator, Mt940Generator>();
         services.AddScoped<ICamt053Generator, Camt053Generator>();
 
+        services.AddScoped<IGoDutchLeadRepository, GoDutchLeadRepository>();
         services.AddScoped<IMyPosAutoSyncSettingsRepository, MyPosAutoSyncSettingsRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IEmailNotificationService, SmtpEmailNotificationService>();

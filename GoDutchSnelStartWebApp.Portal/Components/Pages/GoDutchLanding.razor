@@ -1,0 +1,237 @@
+@page "/godutch"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Models
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject ILogger<GoDutchLanding> Logger
+
+<PageTitle>GoDutch koppeling met SnelStart</PageTitle>
+
+@* ── Hero ── *@
+<div class="px-4 py-5 text-white rounded-3 mb-4" style="background: linear-gradient(135deg, #0055a5 0%, #0077cc 100%);">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="display-5 fw-bold mb-2">GoDutch koppeling met SnelStart</h1>
+            <p class="lead mb-0">
+                Bankafschriften van uw GoDutch-betaalrekeningen worden automatisch verwerkt
+                en geëxporteerd naar SnelStart — zonder handmatig werk.
+            </p>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            <a href="#aanmelden" class="btn btn-light btn-lg fw-semibold px-4">
+                Gratis aanmelden
+            </a>
+        </div>
+    </div>
+</div>
+
+@* ── Wat doet de koppeling? ── *@
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 mb-2">🔄</div>
+                <h5 class="fw-bold">Automatische synchronisatie</h5>
+                <p class="text-muted small mb-0">
+                    Een achtergrondtaak haalt periodiek transacties op uit GoDutch en importeert
+                    deze direct in SnelStart. Instelbaar per bankrekening.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 mb-2">📁</div>
+                <h5 class="fw-bold">MT940 &amp; CAMT.053</h5>
+                <p class="text-muted small mb-0">
+                    Kies zelf het exportformaat dat uw SnelStart-administratie verwacht.
+                    Saldo's worden automatisch berekend per importronde.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 mb-2">🏢</div>
+                <h5 class="fw-bold">Meerdere rekeningen</h5>
+                <p class="text-muted small mb-0">
+                    Koppel meerdere GoDutch-bankrekeningen, elk met eigen dagboek-
+                    en grootboekinstellingen in SnelStart.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Mogelijkheden ── *@
+<div class="row g-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header fw-bold" style="background:#0055a5; color:white;">
+                Automatisch synchroniseren
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Achtergrondtaak haalt transacties op via GoDutch API</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Instelbaar interval per bankrekening (15 min – 1 dag)</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Webhook-ontvangst: import direct bij nieuwe GoDutch-events</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Automatische berekening openings- en eindsaldo</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Slimme retry bij tijdelijke verbindingsfouten</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Importhistorie per run beschikbaar in de portal</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header fw-bold" style="background:#0055a5; color:white;">
+                Handmatig &amp; beheer
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Handmatige resync vanaf zelfgekozen datum en tijdstip</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Export in <strong>MT940</strong> of <strong>CAMT.053</strong> formaat naar keuze</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Dagboek en grootboek per bankrekening instelbaar</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> SnelStart-verbinding testen vanuit de portal</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Bankrekeningen ophalen en aanmaken vanuit GoDutch</li>
+                <li class="list-group-item"><span class="text-success me-2">✓</span> Status en transactieaantal direct zichtbaar per rekening</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@* ── Hoe werkt het? ── *@
+<div class="card shadow-sm mb-5">
+    <div class="card-header fw-bold">Hoe werkt de koppeling?</div>
+    <div class="card-body">
+        <div class="row g-3 text-center">
+            <div class="col-md-3">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2" style="width:48px;height:48px;font-size:1.2rem;">1</div>
+                <div class="fw-semibold">Aanmelden</div>
+                <div class="text-muted small">U meldt uw bedrijf aan via dit formulier.</div>
+            </div>
+            <div class="col-md-3">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2" style="width:48px;height:48px;font-size:1.2rem;">2</div>
+                <div class="fw-semibold">Inrichten</div>
+                <div class="text-muted small">GoDutch API-sleutel en SnelStart credentials invoeren.</div>
+            </div>
+            <div class="col-md-3">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2" style="width:48px;height:48px;font-size:1.2rem;">3</div>
+                <div class="fw-semibold">Koppelen</div>
+                <div class="text-muted small">Bankrekeningen koppelen aan SnelStart dagboek en grootboek.</div>
+            </div>
+            <div class="col-md-3">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2" style="width:48px;height:48px;font-size:1.2rem;">4</div>
+                <div class="fw-semibold">Klaar</div>
+                <div class="text-muted small">De synchronisatie start automatisch. Geen verdere actie vereist.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Aanmeldformulier ── *@
+<div id="aanmelden" class="card shadow-sm mb-4">
+    <div class="card-header fw-bold fs-5" style="background:#0055a5; color:white;">
+        Aanmelden — GoDutch koppeling
+    </div>
+    <div class="card-body">
+
+        @if (submitted)
+        {
+            <div class="alert alert-success">
+                <h5 class="fw-bold">Aanmelding ontvangen!</h5>
+                <p class="mb-0">
+                    Bedankt voor uw aanmelding, <strong>@lead.ContactPersoon</strong>.
+                    We nemen binnen één werkdag contact op via <strong>@lead.Email</strong>.
+                </p>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
+            <p class="text-muted mb-4">
+                Vul onderstaand formulier in en wij nemen binnen één werkdag contact met u op
+                voor een gratis demo en inrichting.
+            </p>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Bedrijfsnaam <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" placeholder="Padans B.V."
+                           @bind="lead.BedrijfsNaam" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Contactpersoon <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" placeholder="Jan de Vries"
+                           @bind="lead.ContactPersoon" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">E-mailadres <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" placeholder="info@bedrijf.nl"
+                           @bind="lead.Email" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Telefoonnummer</label>
+                    <input type="tel" class="form-control" placeholder="+31 6 12345678"
+                           @bind="lead.Telefoon" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Aantal GoDutch-bankrekeningen</label>
+                    <select class="form-select" @bind="lead.AantalBankrekeningen">
+                        <option value="">-- Kies --</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5 of meer</option>
+                    </select>
+                </div>
+                <div class="col-12 mt-2">
+                    <button type="button" class="btn btn-primary btn-lg px-5"
+                            @onclick="SubmitAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Versturen..." : "Aanmelding versturen")
+                    </button>
+                    <div class="form-text mt-2">
+                        Uw gegevens worden vertrouwelijk behandeld en alleen gebruikt voor de inrichting van de koppeling.
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private GoDutchLeadViewModel lead = new();
+    private bool isSubmitting;
+    private bool submitted;
+    private string? errorMessage;
+
+    private async Task SubmitAsync()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(lead.BedrijfsNaam))  { errorMessage = "Bedrijfsnaam is verplicht.";   return; }
+        if (string.IsNullOrWhiteSpace(lead.ContactPersoon)) { errorMessage = "Contactpersoon is verplicht."; return; }
+        if (string.IsNullOrWhiteSpace(lead.Email))          { errorMessage = "E-mailadres is verplicht.";    return; }
+
+        isSubmitting = true;
+
+        try
+        {
+            await BackendApiClient.SubmitGoDutchLeadAsync(lead);
+            submitted = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "GoDutch aanmelding versturen mislukt");
+            errorMessage = "Versturen mislukt. Probeer het opnieuw of neem contact op via admin@padans.eu.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
