@@ -23,9 +23,9 @@ public sealed class SmtpEmailNotificationService : IEmailNotificationService
 
     public async Task SendAsync(string subject, string body, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_options.Host) || string.IsNullOrWhiteSpace(_options.ToAddress))
+        if (string.IsNullOrWhiteSpace(_options.SmtpServer) || string.IsNullOrWhiteSpace(_options.ToAddress))
         {
-            _logger.LogWarning("E-mail niet verzonden: SMTP-host of ontvanger is niet geconfigureerd.");
+            _logger.LogWarning("E-mail niet verzonden: SMTP-server of ontvanger is niet geconfigureerd.");
             return;
         }
 
@@ -37,12 +37,12 @@ public sealed class SmtpEmailNotificationService : IEmailNotificationService
             message.Subject = subject;
             message.Body = new TextPart("plain") { Text = body };
 
-            var secureSocketOptions = _options.Port == 465
+            var secureSocketOptions = _options.SmtpPort == 465
                 ? SecureSocketOptions.SslOnConnect
                 : SecureSocketOptions.StartTlsWhenAvailable;
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
+            await client.ConnectAsync(_options.SmtpServer, _options.SmtpPort, secureSocketOptions, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(_options.Username))
                 await client.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
