@@ -1,9 +1,10 @@
-using System.Net;
-using System.Net.Mail;
 using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.Notifications.Interfaces;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MimeKit;
 
 namespace GoDutchSnelStartWebApp.Infrastructure.ExternalServices.Email;
 
@@ -30,22 +31,24 @@ public sealed class SmtpEmailNotificationService : IEmailNotificationService
 
         try
         {
-            using var client = new SmtpClient(_options.Host, _options.Port)
-            {
-                EnableSsl = _options.EnableSsl,
-                Credentials = new NetworkCredential(_options.Username, _options.Password)
-            };
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_options.FromName, _options.FromAddress));
+            message.To.Add(new MailboxAddress(string.Empty, _options.ToAddress));
+            message.Subject = subject;
+            message.Body = new TextPart("plain") { Text = body };
 
-            var message = new MailMessage(
-                from: new MailAddress(_options.FromAddress, _options.FromName),
-                to: new MailAddress(_options.ToAddress))
-            {
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = false
-            };
+            var secureSocketOptions = _options.Port == 465
+                ? SecureSocketOptions.SslOnConnect
+                : SecureSocketOptions.StartTlsWhenAvailable;
 
-            await client.SendMailAsync(message, cancellationToken);
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(_options.Username))
+                await client.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
+
+            await client.SendAsync(message, cancellationToken);
+            await client.DisconnectAsync(quit: true, cancellationToken);
 
             _logger.LogInformation("E-mail verstuurd naar {To}: {Subject}", _options.ToAddress, subject);
         }

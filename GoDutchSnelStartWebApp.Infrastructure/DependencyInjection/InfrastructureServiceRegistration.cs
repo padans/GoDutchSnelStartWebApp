@@ -10,7 +10,6 @@ using GoDutchSnelStartWebApp.Application.GoDutchTransactions.Interfaces;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using GoDutchSnelStartWebApp.Application.Notifications.Interfaces;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.Email;
-using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Application.SnelStartLookups.Interfaces;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices;
 using GoDutchSnelStartWebApp.Infrastructure.ExternalServices.BackgroundWorkers;
