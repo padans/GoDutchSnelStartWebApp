@@ -231,7 +231,7 @@
                                 <th>Laatste sync</th>
                                 <th>Transacties</th>
                                 <th>Trigger</th>
-                                <th>Acties</th>
+                                <th style="min-width:260px">Acties</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -251,11 +251,16 @@
                                     <td>
                                         <div class="d-flex gap-2">
                                             <a class="btn btn-sm btn-outline-secondary"
-                                                   href="@($"/bankaccounts/{row.BankAccount.Id}")">
+                                               href="@($"/bankaccounts/{row.BankAccount.Id}")">
                                                 Details
                                             </a>
 
-                                            <button class="btn btn-sm btn-outline-primary"
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               href="@($"/bankaccounts/{row.BankAccount.Id}#snelstart")">
+                                                SnelStart koppeling
+                                            </a>
+
+                                            <button class="btn btn-sm btn-outline-secondary"
                                                     @onclick="() => ToggleResync(row.BankAccount.Id)"
                                                     disabled="@isLoading">
                                                 Resync
