@@ -122,7 +122,17 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Nieuwe bankrekening aanmaken vanuit GoDutch</span>
-                <span class="badge text-bg-secondary">@goDutchAccounts.Count gevonden</span>
+                <div class="d-flex gap-2 align-items-center">
+                    @if (goDutchAccounts.Any(a => a.AlreadyExists && a.ExistingBankAccountId.HasValue))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="SyncNamesFromGoDutchAsync"
+                                disabled="@isSyncingNames">
+                            @(isSyncingNames ? "Bijwerken..." : "Namen bijwerken vanuit GoDutch")
+                        </button>
+                    }
+                    <span class="badge text-bg-secondary">@goDutchAccounts.Count gevonden</span>
+                </div>
             </div>
 
             <div class="card-body">
@@ -317,6 +327,7 @@
     private bool isSavingTenantGoDutchConnection;
     private bool isLoadingGoDutchAccounts;
     private bool isCreatingBankAccountFromGoDutch;
+    private bool isSyncingNames;
 
     private CancellationTokenSource? autoRefreshCts;
     private Task? autoRefreshTask;
@@ -632,6 +643,65 @@
         finally
         {
             isCreatingBankAccountFromGoDutch = false;
+        }
+    }
+
+    private async Task SyncNamesFromGoDutchAsync()
+    {
+        isSyncingNames = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var updated = 0;
+
+            foreach (var goDutchAccount in goDutchAccounts.Where(a => a.AlreadyExists && a.ExistingBankAccountId.HasValue))
+            {
+                var newName = !string.IsNullOrWhiteSpace(goDutchAccount.AccountName)
+                    ? goDutchAccount.AccountName
+                    : goDutchAccount.AccountHolderName;
+
+                if (string.IsNullOrWhiteSpace(newName)) continue;
+
+                var localRow = rows.FirstOrDefault(r => r.BankAccount.Id == goDutchAccount.ExistingBankAccountId);
+                if (localRow is null) continue;
+
+                var ba = localRow.BankAccount;
+                if (string.Equals(ba.AccountName, newName, StringComparison.Ordinal)) continue;
+
+                await BackendApiClient.UpdateBankAccountSnelStartSettingsAsync(
+                    TenantId,
+                    ba.Id,
+                    new UpdateBankAccountSnelStartSettingsRequestViewModel
+                    {
+                        AccountName          = newName,
+                        Iban                 = ba.Iban,
+                        IsActive             = ba.IsActive,
+                        SnelStartDagboekId   = ba.SnelStartDagboekId,
+                        SnelStartDagboekCode = ba.SnelStartDagboekCode,
+                        SnelStartDagboekNaam = ba.SnelStartDagboekNaam,
+                        SnelStartGrootboekId     = ba.SnelStartGrootboekId,
+                        SnelStartGrootboekNummer = ba.SnelStartGrootboekNummer,
+                        SnelStartGrootboekNaam   = ba.SnelStartGrootboekNaam
+                    });
+
+                updated++;
+            }
+
+            await LoadAsync();
+            successMessage = updated > 0
+                ? $"{updated} bankaccount(s) hernoemd vanuit GoDutch."
+                : "Alle namen waren al up-to-date.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Namen bijwerken vanuit GoDutch mislukt voor tenant {TenantId}", TenantId);
+            errorMessage = $"Namen bijwerken mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSyncingNames = false;
         }
     }
 
