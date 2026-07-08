@@ -3,6 +3,7 @@
 @using GoDutchSnelStartWebApp.Portal.Services
 @inject IBackendApiClient ApiClient
 @inject AppSession Session
+@inject NavigationManager Navigation
 
 @if (!Session.IsLoggedIn)
 {
@@ -87,6 +88,14 @@
             }
 
             Session.Login(user.Username, user.Module);
+
+            var startPage = user.Module switch
+            {
+                "GoDutch"    => "/bankaccounts",
+                "MyPos"      => "/mypos/import",
+                _            => "/"
+            };
+            Navigation.NavigateTo(startPage);
         }
         catch (HttpRequestException ex)
         {
