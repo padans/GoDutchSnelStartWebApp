@@ -2,6 +2,7 @@ using GoDutchSnelStartWebApp.Portal.Api.Interfaces;
 using GoDutchSnelStartWebApp.Portal.Components;
 using GoDutchSnelStartWebApp.Portal.Configuration;
 using GoDutchSnelStartWebApp.Portal.Api.Services;
+using GoDutchSnelStartWebApp.Portal.Services;
 
 
 namespace GoDutchSnelStartWebApp.Portal
@@ -21,6 +22,7 @@ namespace GoDutchSnelStartWebApp.Portal
             });
             builder.Services.Configure<PortalTenantOptions>(
                     builder.Configuration.GetSection(PortalTenantOptions.SectionName));
+            builder.Services.AddScoped<AppSession>();
 
             builder.Services.AddHttpClient<IGoDutchBackendApiClient, GoDutchBackendApiClient>(client =>
             {

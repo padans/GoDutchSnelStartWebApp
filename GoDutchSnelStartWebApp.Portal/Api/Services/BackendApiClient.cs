@@ -1097,4 +1097,17 @@ public sealed class BackendApiClient : IBackendApiClient
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<AppUserViewModel?> LoginAsync(
+        LoginRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync("api/appusers/login", request, cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<AppUserViewModel>(cancellationToken: cancellationToken);
+    }
+
 }

@@ -1,8 +1,8 @@
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
-using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Infrastructure.Repositories;
 using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Interfaces;
 using GoDutchSnelStartWebApp.Application.GoDutchAccounts.Interfaces;
@@ -86,6 +86,9 @@ public static class InfrastructureServiceRegistration
         // Infrastructure generators
         services.AddScoped<IMt940Generator, Mt940Generator>();
         services.AddScoped<ICamt053Generator, Camt053Generator>();
+
+        services.AddScoped<IAppUserRepository, AppUserRepository>();
+        services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
 
         services.AddScoped<IGoDutchLeadRepository, GoDutchLeadRepository>();
         services.AddScoped<IMyPosAutoSyncSettingsRepository, MyPosAutoSyncSettingsRepository>();

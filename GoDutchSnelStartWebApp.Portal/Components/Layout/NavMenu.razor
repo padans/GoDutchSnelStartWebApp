@@ -1,9 +1,14 @@
+@using GoDutchSnelStartWebApp.Portal.Services
+@inject AppSession Session
+@implements IDisposable
+
 <nav class="app-nav">
     <div class="app-brand">
         <div class="app-brand-title">GoDutch SnelStart</div>
-        <div class="app-brand-subtitle">Koppelingen & exports</div>
+        <div class="app-brand-subtitle">Koppelingen &amp; exports</div>
     </div>
 
+    @* Overzicht — altijd zichtbaar *@
     <div class="app-nav-section">
         <div class="app-nav-heading-dark">Overzicht</div>
 
@@ -17,29 +22,93 @@
             <span>Meldingen</span>
             <NotificationBadge />
         </NavLink>
-
-        <NavLink class="app-nav-link" href="tenants/onboard" Match="NavLinkMatch.Prefix">
-            <span class="app-nav-link-icon">➕</span>
-            <span>Klant aanmelden</span>
-        </NavLink>
     </div>
 
-    <div class="app-nav-section">
-        <div class="app-nav-heading-dark">GoDutch</div>
+    @* GoDutch — zichtbaar voor Beheerder en GoDutch *@
+    @if (IsModuleVisible("GoDutch"))
+    {
+        <div class="app-nav-section">
+            <div class="app-nav-heading-dark">GoDutch</div>
 
-        <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
-            <span class="app-nav-link-icon">🏦</span>
-            <span>Bankaccounts</span>
-        </NavLink>
+            <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🏦</span>
+                <span>Bankaccounts</span>
+            </NavLink>
 
-        <NavLink class="app-nav-link" href="godutch/sync" Match="NavLinkMatch.Prefix">
-            <span class="app-nav-link-icon">🔁</span>
-            <span>Sync & instellingen</span>
-        </NavLink>
+            <NavLink class="app-nav-link" href="godutch/sync" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔁</span>
+                <span>Sync &amp; instellingen</span>
+            </NavLink>
 
-        <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
-            <span class="app-nav-link-icon">🔗</span>
-            <span>SnelStart koppeling</span>
-        </NavLink>
-    </div>
+            <NavLink class="app-nav-link" href="bankaccounts" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔗</span>
+                <span>SnelStart koppeling</span>
+            </NavLink>
+        </div>
+    }
+
+    @* MyPos — zichtbaar voor Beheerder en MyPos *@
+    @if (IsModuleVisible("MyPos"))
+    {
+        <div class="app-nav-section">
+            <div class="app-nav-heading-dark">MyPos</div>
+
+            <NavLink class="app-nav-link" href="mypos/connection" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔌</span>
+                <span>Verbinding</span>
+            </NavLink>
+
+            <NavLink class="app-nav-link" href="mypos/import" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">📥</span>
+                <span>Import</span>
+            </NavLink>
+
+            <NavLink class="app-nav-link" href="mypos/mappings" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🗂️</span>
+                <span>Mappings</span>
+            </NavLink>
+
+            <NavLink class="app-nav-link" href="mypos/auto-sync" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">⚙️</span>
+                <span>Auto-sync</span>
+            </NavLink>
+
+            <NavLink class="app-nav-link" href="mypos/type-status" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">📊</span>
+                <span>Transactie types</span>
+            </NavLink>
+        </div>
+    }
+
+    @* Beheer — alleen voor Beheerder *@
+    @if (IsBeheerder())
+    {
+        <div class="app-nav-section">
+            <div class="app-nav-heading-dark">Beheer</div>
+
+            <NavLink class="app-nav-link" href="tenants/onboard" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🏢</span>
+                <span>Tenant onboarden</span>
+            </NavLink>
+        </div>
+    }
 </nav>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Session.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.OnChange -= StateHasChanged;
+    }
+
+    private bool IsModuleVisible(string module) =>
+        IsBeheerder() ||
+        string.Equals(Session.Module, module, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsBeheerder() =>
+        string.Equals(Session.Module, "Beheerder", StringComparison.OrdinalIgnoreCase);
+}

@@ -195,4 +195,8 @@ public interface IBackendApiClient
     Task SubmitGoDutchLeadAsync(
         GoDutchLeadViewModel lead,
         CancellationToken cancellationToken = default);
+
+    Task<AppUserViewModel?> LoginAsync(
+        LoginRequestViewModel request,
+        CancellationToken cancellationToken = default);
 }

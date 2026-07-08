@@ -1,23 +1,47 @@
 ﻿@inherits LayoutComponentBase
+@using GoDutchSnelStartWebApp.Portal.Services
+@inject AppSession Session
+@implements IDisposable
 
-<div class="app-shell">
-    <aside class="app-sidebar">
-        <NavMenu />
-    </aside>
+<LoginModal />
 
-    <main class="app-main">
-        <div class="app-topbar">
-            <div>
-                <div class="app-topbar-title">Klantportaal</div>
-                <div class="app-topbar-subtitle">Beheer SnelStart, GoDutch en myPOS per tenant</div>
+@if (Session.IsLoggedIn)
+{
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <NavMenu />
+        </aside>
+
+        <main class="app-main">
+            <div class="app-topbar">
+                <div style="flex:1">
+                    <div class="app-topbar-title">Klantportaal</div>
+                    <div class="app-topbar-subtitle">Beheer SnelStart, GoDutch en myPOS per tenant</div>
+                </div>
+                <div class="app-topbar-user">
+                    <span>@Session.Username</span>
+                    <button class="btn-logout" @onclick="Session.Logout">Uitloggen</button>
+                </div>
             </div>
-        </div>
 
-        <section class="app-content">
-            @Body
-        </section>
-    </main>
-</div>
+            <section class="app-content">
+                @Body
+            </section>
+        </main>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Session.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.OnChange -= StateHasChanged;
+    }
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     Er is een onverwachte fout opgetreden.
@@ -75,6 +99,31 @@
         align-items: center;
         padding: 0 28px;
         box-shadow: 0 2px 12px rgba(0, 68, 136, .15);
+        gap: 16px;
+    }
+
+    .app-topbar-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #DDEEFF;
+        font-size: .9rem;
+    }
+
+    .btn-logout {
+        background: rgba(255,255,255,.15);
+        border: 1px solid rgba(255,255,255,.3);
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .btn-logout:hover {
+        background: rgba(255,255,255,.25);
     }
 
     .app-topbar-title {

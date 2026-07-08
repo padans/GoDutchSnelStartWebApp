@@ -1,0 +1,183 @@
+@using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Services
+@inject IBackendApiClient ApiClient
+@inject AppSession Session
+
+@if (!Session.IsLoggedIn)
+{
+    <div class="login-overlay">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="login-logo-title">GoDutch SnelStart</div>
+                <div class="login-logo-sub">Koppelingen &amp; exports</div>
+            </div>
+
+            <EditForm Model="@_model" OnValidSubmit="HandleLogin" FormName="login-form">
+                <div class="login-field">
+                    <label>Module</label>
+                    <select class="form-select" @bind="_model.Module">
+                        <option value="">-- Selecteer module --</option>
+                        <option value="Beheerder">Beheerder</option>
+                        <option value="GoDutch">GoDutch</option>
+                        <option value="MyPos">MyPos</option>
+                    </select>
+                </div>
+
+                <div class="login-field">
+                    <label>Gebruikersnaam</label>
+                    <input class="form-control" type="text" @bind="_model.Username" placeholder="gebruikersnaam" autocomplete="username" />
+                </div>
+
+                <div class="login-field">
+                    <label>Wachtwoord</label>
+                    <input class="form-control" type="password" @bind="_model.Password" placeholder="wachtwoord" autocomplete="current-password" />
+                </div>
+
+                @if (_error is not null)
+                {
+                    <div class="login-error">@_error</div>
+                }
+
+                <button class="login-btn" type="submit" disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span>Bezig...</span>
+                    }
+                    else
+                    {
+                        <span>Inloggen</span>
+                    }
+                </button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly LoginRequestViewModel _model = new();
+    private string? _error;
+    private bool _loading;
+
+    private async Task HandleLogin()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Module))
+        {
+            _error = "Selecteer een module.";
+            return;
+        }
+
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var user = await ApiClient.LoginAsync(_model);
+
+            if (user is null)
+            {
+                _error = "Gebruikersnaam of wachtwoord is onjuist.";
+                return;
+            }
+
+            if (!string.Equals(user.Module, _model.Module, StringComparison.OrdinalIgnoreCase))
+            {
+                _error = $"Dit account heeft geen toegang tot de module '{_model.Module}'.";
+                return;
+            }
+
+            Session.Login(user.Username, user.Module);
+        }
+        catch
+        {
+            _error = "Er kon geen verbinding worden gemaakt met de server.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
+
+<style>
+    .login-overlay {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, #0066CC 0%, #004A94 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .login-card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 44px 40px 36px 40px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0, 46, 92, .35);
+    }
+
+    .login-logo {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .login-logo-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0066CC;
+    }
+
+    .login-logo-sub {
+        color: #6B7280;
+        font-size: .9rem;
+        margin-top: 4px;
+    }
+
+    .login-field {
+        margin-bottom: 18px;
+    }
+
+    .login-field label {
+        display: block;
+        font-weight: 600;
+        font-size: .875rem;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .login-error {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        color: #DC2626;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: .875rem;
+        margin-bottom: 16px;
+    }
+
+    .login-btn {
+        width: 100%;
+        background: #0066CC;
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        padding: 13px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+        margin-top: 8px;
+    }
+
+    .login-btn:hover:not(:disabled) {
+        background: #0057AD;
+    }
+
+    .login-btn:disabled {
+        opacity: .7;
+        cursor: not-allowed;
+    }
+</style>
