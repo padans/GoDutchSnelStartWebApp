@@ -1,9 +1,6 @@
-using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
-using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Web.Controllers.MyPos;
 
@@ -12,19 +9,13 @@ namespace GoDutchSnelStartWebApp.Web.Controllers.MyPos;
 public sealed class MyPosAutoSyncController : ControllerBase
 {
     private readonly IMyPosAutoSyncService _autoSyncService;
-    private readonly IMyPosAutoSyncSettingsRepository _settingsRepository;
-    private readonly IOptions<MyPosAutoSyncOptions> _options;
     private readonly ILogger<MyPosAutoSyncController> _logger;
 
     public MyPosAutoSyncController(
         IMyPosAutoSyncService autoSyncService,
-        IMyPosAutoSyncSettingsRepository settingsRepository,
-        IOptions<MyPosAutoSyncOptions> options,
         ILogger<MyPosAutoSyncController> logger)
     {
         _autoSyncService = autoSyncService;
-        _settingsRepository = settingsRepository;
-        _options = options;
         _logger = logger;
     }
 
@@ -32,21 +23,8 @@ public sealed class MyPosAutoSyncController : ControllerBase
     [ProducesResponseType(typeof(MyPosAutoSyncSettingsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<MyPosAutoSyncSettingsDto>> GetSettingsAsync(CancellationToken cancellationToken)
     {
-        var dbSettings = await _settingsRepository.GetAsync(cancellationToken);
-
-        if (dbSettings is not null)
-        {
-            return Ok(dbSettings);
-        }
-
-        var opts = _options.Value;
-
-        return Ok(new MyPosAutoSyncSettingsDto
-        {
-            Enabled = opts.Enabled,
-            IntervalMinutes = opts.IntervalMinutes < 1 ? 1 : opts.IntervalMinutes,
-            LookbackHours = opts.LookbackHours
-        });
+        var settings = await _autoSyncService.GetSettingsAsync(cancellationToken);
+        return Ok(settings);
     }
 
     [HttpPut("settings")]
@@ -59,29 +37,7 @@ public sealed class MyPosAutoSyncController : ControllerBase
         if (request.IntervalMinutes < 1)
             return BadRequest("IntervalMinutes moet minimaal 1 zijn.");
 
-        // Normaliseer: stel defaults in als velden ontbreken in de JSON
-        var syncMode  = string.IsNullOrWhiteSpace(request.SyncMode)  ? "Lookback" : request.SyncMode;
-        var periodType = string.IsNullOrWhiteSpace(request.PeriodType) ? "Day"      : request.PeriodType;
-
-        var normalizedRequest = new MyPosAutoSyncSettingsDto
-        {
-            Enabled         = request.Enabled,
-            IntervalMinutes = request.IntervalMinutes,
-            SyncMode        = syncMode,
-            LookbackHours   = request.LookbackHours < 1 ? 1 : request.LookbackHours,
-            PeriodType      = periodType
-        };
-
-        await _settingsRepository.UpsertAsync(normalizedRequest, cancellationToken);
-
-        _logger.LogInformation(
-            "myPOS auto-sync instellingen bijgewerkt. Enabled: {Enabled}, Interval: {Interval} min, SyncMode: {SyncMode}, Lookback: {Lookback} uur, PeriodType: {PeriodType}.",
-            normalizedRequest.Enabled,
-            normalizedRequest.IntervalMinutes,
-            normalizedRequest.SyncMode,
-            normalizedRequest.LookbackHours,
-            normalizedRequest.PeriodType);
-
+        await _autoSyncService.UpdateSettingsAsync(request, cancellationToken);
         return NoContent();
     }
 

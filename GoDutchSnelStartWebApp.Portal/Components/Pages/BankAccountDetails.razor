@@ -1503,15 +1503,9 @@
 
     private static string GetAdministrationDisplayName(SnelStartAdministrationViewModel administration)
     {
-        var name = !string.IsNullOrWhiteSpace(administration.DisplayName)
-            ? administration.DisplayName
-            : !string.IsNullOrWhiteSpace(administration.Name)
-                ? administration.Name
-                : administration.AdministrationName;
-
-        return string.IsNullOrWhiteSpace(name)
+        return string.IsNullOrWhiteSpace(administration.Name)
             ? administration.Id.ToString()
-            : $"{name} ({administration.Id})";
+            : $"{administration.Name} ({administration.Id})";
     }
 
     private static Guid ParseRequiredGuid(string? value, string fieldName)

@@ -1,5 +1,7 @@
 using GoDutchSnelStartWebApp.Application.AppUsers.Interfaces;
 using GoDutchSnelStartWebApp.Application.AppUsers.Services;
+using GoDutchSnelStartWebApp.Application.Notifications.Interfaces;
+using GoDutchSnelStartWebApp.Application.Notifications.Services;
 using GoDutchSnelStartWebApp.Application.BankAccounts.Interfaces;
 using GoDutchSnelStartWebApp.Application.BankAccounts.Services;
 using GoDutchSnelStartWebApp.Application.GoDutchLeads.Interfaces;
@@ -57,6 +59,7 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IBankAccountResyncService, BankAccountResyncService>();
         services.AddScoped<IGoDutchLeadService, GoDutchLeadService>();
         services.AddScoped<IAppUserService, AppUserService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

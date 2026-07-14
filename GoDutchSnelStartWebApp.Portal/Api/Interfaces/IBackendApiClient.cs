@@ -199,4 +199,19 @@ public interface IBackendApiClient
     Task<AppUserViewModel?> LoginAsync(
         LoginRequestViewModel request,
         CancellationToken cancellationToken = default);
+
+    Task<TenantSnelStartConnectionViewModel?> GetTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
+    Task<Guid> CreateTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CreateTenantSnelStartConnectionRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
+    Task UpdateTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        Guid id,
+        UpdateTenantSnelStartConnectionRequestViewModel request,
+        CancellationToken cancellationToken = default);
 }

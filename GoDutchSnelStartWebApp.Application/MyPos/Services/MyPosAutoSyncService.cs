@@ -251,7 +251,7 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         }
     }
 
-    private async Task<MyPosAutoSyncSettingsDto> GetSettingsAsync(CancellationToken cancellationToken)
+    public async Task<MyPosAutoSyncSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -271,6 +271,28 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
             LookbackHours = _options.LookbackHours < 1 ? 1 : _options.LookbackHours,
             PeriodType = "Day"
         };
+    }
+
+    public async Task UpdateSettingsAsync(MyPosAutoSyncSettingsDto settings, CancellationToken cancellationToken = default)
+    {
+        var normalized = new MyPosAutoSyncSettingsDto
+        {
+            Enabled         = settings.Enabled,
+            IntervalMinutes = settings.IntervalMinutes < 1 ? 1 : settings.IntervalMinutes,
+            SyncMode        = string.IsNullOrWhiteSpace(settings.SyncMode)  ? "Lookback" : settings.SyncMode,
+            LookbackHours   = settings.LookbackHours < 1 ? 1 : settings.LookbackHours,
+            PeriodType      = string.IsNullOrWhiteSpace(settings.PeriodType) ? "Day"     : settings.PeriodType
+        };
+
+        await _settingsRepository.UpsertAsync(normalized, cancellationToken);
+
+        _logger.LogInformation(
+            "myPOS auto-sync instellingen bijgewerkt. Enabled: {Enabled}, Interval: {Interval} min, SyncMode: {SyncMode}, Lookback: {Lookback} uur, PeriodType: {PeriodType}.",
+            normalized.Enabled,
+            normalized.IntervalMinutes,
+            normalized.SyncMode,
+            normalized.LookbackHours,
+            normalized.PeriodType);
     }
 
     private (DateTime FromUtc, DateTime ToUtc) ResolveRange(MyPosAutoSyncSettingsDto settings)

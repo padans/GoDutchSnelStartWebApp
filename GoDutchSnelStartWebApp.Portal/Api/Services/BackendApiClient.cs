@@ -1110,4 +1110,68 @@ public sealed class BackendApiClient : IBackendApiClient
         return await response.Content.ReadFromJsonAsync<AppUserViewModel>(cancellationToken: cancellationToken);
     }
 
+    public async Task<TenantSnelStartConnectionViewModel?> GetTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/snelstart/connection";
+
+        return await ExecuteWithRetryAsync(
+            async ct =>
+            {
+                using var response = await _httpClient.GetAsync(url, ct);
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<TenantSnelStartConnectionViewModel>(cancellationToken: ct);
+            },
+            operationName: $"SnelStart koppeling ophalen voor tenant {tenantId}",
+            cancellationToken);
+    }
+
+    public async Task<Guid> CreateTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CreateTenantSnelStartConnectionRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/snelstart/connection";
+
+        var result = await ExecuteWithRetryAsync(
+            async ct =>
+            {
+                using var response = await _httpClient.PostAsJsonAsync(url, request, ct);
+                response.EnsureSuccessStatusCode();
+
+                var created = await response.Content.ReadFromJsonAsync<CreateBankAccountResponseViewModel>(cancellationToken: ct);
+                return created?.Id ?? Guid.Empty;
+            },
+            operationName: $"SnelStart koppeling aanmaken voor tenant {tenantId}",
+            cancellationToken);
+
+        return result == Guid.Empty
+            ? throw new InvalidOperationException("Backend heeft geen geldig id teruggegeven.")
+            : result;
+    }
+
+    public async Task UpdateTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        Guid id,
+        UpdateTenantSnelStartConnectionRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/snelstart/connection/{id}";
+
+        await ExecuteWithRetryAsync<object?>(
+            async ct =>
+            {
+                using var response = await _httpClient.PutAsJsonAsync(url, request, ct);
+                response.EnsureSuccessStatusCode();
+                return null;
+            },
+            operationName: $"SnelStart koppeling bijwerken voor tenant {tenantId}",
+            cancellationToken);
+    }
+
 }
