@@ -2,6 +2,8 @@
 
 public sealed class UpdateTenantMyPosConnectionRequestViewModel
 {
+    public string? Name { get; set; }
+
     public string AuthUrl { get; set; } = string.Empty;
     public string TransactionsApiBaseUrl { get; set; } = string.Empty;
     public string ClientId { get; set; } = string.Empty;

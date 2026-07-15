@@ -154,6 +154,7 @@ public sealed class SnelStartAdministrationRepository : ISnelStartAdministration
 
         command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = administration.TenantId });
         command.Parameters.Add(new SqlParameter("@Name", SqlDbType.NVarChar, 200) { Value = administration.Name });
+        command.Parameters.Add(new SqlParameter("@NameSnelStartAdministration", SqlDbType.NVarChar, 200) { Value = (object?)administration.NameSnelStartAdministration ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@AdministrationClientKeyEncrypted", SqlDbType.NVarChar) { Value = administration.AdministrationClientKeyEncrypted });
         command.Parameters.Add(new SqlParameter("@IsActive", SqlDbType.Bit) { Value = administration.IsActive });
     }
@@ -165,6 +166,9 @@ public sealed class SnelStartAdministrationRepository : ISnelStartAdministration
             Id = reader.GetGuid(reader.GetOrdinal("Id")),
             TenantId = reader.GetGuid(reader.GetOrdinal("TenantId")),
             Name = reader.GetString(reader.GetOrdinal("Name")),
+            NameSnelStartAdministration = reader.IsDBNull(reader.GetOrdinal("NameSnelStartAdministration"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("NameSnelStartAdministration")),
             AdministrationClientKeyEncrypted = reader.GetString(reader.GetOrdinal("AdministrationClientKeyEncrypted")),
             IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
             CreatedUtc = reader.GetDateTime(reader.GetOrdinal("CreatedUtc")),

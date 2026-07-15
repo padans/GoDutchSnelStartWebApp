@@ -179,6 +179,7 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         }
 
         command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = connection.TenantId });
+        command.Parameters.Add(new SqlParameter("@Name", SqlDbType.NVarChar, 200) { Value = (object?)connection.Name ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@AuthUrl", SqlDbType.NVarChar, 500) { Value = connection.AuthUrl });
         command.Parameters.Add(new SqlParameter("@TransactionsApiBaseUrl", SqlDbType.NVarChar, 500) { Value = connection.TransactionsApiBaseUrl });
         command.Parameters.Add(new SqlParameter("@ClientId", SqlDbType.NVarChar, 256) { Value = connection.ClientId });
@@ -219,6 +220,9 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         {
             Id = reader.GetGuid(reader.GetOrdinal("Id")),
             TenantId = reader.GetGuid(reader.GetOrdinal("TenantId")),
+            Name = reader.IsDBNull(reader.GetOrdinal("Name"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("Name")),
             AuthUrl = reader.GetString(reader.GetOrdinal("AuthUrl")),
             TransactionsApiBaseUrl = reader.GetString(reader.GetOrdinal("TransactionsApiBaseUrl")),
             ClientId = reader.GetString(reader.GetOrdinal("ClientId")),

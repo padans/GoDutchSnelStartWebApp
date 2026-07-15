@@ -166,7 +166,8 @@ else
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Naam</th>
+                                <th>Interne naam</th>
+                                <th>SnelStart administratienaam</th>
                                 <th class="text-center">Client key</th>
                                 <th class="text-center">Actief</th>
                                 <th>Aangemaakt</th>
@@ -180,7 +181,12 @@ else
                                     @if (editingAdminId == admin.Id)
                                     {
                                         <td>
-                                            <input class="form-control form-control-sm" @bind="editAdmin!.Name" />
+                                            <input class="form-control form-control-sm" @bind="editAdmin!.Name"
+                                                   placeholder="Interne naam" />
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" @bind="editAdmin!.NameSnelStartAdministration"
+                                                   placeholder="SnelStart administratienaam" />
                                         </td>
                                         <td>
                                             <input class="form-control form-control-sm" type="password"
@@ -204,6 +210,16 @@ else
                                     else
                                     {
                                         <td><strong>@admin.Name</strong></td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(admin.NameSnelStartAdministration))
+                                            {
+                                                @admin.NameSnelStartAdministration
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fst-italic">Niet ingesteld</span>
+                                            }
+                                        </td>
                                         <td class="text-center">
                                             @if (admin.HasClientKey)
                                             {
@@ -516,10 +532,11 @@ else
         editingAdminId = admin.Id;
         editAdmin = new UpdateSnelStartAdministrationRequestViewModel
         {
-            Id       = admin.Id,
-            TenantId = TenantId,
-            Name     = admin.Name,
-            IsActive = admin.IsActive
+            Id                          = admin.Id,
+            TenantId                    = TenantId,
+            Name                        = admin.Name,
+            NameSnelStartAdministration = admin.NameSnelStartAdministration,
+            IsActive                    = admin.IsActive
         };
         editAdminClientKey = null;
         adminSuccess = null;

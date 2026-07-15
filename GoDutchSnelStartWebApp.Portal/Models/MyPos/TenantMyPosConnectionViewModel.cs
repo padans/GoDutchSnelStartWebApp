@@ -5,6 +5,8 @@ public sealed class TenantMyPosConnectionViewModel
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
 
+    public string? Name { get; set; }
+
     public string? AuthUrl { get; set; }
     public string? TransactionsApiBaseUrl { get; set; }
     public string? ClientId { get; set; }

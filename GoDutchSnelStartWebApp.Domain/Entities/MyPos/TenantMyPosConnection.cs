@@ -7,6 +7,8 @@ public sealed class TenantMyPosConnection
     public Guid Id { get; init; }
     public Guid TenantId { get; init; }
 
+    public string? Name { get; set; }
+
     public string AuthUrl { get; set; } = string.Empty;
     public string TransactionsApiBaseUrl { get; set; } = string.Empty;
 

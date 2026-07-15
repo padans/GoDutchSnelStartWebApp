@@ -2,6 +2,8 @@
 
 public sealed class CreateTenantMyPosConnectionRequest
 {
+    public string? Name { get; set; }
+
     public string AuthUrl { get; set; } = "https://auth-api.mypos.com/oauth/token";
     public string TransactionsApiBaseUrl { get; set; } = "https://transactions-api.mypos.com/v1.1";
     public string ClientId { get; set; } = string.Empty;

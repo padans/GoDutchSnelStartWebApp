@@ -1,0 +1,340 @@
+@page "/snelstart/administrations"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<SnelStartAdministrations> Logger
+
+<PageTitle>SnelStart administraties</PageTitle>
+
+<h1 class="mb-1">SnelStart administraties</h1>
+<p class="text-muted mb-4">
+    Beheer de SnelStart administraties voor deze tenant. Elke administratie heeft een eigen naam en client key.
+    Bankaccounts worden per administratie gekoppeld via de pagina <a href="snelstart/connection">SnelStart koppeling</a>.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(pageError))
+{
+    <div class="alert alert-danger">@pageError</div>
+}
+
+@if (isLoading)
+{
+    <p class="text-muted">Gegevens laden...</p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Administraties</strong>
+            <button class="btn btn-sm btn-success" @onclick="ToggleNewForm">
+                @(showNewForm ? "Annuleren" : "+ Nieuwe administratie")
+            </button>
+        </div>
+        <div class="card-body">
+
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="alert alert-success py-2">@successMessage</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger py-2">@errorMessage</div>
+            }
+
+            @if (showNewForm)
+            {
+                <div class="border rounded p-3 mb-4 bg-light">
+                    <h6 class="mb-3">Nieuwe administratie toevoegen</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Interne naam <span class="text-danger">*</span></label>
+                            <input class="form-control" @bind="newAdmin.Name"
+                                   placeholder="bijv. GoDutch hoofdrekening" />
+                            <div class="form-text">Korte herkenbare naam voor intern gebruik.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">SnelStart administratienaam</label>
+                            <input class="form-control" @bind="newAdmin.NameSnelStartAdministration"
+                                   placeholder="bijv. Bakkerij De Korst BV" />
+                            <div class="form-text">Naam zoals de administratie in SnelStart heet.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Client Key <span class="text-danger">*</span></label>
+                            <input class="form-control" type="password" @bind="newAdmin.AdministrationClientKey"
+                                   autocomplete="off" placeholder="SnelStart client key" />
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="newActive" @bind="newAdmin.IsActive" />
+                                <label class="form-check-label" for="newActive">Actief</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-success" @onclick="CreateAsync" disabled="@isSaving">
+                                @(isSaving ? "Aanmaken..." : "Aanmaken")
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" @onclick="ToggleNewForm">
+                                Annuleren
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (administrations.Count == 0)
+            {
+                <div class="text-muted">Nog geen administraties aangemaakt.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Interne naam</th>
+                                <th>SnelStart administratienaam</th>
+                                <th class="text-center">Client key</th>
+                                <th class="text-center">Actief</th>
+                                <th>Aangemaakt</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var admin in administrations)
+                            {
+                                <tr>
+                                    @if (editingId == admin.Id)
+                                    {
+                                        <td>
+                                            <input class="form-control form-control-sm" @bind="editForm!.Name"
+                                                   placeholder="Interne naam" />
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" @bind="editForm!.NameSnelStartAdministration"
+                                                   placeholder="SnelStart administratienaam" />
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" type="password"
+                                                   @bind="editClientKey" autocomplete="off"
+                                                   placeholder="@(admin.HasClientKey ? "Laat leeg = behouden" : "Vul in")" />
+                                            <div class="form-text text-center">
+                                                @(admin.HasClientKey ? "Ingesteld" : "Ontbreekt")
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" @bind="editForm!.IsActive" />
+                                        </td>
+                                        <td>@admin.CreatedUtc.ToString("dd-MM-yyyy")</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-primary me-1"
+                                                    @onclick="() => SaveAsync(admin.Id)"
+                                                    disabled="@isSaving">
+                                                @(isSaving ? "..." : "Opslaan")
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary"
+                                                    @onclick="CancelEdit">
+                                                Annuleren
+                                            </button>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td><strong>@admin.Name</strong></td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(admin.NameSnelStartAdministration))
+                                            {
+                                                @admin.NameSnelStartAdministration
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fst-italic">Niet ingesteld</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (admin.HasClientKey)
+                                            {
+                                                <span class="badge bg-success">Ingesteld</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Ontbreekt</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge @(admin.IsActive ? "bg-success" : "bg-secondary")">
+                                                @(admin.IsActive ? "Ja" : "Nee")
+                                            </span>
+                                        </td>
+                                        <td>@admin.CreatedUtc.ToString("dd-MM-yyyy")</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => StartEdit(admin)">
+                                                Bewerken
+                                            </button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private Guid TenantId => TenantOptions.Value.TenantId;
+
+    private List<SnelStartAdministrationViewModel> administrations = [];
+
+    private bool showNewForm;
+    private CreateSnelStartAdministrationRequestViewModel newAdmin = new();
+
+    private Guid? editingId;
+    private UpdateSnelStartAdministrationRequestViewModel? editForm;
+    private string? editClientKey;
+
+    private bool isLoading;
+    private bool isSaving;
+    private string? pageError;
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        pageError = null;
+
+        try
+        {
+            var result = await BackendApiClient.GetSnelStartAdministrationsByTenantAsync(TenantId);
+            administrations = result.OrderBy(a => a.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Laden SnelStart administraties mislukt.");
+            pageError = $"Laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleNewForm()
+    {
+        showNewForm = !showNewForm;
+        if (showNewForm)
+        {
+            newAdmin = new CreateSnelStartAdministrationRequestViewModel
+            {
+                TenantId = TenantId,
+                IsActive = true
+            };
+            successMessage = null;
+            errorMessage = null;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(newAdmin.Name))
+        {
+            errorMessage = "Naam is verplicht.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newAdmin.AdministrationClientKey))
+        {
+            errorMessage = "Client key is verplicht bij het aanmaken.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            newAdmin.TenantId = TenantId;
+            await BackendApiClient.CreateSnelStartAdministrationAsync(newAdmin);
+            successMessage = $"Administratie '{newAdmin.Name}' aangemaakt.";
+            showNewForm = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Aanmaken mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void StartEdit(SnelStartAdministrationViewModel admin)
+    {
+        editingId = admin.Id;
+        editForm = new UpdateSnelStartAdministrationRequestViewModel
+        {
+            Id = admin.Id,
+            TenantId = TenantId,
+            Name = admin.Name,
+            NameSnelStartAdministration = admin.NameSnelStartAdministration,
+            IsActive = admin.IsActive
+        };
+        editClientKey = null;
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        editForm = null;
+        editClientKey = null;
+    }
+
+    private async Task SaveAsync(Guid adminId)
+    {
+        if (editForm is null) return;
+
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(editForm.Name))
+        {
+            errorMessage = "Naam is verplicht.";
+            return;
+        }
+
+        editForm.AdministrationClientKey = string.IsNullOrWhiteSpace(editClientKey)
+            ? null
+            : editClientKey.Trim();
+
+        isSaving = true;
+        try
+        {
+            await BackendApiClient.UpdateSnelStartAdministrationAsync(adminId, editForm);
+            successMessage = $"Administratie '{editForm.Name}' opgeslagen.";
+            CancelEdit();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

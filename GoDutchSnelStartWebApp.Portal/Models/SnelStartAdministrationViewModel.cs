@@ -6,6 +6,7 @@ public sealed class SnelStartAdministrationViewModel
     public Guid TenantId { get; set; }
 
     public string Name { get; set; } = string.Empty;
+    public string? NameSnelStartAdministration { get; set; }
     public bool HasClientKey { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; set; }

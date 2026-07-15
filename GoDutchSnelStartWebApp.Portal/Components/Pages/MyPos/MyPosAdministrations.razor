@@ -1,0 +1,165 @@
+@page "/mypos/administrations"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosAdministrations> Logger
+
+<PageTitle>MyPos administratie</PageTitle>
+
+<h1 class="mb-1">MyPos administratie</h1>
+<p class="text-muted mb-4">
+    Geef de MyPos verbinding een herkenbare naam. Ga naar
+    <a href="mypos/connection">MyPos verbinding</a> voor de volledige API-instellingen.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(pageError))
+{
+    <div class="alert alert-danger">@pageError</div>
+}
+
+@if (isLoading)
+{
+    <p class="text-muted">Gegevens laden...</p>
+}
+else if (connection is null)
+{
+    <div class="card">
+        <div class="card-header"><strong>Geen MyPos verbinding gevonden</strong></div>
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                Er is nog geen MyPos verbinding aangemaakt voor deze tenant.
+                Ga naar <a href="mypos/connection">MyPos verbinding</a> om er een aan te maken.
+            </p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>MyPos verbinding</strong>
+            <span class="badge @(connection.IsActive ? "bg-success" : "bg-secondary")">
+                @(connection.IsActive ? "Actief" : "Inactief")
+            </span>
+        </div>
+        <div class="card-body">
+
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="alert alert-success py-2">@successMessage</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger py-2">@errorMessage</div>
+            }
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Naam</label>
+                    <input class="form-control" @bind="editName"
+                           placeholder="bijv. MyPos terminal winkel Amsterdam" />
+                    <div class="form-text">Vrij te kiezen herkenbare naam voor deze MyPos verbinding.</div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-4">
+                <div class="col-auto">
+                    <span class="badge @(connection.HasClientSecret ? "bg-success" : "bg-warning text-dark")">
+                        Client Secret: @(connection.HasClientSecret ? "Ingesteld" : "Ontbreekt")
+                    </span>
+                </div>
+                <div class="col-auto">
+                    <span class="badge @(connection.HasApiKey ? "bg-success" : "bg-warning text-dark")">
+                        API Key: @(connection.HasApiKey ? "Ingesteld" : "Ontbreekt")
+                    </span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" @onclick="SaveNameAsync" disabled="@isSaving">
+                @(isSaving ? "Opslaan..." : "Naam opslaan")
+            </button>
+            <a class="btn btn-outline-secondary ms-2" href="mypos/connection">
+                Volledige instellingen
+            </a>
+        </div>
+    </div>
+}
+
+@code {
+    private Guid TenantId => TenantOptions.Value.TenantId;
+
+    private TenantMyPosConnectionViewModel? connection;
+    private string? editName;
+
+    private bool isLoading;
+    private bool isSaving;
+    private string? pageError;
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        pageError = null;
+
+        try
+        {
+            connection = await BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+            editName = connection?.Name;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Laden MyPos verbinding mislukt.");
+            pageError = $"Laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (connection is null) return;
+
+        successMessage = null;
+        errorMessage = null;
+        isSaving = true;
+
+        try
+        {
+            var request = new UpdateTenantMyPosConnectionRequestViewModel
+            {
+                Name                       = string.IsNullOrWhiteSpace(editName) ? null : editName.Trim(),
+                AuthUrl                    = connection.AuthUrl ?? string.Empty,
+                TransactionsApiBaseUrl     = connection.TransactionsApiBaseUrl ?? string.Empty,
+                ClientId                   = connection.ClientId ?? string.Empty,
+                SnelStartBankDagboekId     = connection.SnelStartBankDagboekId,
+                SnelStartBankDagboekNummer = connection.SnelStartBankDagboekNummer,
+                SnelStartBankDagboekNaam   = connection.SnelStartBankDagboekNaam,
+                SnelStartBankIban          = connection.SnelStartBankIban,
+                IsActive                   = connection.IsActive
+            };
+
+            await BackendApiClient.UpdateTenantMyPosConnectionAsync(TenantId, connection.Id, request);
+            connection.Name = request.Name;
+            successMessage = "Naam opgeslagen.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

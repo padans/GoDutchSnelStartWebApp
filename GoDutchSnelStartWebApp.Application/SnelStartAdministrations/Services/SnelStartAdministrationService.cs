@@ -84,6 +84,9 @@ public sealed class SnelStartAdministrationService : ISnelStartAdministrationSer
             Id = Guid.NewGuid(),
             TenantId = request.TenantId,
             Name = request.Name.Trim(),
+            NameSnelStartAdministration = string.IsNullOrWhiteSpace(request.NameSnelStartAdministration)
+                ? null
+                : request.NameSnelStartAdministration.Trim(),
             AdministrationClientKeyEncrypted = encryptedClientKey,
             IsActive = request.IsActive
         };
@@ -132,6 +135,9 @@ public sealed class SnelStartAdministrationService : ISnelStartAdministrationSer
 
         existing.TenantId = request.TenantId;
         existing.Name = request.Name.Trim();
+        existing.NameSnelStartAdministration = string.IsNullOrWhiteSpace(request.NameSnelStartAdministration)
+            ? null
+            : request.NameSnelStartAdministration.Trim();
         existing.IsActive = request.IsActive;
 
         if (!string.IsNullOrWhiteSpace(request.AdministrationClientKey))
@@ -178,6 +184,7 @@ public sealed class SnelStartAdministrationService : ISnelStartAdministrationSer
             Id = administration.Id,
             TenantId = administration.TenantId,
             Name = administration.Name,
+            NameSnelStartAdministration = administration.NameSnelStartAdministration,
             IsActive = administration.IsActive,
             HasClientKey = !string.IsNullOrWhiteSpace(administration.AdministrationClientKeyEncrypted),
             CreatedUtc = administration.CreatedUtc,

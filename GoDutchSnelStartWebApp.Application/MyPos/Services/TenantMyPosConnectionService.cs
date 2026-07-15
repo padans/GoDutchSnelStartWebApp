@@ -74,6 +74,7 @@ public sealed class TenantMyPosConnectionService : ITenantMyPosConnectionService
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
+            Name = NormalizeNullable(request.Name),
             AuthUrl = NormalizeAuthUrl(request.AuthUrl),
             TransactionsApiBaseUrl = NormalizeBaseUrl(request.TransactionsApiBaseUrl, DefaultTransactionsApiBaseUrl),
             ClientId = request.ClientId.Trim(),
@@ -114,6 +115,7 @@ public sealed class TenantMyPosConnectionService : ITenantMyPosConnectionService
             throw new ArgumentException("ClientId is required.", nameof(request));
         }
 
+        existing.Name = NormalizeNullable(request.Name);
         existing.AuthUrl = NormalizeAuthUrl(request.AuthUrl);
         existing.TransactionsApiBaseUrl = NormalizeBaseUrl(request.TransactionsApiBaseUrl, DefaultTransactionsApiBaseUrl);
         existing.ClientId = request.ClientId.Trim();
@@ -171,6 +173,7 @@ public sealed class TenantMyPosConnectionService : ITenantMyPosConnectionService
         {
             Id = connection.Id,
             TenantId = connection.TenantId,
+            Name = connection.Name,
             AuthUrl = connection.AuthUrl,
             TransactionsApiBaseUrl = connection.TransactionsApiBaseUrl,
             ClientId = connection.ClientId,

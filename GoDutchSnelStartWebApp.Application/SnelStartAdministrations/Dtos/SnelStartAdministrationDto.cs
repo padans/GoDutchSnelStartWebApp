@@ -6,6 +6,7 @@ public sealed class SnelStartAdministrationDto
     public Guid TenantId { get; set; }
 
     public string Name { get; set; } = string.Empty;
+    public string? NameSnelStartAdministration { get; set; }
 
     public bool IsActive { get; set; }
     public bool HasClientKey { get; set; }
