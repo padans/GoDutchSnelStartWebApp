@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padans — GoDutch &amp; MyPos automatisch naar SnelStart</title>
+    <meta name="description" content="Koppel GoDutch en MyPos automatisch aan SnelStart. Banktransacties en pintransacties worden automatisch geboekt. Start vandaag met 7 dagen gratis proberen.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --blue: #1565C0;
+            --blue-dark: #0D47A1;
+            --blue-light: #1976D2;
+            --blue-bg: #E3F2FD;
+            --green: #2E7D32;
+            --green-light: #4CAF50;
+            --text: #1A1A2E;
+            --text-muted: #5C6677;
+            --border: #E0E7EF;
+            --bg: #F8FAFC;
+            --white: #FFFFFF;
+            --shadow: 0 2px 16px rgba(0,0,0,.08);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,.12);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            background: var(--white);
+            line-height: 1.6;
+        }
+
+        /* NAV */
+        nav {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--blue);
+            text-decoration: none;
+        }
+        .nav-brand span { color: var(--text); }
+        .btn-nav {
+            background: var(--blue);
+            color: var(--white);
+            padding: 8px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: .9rem;
+            font-weight: 600;
+            transition: background .2s;
+        }
+        .btn-nav:hover { background: var(--blue-dark); color: var(--white); }
+
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-light) 100%);
+            color: var(--white);
+            padding: 100px 24px 80px;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.3);
+            color: var(--white);
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: .85rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: .5px;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            line-height: 1.15;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+        .hero h1 span { color: #90CAF9; }
+        .hero p {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,.85);
+            max-width: 600px;
+            margin: 0 auto 36px;
+        }
+        .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--white);
+            color: var(--blue-dark);
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+            display: inline-block;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.2); }
+        .btn-outline-white {
+            background: transparent;
+            color: var(--white);
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 2px solid rgba(255,255,255,.6);
+            transition: border-color .2s, background .2s;
+        }
+        .btn-outline-white:hover { border-color: var(--white); background: rgba(255,255,255,.1); color: var(--white); }
+        .hero-note {
+            margin-top: 20px;
+            font-size: .85rem;
+            color: rgba(255,255,255,.6);
+        }
+
+        /* TRUST BAR */
+        .trust-bar {
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            padding: 18px 24px;
+            text-align: center;
+            font-size: .9rem;
+            color: var(--text-muted);
+        }
+        .trust-items { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
+        .trust-item { display: flex; align-items: center; gap: 7px; }
+        .trust-icon { color: var(--green-light); font-size: 1rem; }
+
+        /* SECTION */
+        section { padding: 80px 24px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .section-label {
+            text-align: center;
+            font-size: .85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--blue);
+            margin-bottom: 12px;
+        }
+        .section-title {
+            text-align: center;
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+        .section-sub {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto 56px;
+        }
+
+        /* MODULE CARDS */
+        .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+        @media(max-width: 720px) { .modules-grid { grid-template-columns: 1fr; } }
+
+        .module-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .module-header {
+            background: var(--blue);
+            color: var(--white);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .module-icon { font-size: 1.4rem; }
+        .module-title { font-size: 1.15rem; font-weight: 700; }
+        .module-desc { font-size: .85rem; color: rgba(255,255,255,.8); margin-top: 2px; }
+        .module-body { padding: 20px 24px; }
+        .feature-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: .92rem;
+            color: var(--text);
+        }
+        .check {
+            width: 20px;
+            height: 20px;
+            background: var(--green-light);
+            border-radius: 50%;
+            color: white;
+            font-size: .7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* HOW IT WORKS */
+        .how-bg { background: var(--bg); }
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        @media(max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+        .step {
+            text-align: center;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px 24px;
+            box-shadow: var(--shadow);
+        }
+        .step-num {
+            width: 48px;
+            height: 48px;
+            background: var(--blue);
+            color: white;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+        .step p { font-size: .9rem; color: var(--text-muted); }
+
+        /* SIGNUP */
+        .signup-bg { background: var(--blue-dark); }
+        .signup-wrap {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: var(--shadow-lg);
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        @media(max-width: 600px) { .signup-wrap { padding: 28px 20px; } }
+        .signup-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+        .signup-sub { color: var(--text-muted); margin-bottom: 32px; font-size: .95rem; }
+
+        .form-section-label {
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: var(--blue);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin: 24px 0 16px;
+        }
+        .form-row { display: grid; gap: 16px; }
+        .col-2 { grid-template-columns: 1fr 1fr; }
+        .col-3 { grid-template-columns: 2fr 1fr 1fr; }
+        @media(max-width: 600px) { .col-2, .col-3 { grid-template-columns: 1fr; } }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: .85rem; font-weight: 600; color: var(--text); }
+        .form-group label .req { color: #C62828; }
+        .form-group input {
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: .95rem;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color .2s;
+        }
+        .form-group input:focus { outline: none; border-color: var(--blue); }
+        .form-group input.error { border-color: #C62828; }
+
+        .modules-check { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+        @media(max-width: 600px) { .modules-check { grid-template-columns: 1fr; } }
+        .module-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            user-select: none;
+        }
+        .module-option:has(input:checked) { border-color: var(--blue); background: var(--blue-bg); }
+        .module-option input { margin-top: 3px; accent-color: var(--blue); width: 16px; height: 16px; }
+        .module-option-text strong { font-size: .92rem; display: block; }
+        .module-option-text span { font-size: .82rem; color: var(--text-muted); }
+
+        .form-alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: .9rem;
+            margin-top: 16px;
+            display: none;
+        }
+        .form-alert.show { display: block; }
+        .form-alert.error { background: #FFEBEE; color: #B71C1C; border: 1px solid #EF9A9A; }
+        .form-alert.success { background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; }
+
+        .btn-submit {
+            width: 100%;
+            margin-top: 24px;
+            background: var(--blue);
+            color: var(--white);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: inherit;
+            border: none;
+            cursor: pointer;
+            transition: background .2s, transform .15s;
+        }
+        .btn-submit:hover:not(:disabled) { background: var(--blue-dark); transform: translateY(-1px); }
+        .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+        .submit-note { text-align: center; font-size: .8rem; color: var(--text-muted); margin-top: 10px; }
+
+        /* FOOTER */
+        footer {
+            background: #0D1B2A;
+            color: rgba(255,255,255,.7);
+            padding: 40px 24px;
+            text-align: center;
+            font-size: .88rem;
+        }
+        footer strong { color: var(--white); }
+        footer a { color: rgba(255,255,255,.7); text-decoration: none; }
+        footer a:hover { color: var(--white); }
+    </style>
+</head>
+<body>
+
+<!-- NAVIGATIE -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-brand">Padans<span>.</span></a>
+        <a href="#aanmelden" class="btn-nav">Gratis proberen</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">&#10003; 7 dagen gratis — geen creditcard nodig</div>
+    <h1>Automatisch van <span>GoDutch &amp; MyPos</span> naar SnelStart</h1>
+    <p>Banktransacties en pintransacties worden automatisch opgehaald en als boeking verwerkt in SnelStart. U hoeft niets handmatig over te zetten.</p>
+    <div class="hero-cta">
+        <a href="#aanmelden" class="btn-primary">Start gratis proefperiode</a>
+        <a href="#modules" class="btn-outline-white">Meer informatie</a>
+    </div>
+    <p class="hero-note">7 dagen gratis &bull; Daarna op aanvraag &bull; Direct actief</p>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+    <div class="trust-items">
+        <div class="trust-item"><span class="trust-icon">&#10003;</span> Auto-sync op ingesteld interval</div>
+        <div class="trust-item"><span class="trust-icon">&#10003;</span> MT940 &amp; CAMT053 export</div>
+        <div class="trust-item"><span class="trust-icon">&#10003;</span> Webhook-ondersteuning</div>
+        <div class="trust-item"><span class="trust-icon">&#10003;</span> Multi-tenant &amp; meerdere bankrekeningen</div>
+    </div>
+</div>
+
+<!-- MODULES -->
+<section id="modules">
+    <div class="container">
+        <p class="section-label">Modules</p>
+        <h2 class="section-title">Twee koppelingen, één platform</h2>
+        <p class="section-sub">Kies de module die bij uw situatie past. Of activeer beide voor een volledig geautomatiseerde verwerking.</p>
+
+        <div class="modules-grid">
+            <!-- GoDutch -->
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">&#127974;</div>
+                    <div>
+                        <div class="module-title">GoDutch &rarr; SnelStart</div>
+                        <div class="module-desc">Bankafschriften automatisch importeren</div>
+                    </div>
+                </div>
+                <div class="module-body">
+                    <ul class="feature-list">
+                        <li><span class="check">&#10003;</span> Transacties ophalen per bankrekening (IBAN) en datumperiode</li>
+                        <li><span class="check">&#10003;</span> Export naar SnelStart in <strong>MT940</strong> of <strong>CAMT053</strong> formaat</li>
+                        <li><span class="check">&#10003;</span> Automatische berekening van openings- en eindsaldo per exportperiode</li>
+                        <li><span class="check">&#10003;</span> Auto-sync via achtergrondworker met instelbaar interval per bankrekening</li>
+                        <li><span class="check">&#10003;</span> Handmatige resync vanaf een zelfgekozen datum</li>
+                        <li><span class="check">&#10003;</span> Webhook-ontvangst: SnelStart-import getriggerd door GoDutch-events</li>
+                        <li><span class="check">&#10003;</span> Retry-mechanisme bij tijdelijke SnelStart-uploadfouten (exponential backoff)</li>
+                        <li><span class="check">&#10003;</span> Elke sync-run vastgelegd met status, triggerobron en statistieken</li>
+                        <li><span class="check">&#10003;</span> Syncperiode automatisch bepaald op basis van laatste succesvolle run</li>
+                        <li><span class="check">&#10003;</span> GoDutch-rekeningen opvragen rechtstreeks vanuit de GoDutch API</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- MyPos -->
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">&#128179;</div>
+                    <div>
+                        <div class="module-title">MyPos &rarr; SnelStart</div>
+                        <div class="module-desc">Pinbetalingen automatisch boeken</div>
+                    </div>
+                </div>
+                <div class="module-body">
+                    <ul class="feature-list">
+                        <li><span class="check">&#10003;</span> MyPos-transacties importeren per periode</li>
+                        <li><span class="check">&#10003;</span> Transactietype-mappings beheren per tenant</li>
+                        <li><span class="check">&#10003;</span> Exportbatches aanmaken en naar SnelStart bankboek exporteren</li>
+                        <li><span class="check">&#10003;</span> Auto-sync via achtergrondworker</li>
+                        <li><span class="check">&#10003;</span> Transactietype-statusbewaking</li>
+                        <li><span class="check">&#10003;</span> Overzicht van alle geïmporteerde transacties per periode</li>
+                        <li><span class="check">&#10003;</span> Koppeling met SnelStart dagboek per transactietype</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-bg">
+    <div class="container">
+        <p class="section-label">Hoe werkt het</p>
+        <h2 class="section-title">In drie stappen aan de slag</h2>
+        <p class="section-sub">Na aanmelding kunt u direct starten. Geen installatie, geen technische kennis vereist.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Aanmelden</h3>
+                <p>Vul uw bedrijfsgegevens in en kies de gewenste module(s). Uw proefperiode van 7 dagen start direct.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Koppelen</h3>
+                <p>Voer uw GoDutch- en/of SnelStart API-gegevens in via het beveiligde portaal. Uw bankrekeningen worden automatisch herkend.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Automatisch verwerken</h3>
+                <p>De koppeling werkt volledig automatisch. Transacties worden op ingesteld interval opgehaald en doorgestuurd naar SnelStart.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SIGNUP FORM -->
+<section class="signup-bg" id="aanmelden">
+    <div class="container">
+        <div class="signup-wrap">
+            <h2 class="signup-title">Gratis aanmelden</h2>
+            <p class="signup-sub">Vul uw bedrijfsgegevens in. Uw proefperiode van <strong>7 dagen</strong> start direct na aanmelding. Geen betalingsgegevens nodig.</p>
+
+            <form id="registrationForm" novalidate>
+
+                <div class="form-section-label">Bedrijfsgegevens</div>
+                <div class="form-row col-2">
+                    <div class="form-group">
+                        <label for="companyName">Bedrijfsnaam <span class="req">*</span></label>
+                        <input type="text" id="companyName" name="companyName" placeholder="Officiële bedrijfsnaam" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactName">Contactpersoon</label>
+                        <input type="text" id="contactName" name="contactName" placeholder="Voor- en achternaam">
+                    </div>
+                </div>
+                <div class="form-row col-3" style="margin-top:16px">
+                    <div class="form-group">
+                        <label for="email">E-mailadres</label>
+                        <input type="email" id="email" name="email" placeholder="contact@bedrijf.nl">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Telefoonnummer</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+31 6 12345678">
+                    </div>
+                    <div class="form-group">
+                        <label for="kvkNumber">KvK-nummer</label>
+                        <input type="text" id="kvkNumber" name="kvkNumber" placeholder="12345678">
+                    </div>
+                </div>
+
+                <div class="form-section-label" style="margin-top:28px">Adres</div>
+                <div class="form-row col-3">
+                    <div class="form-group">
+                        <label for="address">Straat en huisnummer</label>
+                        <input type="text" id="address" name="address" placeholder="Hoofdstraat 1">
+                    </div>
+                    <div class="form-group">
+                        <label for="postalCode">Postcode</label>
+                        <input type="text" id="postalCode" name="postalCode" placeholder="1234 AB">
+                    </div>
+                    <div class="form-group">
+                        <label for="city">Plaats</label>
+                        <input type="text" id="city" name="city" placeholder="Amsterdam">
+                    </div>
+                </div>
+
+                <div class="form-section-label" style="margin-top:28px">Modules</div>
+                <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:12px">Selecteer welke module(s) u wilt activeren. U kunt later altijd modules toevoegen.</p>
+                <div class="modules-check">
+                    <label class="module-option">
+                        <input type="checkbox" id="goDutchEnabled" name="goDutchEnabled">
+                        <div class="module-option-text">
+                            <strong>&#127974; GoDutch &rarr; SnelStart</strong>
+                            <span>Bankafschriften automatisch importeren</span>
+                        </div>
+                    </label>
+                    <label class="module-option">
+                        <input type="checkbox" id="myPosEnabled" name="myPosEnabled">
+                        <div class="module-option-text">
+                            <strong>&#128179; MyPos &rarr; SnelStart</strong>
+                            <span>Pinbetalingen automatisch boeken</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="formAlert" class="form-alert"></div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    Gratis aanmelden — 7 dagen proefperiode starten
+                </button>
+                <p class="submit-note">&#128274; Uw gegevens worden veilig verwerkt &bull; Geen betaalverplichting &bull; Na 7 dagen ontvangt u bericht</p>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <p><strong>Padans</strong> &mdash; Automatische boekhoudkoppelingen voor het MKB</p>
+    <p style="margin-top:8px">
+        <a href="mailto:info@padans.eu">info@padans.eu</a>
+        &bull; &copy; <span id="year"></span> Padans. Alle rechten voorbehouden.
+    </p>
+</footer>
+
+<script>
+    // !! Pas deze URL aan naar het adres van uw API-server !!
+    const API_BASE_URL = 'https://app.padans.eu';
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const form = document.getElementById('registrationForm');
+    const alertEl = document.getElementById('formAlert');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showAlert(msg, type) {
+        alertEl.textContent = msg;
+        alertEl.className = 'form-alert show ' + type;
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const companyName = document.getElementById('companyName').value.trim();
+        const goDutch = document.getElementById('goDutchEnabled').checked;
+        const myPos = document.getElementById('myPosEnabled').checked;
+
+        // Client-side validatie
+        if (!companyName) {
+            document.getElementById('companyName').classList.add('error');
+            showAlert('Vul uw bedrijfsnaam in.', 'error');
+            return;
+        }
+        if (!goDutch && !myPos) {
+            showAlert('Selecteer minimaal één module (GoDutch of MyPos).', 'error');
+            return;
+        }
+
+        document.getElementById('companyName').classList.remove('error');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Aanmelding verwerken...';
+        alertEl.className = 'form-alert';
+
+        const payload = {
+            companyName: companyName,
+            contactName: document.getElementById('contactName').value.trim() || null,
+            email: document.getElementById('email').value.trim() || null,
+            phone: document.getElementById('phone').value.trim() || null,
+            address: document.getElementById('address').value.trim() || null,
+            postalCode: document.getElementById('postalCode').value.trim() || null,
+            city: document.getElementById('city').value.trim() || null,
+            kvkNumber: document.getElementById('kvkNumber').value.trim() || null,
+            goDutchEnabled: goDutch,
+            myPosEnabled: myPos
+        };
+
+        try {
+            const resp = await fetch(API_BASE_URL + '/api/public/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                form.innerHTML = `
+                    <div style="text-align:center;padding:32px 0">
+                        <div style="font-size:3rem;margin-bottom:16px">&#10003;</div>
+                        <h3 style="font-size:1.4rem;font-weight:800;margin-bottom:8px">Aanmelding ontvangen!</h3>
+                        <p style="color:var(--text-muted)">Uw proefperiode van <strong>7 dagen</strong> is gestart. U ontvangt binnen 24 uur toegangsgegevens voor het portaal op <strong>${API_BASE_URL}</strong>.</p>
+                    </div>`;
+            } else {
+                const data = await resp.json().catch(() => ({}));
+                showAlert(data.error || 'Er is een fout opgetreden. Probeer het opnieuw of neem contact op via info@padans.eu.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Gratis aanmelden — 7 dagen proefperiode starten';
+            }
+        } catch {
+            showAlert('Verbinding mislukt. Controleer uw internetverbinding en probeer het opnieuw.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Gratis aanmelden — 7 dagen proefperiode starten';
+        }
+    });
+</script>
+</body>
+</html>

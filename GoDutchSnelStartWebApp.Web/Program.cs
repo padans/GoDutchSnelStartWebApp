@@ -47,6 +47,18 @@ public class Program
                         shared: true);
             });
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("LandingPage", policy =>
+                    policy.WithOrigins(
+                            "https://www.padans.eu",
+                            "https://padans.eu",
+                            "http://www.padans.eu",
+                            "http://padans.eu")
+                        .WithMethods("POST")
+                        .WithHeaders("Content-Type"));
+            });
+
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                     options.JsonSerializerOptions.Converters.Add(
@@ -63,6 +75,7 @@ public class Program
             Log.Information("Serilog file test after app build");
 
             app.UseSerilogRequestLogging();
+            app.UseCors("LandingPage");
             app.UseApiExceptionMiddleware();
 
             if (app.Environment.IsDevelopment())
