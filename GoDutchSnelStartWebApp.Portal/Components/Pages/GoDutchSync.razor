@@ -44,6 +44,10 @@ else
                 <div>
                     <span class="fw-bold font-monospace">@row.BankAccount.Iban</span>
                     <span class="ms-2 text-muted">@row.BankAccount.AccountName</span>
+                    @if (!string.IsNullOrWhiteSpace(row.SnelStartAdminName))
+                    {
+                        <span class="badge bg-info text-dark ms-2">@row.SnelStartAdminName</span>
+                    }
                     @if (!row.BankAccount.IsActive)
                     {
                         <span class="badge bg-secondary ms-2">Inactief</span>
@@ -194,6 +198,16 @@ else
             var tenantId = TenantOptions.Value.TenantId;
             var bankAccounts = await BackendApiClient.GetBankAccountsAsync(tenantId);
 
+            List<SnelStartAdministrationViewModel> administrations = [];
+            try
+            {
+                administrations = (await BackendApiClient.GetSnelStartAdministrationsByTenantAsync(tenantId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "SnelStart administraties ophalen mislukt voor tenant {TenantId}", tenantId);
+            }
+
             var loadTasks = bankAccounts.Select(async ba =>
             {
                 var syncTask = BackendApiClient.GetSyncStatusAsync(tenantId, ba.Id);
@@ -201,11 +215,15 @@ else
                 await Task.WhenAll(syncTask, linkTask);
 
                 var link = linkTask.Result;
+                var admin = link is not null
+                    ? administrations.FirstOrDefault(a => a.Id == link.SnelStartAdministrationId)
+                    : null;
                 return new SyncRow
                 {
                     BankAccount = ba,
                     SyncStatus = syncTask.Result,
                     Link = link,
+                    SnelStartAdminName = admin?.NameSnelStartAdministration ?? admin?.Name,
                     EditAutoSyncEnabled = link?.AutoSyncEnabled ?? true,
                     EditIntervalMinutes = link?.SyncIntervalMinutes ?? 15,
                     EditExportFormat = link?.ExportFormat ?? "Mt940"
@@ -318,6 +336,7 @@ else
         public BankAccountViewModel BankAccount { get; set; } = new();
         public BankAccountSyncStatusViewModel? SyncStatus { get; set; }
         public BankAccountSnelStartLinkViewModel? Link { get; set; }
+        public string? SnelStartAdminName { get; set; }
 
         public bool ShowSettings { get; set; }
         public bool IsSyncing { get; set; }

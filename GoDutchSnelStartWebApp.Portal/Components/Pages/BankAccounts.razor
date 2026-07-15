@@ -227,6 +227,7 @@
                             <tr>
                                 <th>Accountnaam</th>
                                 <th>IBAN</th>
+                                <th>SnelStart administratie</th>
                                 <th>Status</th>
                                 <th>Laatste sync</th>
                                 <th>Transacties</th>
@@ -240,6 +241,16 @@
                                 <tr>
                                     <td>@row.BankAccount.AccountName</td>
                                     <td>@row.BankAccount.Iban</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(row.SnelStartAdminName))
+                                        {
+                                            @row.SnelStartAdminName
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fst-italic">-</span>
+                                        }
+                                    </td>
                                     <td>
                                         <span class="@GetStatusBadgeClass(row.SyncStatus?.Status)">
                                             @(row.SyncStatus?.Status ?? "NeverRun")
@@ -272,7 +283,7 @@
                                 @if (resyncBankAccountId == row.BankAccount.Id)
                                 {
                                     <tr>
-                                        <td colspan="7" class="bg-light">
+                                        <td colspan="8" class="bg-light">
                                             <div class="p-3">
                                                 <div class="row g-3 align-items-end">
                                                     <div class="col-md-4">
@@ -306,7 +317,7 @@
                                 @if (!string.IsNullOrWhiteSpace(row.SyncStatus?.Message))
                                 {
                                     <tr>
-                                        <td colspan="7" class="text-muted small bg-light">
+                                        <td colspan="8" class="text-muted small bg-light">
                                             @row.SyncStatus!.Message
                                         </td>
                                     </tr>
@@ -323,6 +334,7 @@
     private Guid TenantId => TenantOptions.Value.TenantId;
     private readonly List<BankAccountRowViewModel> rows = [];
     private readonly List<GoDutchAccountLookupViewModel> goDutchAccounts = [];
+    private readonly List<SnelStartAdministrationViewModel> snelStartAdministrations = [];
 
     private TenantGoDutchConnectionViewModel tenantGoDutchConnection = CreateDefaultTenantGoDutchConnection();
 
@@ -412,6 +424,17 @@
 
             var bankAccounts = await BackendApiClient.GetBankAccountsAsync(tenantId);
 
+            snelStartAdministrations.Clear();
+            try
+            {
+                var admins = await BackendApiClient.GetSnelStartAdministrationsByTenantAsync(tenantId);
+                snelStartAdministrations.AddRange(admins);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "SnelStart administraties ophalen mislukt voor tenant {TenantId}", tenantId);
+            }
+
             foreach (var bankAccount in bankAccounts)
             {
                 BankAccountSyncStatusViewModel? syncStatus = null;
@@ -430,10 +453,26 @@
                         bankAccount.Id);
                 }
 
+                string? adminName = null;
+                try
+                {
+                    var link = await BackendApiClient.GetBankAccountSnelStartLinkByBankAccountIdAsync(bankAccount.Id);
+                    if (link is not null)
+                    {
+                        var admin = snelStartAdministrations.FirstOrDefault(a => a.Id == link.SnelStartAdministrationId);
+                        adminName = admin?.NameSnelStartAdministration ?? admin?.Name;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "SnelStart link ophalen mislukt voor BankAccountId {BankAccountId}", bankAccount.Id);
+                }
+
                 rows.Add(new BankAccountRowViewModel
                 {
                     BankAccount = bankAccount,
-                    SyncStatus = syncStatus
+                    SyncStatus = syncStatus,
+                    SnelStartAdminName = adminName
                 });
             }
 
@@ -870,5 +909,6 @@
     {
         public BankAccountViewModel BankAccount { get; set; } = new();
         public BankAccountSyncStatusViewModel? SyncStatus { get; set; }
+        public string? SnelStartAdminName { get; set; }
     }
 }
