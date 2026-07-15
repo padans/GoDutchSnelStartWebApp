@@ -11,358 +11,212 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --blue: #1565C0;
-            --blue-dark: #0D47A1;
+            --blue:       #1565C0;
+            --blue-dark:  #0D47A1;
             --blue-light: #1976D2;
-            --blue-bg: #E3F2FD;
-            --green: #2E7D32;
-            --green-light: #4CAF50;
-            --text: #1A1A2E;
-            --text-muted: #5C6677;
-            --border: #E0E7EF;
-            --bg: #F8FAFC;
-            --white: #FFFFFF;
-            --shadow: 0 2px 16px rgba(0,0,0,.08);
-            --shadow-lg: 0 8px 40px rgba(0,0,0,.12);
+            --blue-bg:    #E3F2FD;
+            --green:      #2E7D32;
+            --green-lt:   #4CAF50;
+            --text:       #1A1A2E;
+            --muted:      #5C6677;
+            --border:     #E0E7EF;
+            --bg:         #F8FAFC;
+            --white:      #FFFFFF;
+            --shadow:     0 2px 16px rgba(0,0,0,.08);
+            --shadow-lg:  0 8px 40px rgba(0,0,0,.18);
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text);
-            background: var(--white);
-            line-height: 1.6;
-        }
+        body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--white); line-height: 1.6; }
 
-        /* NAV */
-        nav {
-            background: var(--white);
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .nav-inner {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 24px;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .nav-brand {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: var(--blue);
-            text-decoration: none;
-        }
+        /* ── NAV ── */
+        nav { background: var(--white); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200; }
+        .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { font-size: 1.4rem; font-weight: 800; color: var(--blue); text-decoration: none; }
         .nav-brand span { color: var(--text); }
-        .btn-nav {
-            background: var(--blue);
-            color: var(--white);
-            padding: 8px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: .9rem;
-            font-weight: 600;
-            transition: background .2s;
-        }
-        .btn-nav:hover { background: var(--blue-dark); color: var(--white); }
+        .btn-nav { background: var(--blue); color: var(--white); padding: 8px 20px; border-radius: 6px; text-decoration: none; font-size: .9rem; font-weight: 600; transition: background .2s; border: none; cursor: pointer; font-family: inherit; }
+        .btn-nav:hover { background: var(--blue-dark); }
 
-        /* HERO */
-        .hero {
-            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-light) 100%);
-            color: var(--white);
-            padding: 100px 24px 80px;
-            text-align: center;
-        }
-        .hero-badge {
-            display: inline-block;
-            background: rgba(255,255,255,.15);
-            border: 1px solid rgba(255,255,255,.3);
-            color: var(--white);
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: .85rem;
-            font-weight: 600;
-            margin-bottom: 24px;
-            letter-spacing: .5px;
-        }
-        .hero h1 {
-            font-size: clamp(2rem, 5vw, 3.2rem);
-            font-weight: 800;
-            line-height: 1.15;
-            max-width: 800px;
-            margin: 0 auto 20px;
-        }
+        /* ── HERO ── */
+        .hero { background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-light) 100%); color: var(--white); padding: 100px 24px 80px; text-align: center; }
+        .hero-badge { display: inline-block; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: var(--white); padding: 5px 14px; border-radius: 20px; font-size: .85rem; font-weight: 600; margin-bottom: 24px; }
+        .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; max-width: 820px; margin: 0 auto 20px; }
         .hero h1 span { color: #90CAF9; }
-        .hero p {
-            font-size: 1.15rem;
-            color: rgba(255,255,255,.85);
-            max-width: 600px;
-            margin: 0 auto 36px;
-        }
+        .hero p { font-size: 1.1rem; color: rgba(255,255,255,.85); max-width: 600px; margin: 0 auto 36px; }
         .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-        .btn-primary {
-            background: var(--white);
-            color: var(--blue-dark);
-            padding: 14px 32px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: transform .15s, box-shadow .15s;
-            display: inline-block;
-        }
+        .btn-primary { background: var(--white); color: var(--blue-dark); padding: 14px 32px; border-radius: 8px; font-size: 1rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; font-family: inherit; transition: transform .15s, box-shadow .15s; display: inline-block; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.2); }
-        .btn-outline-white {
-            background: transparent;
-            color: var(--white);
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            border: 2px solid rgba(255,255,255,.6);
-            transition: border-color .2s, background .2s;
-        }
+        .btn-outline-white { background: transparent; color: var(--white); padding: 14px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; border: 2px solid rgba(255,255,255,.6); transition: border-color .2s, background .2s; display: inline-block; }
         .btn-outline-white:hover { border-color: var(--white); background: rgba(255,255,255,.1); color: var(--white); }
-        .hero-note {
-            margin-top: 20px;
-            font-size: .85rem;
-            color: rgba(255,255,255,.6);
-        }
+        .hero-note { margin-top: 20px; font-size: .85rem; color: rgba(255,255,255,.6); }
 
-        /* TRUST BAR */
-        .trust-bar {
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            padding: 18px 24px;
-            text-align: center;
-            font-size: .9rem;
-            color: var(--text-muted);
-        }
-        .trust-items { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
+        /* ── TRUST BAR ── */
+        .trust-bar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 18px 24px; text-align: center; }
+        .trust-items { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: .9rem; color: var(--muted); }
         .trust-item { display: flex; align-items: center; gap: 7px; }
-        .trust-icon { color: var(--green-light); font-size: 1rem; }
+        .trust-icon { color: var(--green-lt); }
 
-        /* SECTION */
+        /* ── SECTIONS ── */
         section { padding: 80px 24px; }
         .container { max-width: 1100px; margin: 0 auto; }
-        .section-label {
-            text-align: center;
-            font-size: .85rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--blue);
-            margin-bottom: 12px;
-        }
-        .section-title {
-            text-align: center;
-            font-size: clamp(1.5rem, 3vw, 2.2rem);
-            font-weight: 800;
-            margin-bottom: 16px;
-        }
-        .section-sub {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 1.05rem;
-            max-width: 600px;
-            margin: 0 auto 56px;
-        }
+        .section-label { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; }
+        .section-title { text-align: center; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 14px; }
+        .section-sub { text-align: center; color: var(--muted); font-size: 1rem; max-width: 580px; margin: 0 auto 52px; }
 
-        /* MODULE CARDS */
+        /* ── MODULE CARDS ── */
         .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
         @media(max-width: 720px) { .modules-grid { grid-template-columns: 1fr; } }
-
-        .module-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-        .module-header {
-            background: var(--blue);
-            color: var(--white);
-            padding: 20px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .module-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+        .module-header { background: var(--blue); color: var(--white); padding: 20px 24px; display: flex; align-items: center; gap: 12px; }
         .module-icon { font-size: 1.4rem; }
-        .module-title { font-size: 1.15rem; font-weight: 700; }
-        .module-desc { font-size: .85rem; color: rgba(255,255,255,.8); margin-top: 2px; }
+        .module-title { font-size: 1.1rem; font-weight: 700; }
+        .module-desc { font-size: .83rem; color: rgba(255,255,255,.8); margin-top: 2px; }
         .module-body { padding: 20px 24px; }
-        .feature-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-        .feature-list li {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            font-size: .92rem;
-            color: var(--text);
-        }
-        .check {
-            width: 20px;
-            height: 20px;
-            background: var(--green-light);
-            border-radius: 50%;
-            color: white;
-            font-size: .7rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
+        .feature-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+        .feature-list li { display: flex; align-items: flex-start; gap: 10px; font-size: .91rem; }
+        .check { width: 20px; height: 20px; background: var(--green-lt); border-radius: 50%; color: white; font-size: .7rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 
-        /* HOW IT WORKS */
+        /* ── HOW IT WORKS ── */
         .how-bg { background: var(--bg); }
         .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
         @media(max-width: 720px) { .steps { grid-template-columns: 1fr; } }
-        .step {
-            text-align: center;
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 32px 24px;
-            box-shadow: var(--shadow);
-        }
-        .step-num {
-            width: 48px;
-            height: 48px;
-            background: var(--blue);
-            color: white;
-            border-radius: 50%;
-            font-size: 1.2rem;
-            font-weight: 800;
+        .step { text-align: center; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 32px 24px; box-shadow: var(--shadow); }
+        .step-num { width: 48px; height: 48px; background: var(--blue); color: white; border-radius: 50%; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+        .step p { font-size: .88rem; color: var(--muted); }
+
+        /* ── CTA STRIP ── */
+        .cta-strip { background: var(--blue-dark); color: var(--white); padding: 72px 24px; text-align: center; }
+        .cta-strip h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; margin-bottom: 12px; }
+        .cta-strip p { color: rgba(255,255,255,.8); font-size: 1.05rem; margin-bottom: 32px; }
+
+        /* ── FOOTER ── */
+        footer { background: #0D1B2A; color: rgba(255,255,255,.65); padding: 40px 24px; text-align: center; font-size: .88rem; }
+        footer strong { color: var(--white); }
+        footer a { color: rgba(255,255,255,.65); text-decoration: none; }
+        footer a:hover { color: var(--white); }
+
+        /* ══════════════════════════════════
+           MODAL
+        ══════════════════════════════════ */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 999;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 16px;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s;
         }
-        .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-        .step p { font-size: .9rem; color: var(--text-muted); }
+        .modal-backdrop.open { opacity: 1; pointer-events: all; }
 
-        /* SIGNUP */
-        .signup-bg { background: var(--blue-dark); }
-        .signup-wrap {
+        .modal-box {
             background: var(--white);
             border-radius: 16px;
-            padding: 48px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: var(--shadow-lg);
-            max-width: 760px;
-            margin: 0 auto;
+            transform: translateY(20px);
+            transition: transform .25s;
+            position: relative;
         }
-        @media(max-width: 600px) { .signup-wrap { padding: 28px 20px; } }
-        .signup-title {
-            font-size: 1.6rem;
-            font-weight: 800;
-            margin-bottom: 6px;
-            color: var(--text);
-        }
-        .signup-sub { color: var(--text-muted); margin-bottom: 32px; font-size: .95rem; }
+        .modal-backdrop.open .modal-box { transform: translateY(0); }
 
+        .modal-header {
+            padding: 28px 32px 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .modal-header-text h2 { font-size: 1.5rem; font-weight: 800; }
+        .modal-header-text p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+
+        .modal-close {
+            background: none; border: none; cursor: pointer; color: var(--muted);
+            font-size: 1.4rem; line-height: 1; padding: 4px; flex-shrink: 0;
+            transition: color .15s;
+        }
+        .modal-close:hover { color: var(--text); }
+
+        .modal-body { padding: 24px 32px 32px; }
+        @media(max-width: 520px) {
+            .modal-header { padding: 20px 20px 0; }
+            .modal-body { padding: 20px 20px 24px; }
+        }
+
+        /* ── FORM INSIDE MODAL ── */
         .form-section-label {
-            font-size: .75rem;
-            font-weight: 700;
-            letter-spacing: .8px;
-            text-transform: uppercase;
-            color: var(--blue);
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            margin: 24px 0 16px;
+            font-size: .72rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+            color: var(--blue); border-bottom: 1px solid var(--border);
+            padding-bottom: 7px; margin: 20px 0 14px;
         }
-        .form-row { display: grid; gap: 16px; }
-        .col-2 { grid-template-columns: 1fr 1fr; }
-        .col-3 { grid-template-columns: 2fr 1fr 1fr; }
-        @media(max-width: 600px) { .col-2, .col-3 { grid-template-columns: 1fr; } }
+        .form-section-label:first-child { margin-top: 0; }
 
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: .85rem; font-weight: 600; color: var(--text); }
+        .form-row { display: grid; gap: 12px; }
+        .form-row.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .form-row.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        @media(max-width: 520px) { .form-row.g2, .form-row.g3 { grid-template-columns: 1fr; } }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .form-group label { font-size: .83rem; font-weight: 600; }
         .form-group label .req { color: #C62828; }
         .form-group input {
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: .95rem;
-            font-family: inherit;
-            color: var(--text);
+            border: 1.5px solid var(--border); border-radius: 7px;
+            padding: 9px 12px; font-size: .92rem; font-family: inherit;
+            color: var(--text); width: 100%; min-width: 0;
             transition: border-color .2s;
         }
         .form-group input:focus { outline: none; border-color: var(--blue); }
         .form-group input.error { border-color: #C62828; }
 
-        .modules-check { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
-        @media(max-width: 600px) { .modules-check { grid-template-columns: 1fr; } }
+        .modules-check { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+        @media(max-width: 480px) { .modules-check { grid-template-columns: 1fr; } }
+
         .module-option {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 14px 16px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: border-color .2s, background .2s;
-            user-select: none;
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 14px; border: 2px solid var(--border); border-radius: 10px;
+            cursor: pointer; transition: border-color .2s, background .2s; user-select: none;
         }
         .module-option:has(input:checked) { border-color: var(--blue); background: var(--blue-bg); }
-        .module-option input { margin-top: 3px; accent-color: var(--blue); width: 16px; height: 16px; }
-        .module-option-text strong { font-size: .92rem; display: block; }
-        .module-option-text span { font-size: .82rem; color: var(--text-muted); }
+        .module-option input { margin-top: 2px; accent-color: var(--blue); width: 15px; height: 15px; flex-shrink: 0; }
+        .module-option-text strong { font-size: .88rem; display: block; }
+        .module-option-text span { font-size: .78rem; color: var(--muted); }
 
-        .form-alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: .9rem;
-            margin-top: 16px;
-            display: none;
-        }
+        .form-alert { padding: 11px 14px; border-radius: 7px; font-size: .88rem; margin-top: 14px; display: none; }
         .form-alert.show { display: block; }
         .form-alert.error { background: #FFEBEE; color: #B71C1C; border: 1px solid #EF9A9A; }
         .form-alert.success { background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; }
 
         .btn-submit {
-            width: 100%;
-            margin-top: 24px;
-            background: var(--blue);
-            color: var(--white);
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            font-family: inherit;
-            border: none;
-            cursor: pointer;
+            width: 100%; margin-top: 20px;
+            background: var(--blue); color: var(--white);
+            padding: 14px; border-radius: 8px;
+            font-size: .97rem; font-weight: 700; font-family: inherit;
+            border: none; cursor: pointer;
             transition: background .2s, transform .15s;
         }
         .btn-submit:hover:not(:disabled) { background: var(--blue-dark); transform: translateY(-1px); }
         .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
-        .submit-note { text-align: center; font-size: .8rem; color: var(--text-muted); margin-top: 10px; }
+        .submit-note { text-align: center; font-size: .77rem; color: var(--muted); margin-top: 9px; }
 
-        /* FOOTER */
-        footer {
-            background: #0D1B2A;
-            color: rgba(255,255,255,.7);
-            padding: 40px 24px;
-            text-align: center;
-            font-size: .88rem;
-        }
-        footer strong { color: var(--white); }
-        footer a { color: rgba(255,255,255,.7); text-decoration: none; }
-        footer a:hover { color: var(--white); }
+        .success-box { text-align: center; padding: 40px 16px; }
+        .success-icon { font-size: 3rem; margin-bottom: 14px; }
+        .success-box h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+        .success-box p { color: var(--muted); font-size: .92rem; }
     </style>
 </head>
 <body>
 
-<!-- NAVIGATIE -->
+<!-- NAV -->
 <nav>
     <div class="nav-inner">
         <a href="#" class="nav-brand">Padans<span>.</span></a>
-        <a href="#aanmelden" class="btn-nav">Gratis proberen</a>
+        <button class="btn-nav" onclick="openModal()">Gratis proberen</button>
     </div>
 </nav>
 
@@ -370,18 +224,18 @@
 <section class="hero">
     <div class="hero-badge">&#10003; 7 dagen gratis — geen creditcard nodig</div>
     <h1>Automatisch van <span>GoDutch &amp; MyPos</span> naar SnelStart</h1>
-    <p>Banktransacties en pintransacties worden automatisch opgehaald en als boeking verwerkt in SnelStart. U hoeft niets handmatig over te zetten.</p>
+    <p>Banktransacties en pintransacties worden automatisch opgehaald en als boeking verwerkt in SnelStart. Niets handmatig overtypen.</p>
     <div class="hero-cta">
-        <a href="#aanmelden" class="btn-primary">Start gratis proefperiode</a>
+        <button class="btn-primary" onclick="openModal()">Start gratis proefperiode</button>
         <a href="#modules" class="btn-outline-white">Meer informatie</a>
     </div>
-    <p class="hero-note">7 dagen gratis &bull; Daarna op aanvraag &bull; Direct actief</p>
+    <p class="hero-note">7 dagen gratis &bull; Geen betalingsgegevens nodig &bull; Direct actief</p>
 </section>
 
 <!-- TRUST BAR -->
 <div class="trust-bar">
     <div class="trust-items">
-        <div class="trust-item"><span class="trust-icon">&#10003;</span> Auto-sync op ingesteld interval</div>
+        <div class="trust-item"><span class="trust-icon">&#10003;</span> Auto-sync op instelbaar interval</div>
         <div class="trust-item"><span class="trust-icon">&#10003;</span> MT940 &amp; CAMT053 export</div>
         <div class="trust-item"><span class="trust-icon">&#10003;</span> Webhook-ondersteuning</div>
         <div class="trust-item"><span class="trust-icon">&#10003;</span> Multi-tenant &amp; meerdere bankrekeningen</div>
@@ -393,10 +247,8 @@
     <div class="container">
         <p class="section-label">Modules</p>
         <h2 class="section-title">Twee koppelingen, één platform</h2>
-        <p class="section-sub">Kies de module die bij uw situatie past. Of activeer beide voor een volledig geautomatiseerde verwerking.</p>
-
+        <p class="section-sub">Kies de module die bij uw situatie past, of activeer beide voor een volledig geautomatiseerde verwerking.</p>
         <div class="modules-grid">
-            <!-- GoDutch -->
             <div class="module-card">
                 <div class="module-header">
                     <div class="module-icon">&#127974;</div>
@@ -420,8 +272,6 @@
                     </ul>
                 </div>
             </div>
-
-            <!-- MyPos -->
             <div class="module-card">
                 <div class="module-header">
                     <div class="module-icon">&#128179;</div>
@@ -452,7 +302,6 @@
         <p class="section-label">Hoe werkt het</p>
         <h2 class="section-title">In drie stappen aan de slag</h2>
         <p class="section-sub">Na aanmelding kunt u direct starten. Geen installatie, geen technische kennis vereist.</p>
-
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
@@ -462,95 +311,23 @@
             <div class="step">
                 <div class="step-num">2</div>
                 <h3>Koppelen</h3>
-                <p>Voer uw GoDutch- en/of SnelStart API-gegevens in via het beveiligde portaal. Uw bankrekeningen worden automatisch herkend.</p>
+                <p>Voer uw GoDutch- en/of SnelStart API-gegevens in via het beveiligde portaal. Bankrekeningen worden automatisch herkend.</p>
             </div>
             <div class="step">
                 <div class="step-num">3</div>
                 <h3>Automatisch verwerken</h3>
-                <p>De koppeling werkt volledig automatisch. Transacties worden op ingesteld interval opgehaald en doorgestuurd naar SnelStart.</p>
+                <p>De koppeling werkt volledig automatisch op het door u ingestelde interval.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- SIGNUP FORM -->
-<section class="signup-bg" id="aanmelden">
+<!-- CTA STRIP -->
+<section class="cta-strip">
     <div class="container">
-        <div class="signup-wrap">
-            <h2 class="signup-title">Gratis aanmelden</h2>
-            <p class="signup-sub">Vul uw bedrijfsgegevens in. Uw proefperiode van <strong>7 dagen</strong> start direct na aanmelding. Geen betalingsgegevens nodig.</p>
-
-            <form id="registrationForm" novalidate>
-
-                <div class="form-section-label">Bedrijfsgegevens</div>
-                <div class="form-row col-2">
-                    <div class="form-group">
-                        <label for="companyName">Bedrijfsnaam <span class="req">*</span></label>
-                        <input type="text" id="companyName" name="companyName" placeholder="Officiële bedrijfsnaam" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="contactName">Contactpersoon</label>
-                        <input type="text" id="contactName" name="contactName" placeholder="Voor- en achternaam">
-                    </div>
-                </div>
-                <div class="form-row col-3" style="margin-top:16px">
-                    <div class="form-group">
-                        <label for="email">E-mailadres</label>
-                        <input type="email" id="email" name="email" placeholder="contact@bedrijf.nl">
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Telefoonnummer</label>
-                        <input type="tel" id="phone" name="phone" placeholder="+31 6 12345678">
-                    </div>
-                    <div class="form-group">
-                        <label for="kvkNumber">KvK-nummer</label>
-                        <input type="text" id="kvkNumber" name="kvkNumber" placeholder="12345678">
-                    </div>
-                </div>
-
-                <div class="form-section-label" style="margin-top:28px">Adres</div>
-                <div class="form-row col-3">
-                    <div class="form-group">
-                        <label for="address">Straat en huisnummer</label>
-                        <input type="text" id="address" name="address" placeholder="Hoofdstraat 1">
-                    </div>
-                    <div class="form-group">
-                        <label for="postalCode">Postcode</label>
-                        <input type="text" id="postalCode" name="postalCode" placeholder="1234 AB">
-                    </div>
-                    <div class="form-group">
-                        <label for="city">Plaats</label>
-                        <input type="text" id="city" name="city" placeholder="Amsterdam">
-                    </div>
-                </div>
-
-                <div class="form-section-label" style="margin-top:28px">Modules</div>
-                <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:12px">Selecteer welke module(s) u wilt activeren. U kunt later altijd modules toevoegen.</p>
-                <div class="modules-check">
-                    <label class="module-option">
-                        <input type="checkbox" id="goDutchEnabled" name="goDutchEnabled">
-                        <div class="module-option-text">
-                            <strong>&#127974; GoDutch &rarr; SnelStart</strong>
-                            <span>Bankafschriften automatisch importeren</span>
-                        </div>
-                    </label>
-                    <label class="module-option">
-                        <input type="checkbox" id="myPosEnabled" name="myPosEnabled">
-                        <div class="module-option-text">
-                            <strong>&#128179; MyPos &rarr; SnelStart</strong>
-                            <span>Pinbetalingen automatisch boeken</span>
-                        </div>
-                    </label>
-                </div>
-
-                <div id="formAlert" class="form-alert"></div>
-
-                <button type="submit" class="btn-submit" id="submitBtn">
-                    Gratis aanmelden — 7 dagen proefperiode starten
-                </button>
-                <p class="submit-note">&#128274; Uw gegevens worden veilig verwerkt &bull; Geen betaalverplichting &bull; Na 7 dagen ontvangt u bericht</p>
-            </form>
-        </div>
+        <h2>Klaar om te starten?</h2>
+        <p>7 dagen gratis uitproberen. Geen creditcard, geen verplichting.</p>
+        <button class="btn-primary" onclick="openModal()">Gratis aanmelden</button>
     </div>
 </section>
 
@@ -563,30 +340,134 @@
     </p>
 </footer>
 
+<!-- ══════════════════════════════════
+     AANMELD-MODAL
+══════════════════════════════════ -->
+<div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-header-text">
+                <h2 id="modalTitle">Gratis aanmelden</h2>
+                <p>Vul uw bedrijfsgegevens in. Uw proefperiode van <strong>7 dagen</strong> start direct &mdash; geen betaalgegevens nodig.</p>
+            </div>
+            <button class="modal-close" onclick="closeModal()" aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="registrationForm" novalidate>
+
+                <div class="form-section-label">Bedrijfsgegevens</div>
+                <div class="form-row g2">
+                    <div class="form-group">
+                        <label for="companyName">Bedrijfsnaam <span class="req">*</span></label>
+                        <input type="text" id="companyName" placeholder="Officiële bedrijfsnaam" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactName">Contactpersoon</label>
+                        <input type="text" id="contactName" placeholder="Voor- en achternaam">
+                    </div>
+                </div>
+                <div class="form-row g3" style="margin-top:12px">
+                    <div class="form-group">
+                        <label for="email">E-mailadres</label>
+                        <input type="email" id="email" placeholder="contact@bedrijf.nl">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Telefoonnummer</label>
+                        <input type="tel" id="phone" placeholder="+31 6 12345678">
+                    </div>
+                    <div class="form-group">
+                        <label for="kvkNumber">KvK-nummer</label>
+                        <input type="text" id="kvkNumber" placeholder="12345678">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Adres</div>
+                <div class="form-row g3">
+                    <div class="form-group">
+                        <label for="address">Straat en huisnummer</label>
+                        <input type="text" id="address" placeholder="Hoofdstraat 1">
+                    </div>
+                    <div class="form-group">
+                        <label for="postalCode">Postcode</label>
+                        <input type="text" id="postalCode" placeholder="1234 AB">
+                    </div>
+                    <div class="form-group">
+                        <label for="city">Plaats</label>
+                        <input type="text" id="city" placeholder="Amsterdam">
+                    </div>
+                </div>
+
+                <div class="form-section-label">Modules</div>
+                <p style="font-size:.83rem;color:var(--muted);margin-bottom:10px">Selecteer welke module(s) u wilt activeren. U kunt later altijd modules toevoegen.</p>
+                <div class="modules-check">
+                    <label class="module-option">
+                        <input type="checkbox" id="goDutchEnabled">
+                        <div class="module-option-text">
+                            <strong>&#127974; GoDutch &rarr; SnelStart</strong>
+                            <span>Bankafschriften automatisch importeren</span>
+                        </div>
+                    </label>
+                    <label class="module-option">
+                        <input type="checkbox" id="myPosEnabled">
+                        <div class="module-option-text">
+                            <strong>&#128179; MyPos &rarr; SnelStart</strong>
+                            <span>Pinbetalingen automatisch boeken</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="formAlert" class="form-alert"></div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    Gratis aanmelden &mdash; 7 dagen proefperiode starten
+                </button>
+                <p class="submit-note">&#128274; Veilig verwerkt &bull; Geen betaalverplichting &bull; Na aanmelding ontvangt u toegangsgegevens</p>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     // !! Pas deze URL aan naar het adres van uw API-server !!
     const API_BASE_URL = 'https://app.padans.eu';
 
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    const form = document.getElementById('registrationForm');
-    const alertEl = document.getElementById('formAlert');
-    const submitBtn = document.getElementById('submitBtn');
+    /* ── Modal open/close ── */
+    function openModal() {
+        document.getElementById('modal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    // Sluiten bij klik op backdrop
+    document.getElementById('modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+    // Sluiten met Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    /* ── Formulier ── */
+    const form       = document.getElementById('registrationForm');
+    const alertEl    = document.getElementById('formAlert');
+    const submitBtn  = document.getElementById('submitBtn');
 
     function showAlert(msg, type) {
         alertEl.textContent = msg;
         alertEl.className = 'form-alert show ' + type;
-        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const companyName = document.getElementById('companyName').value.trim();
-        const goDutch = document.getElementById('goDutchEnabled').checked;
-        const myPos = document.getElementById('myPosEnabled').checked;
+        const goDutch     = document.getElementById('goDutchEnabled').checked;
+        const myPos       = document.getElementById('myPosEnabled').checked;
 
-        // Client-side validatie
         if (!companyName) {
             document.getElementById('companyName').classList.add('error');
             showAlert('Vul uw bedrijfsnaam in.', 'error');
@@ -598,21 +479,21 @@
         }
 
         document.getElementById('companyName').classList.remove('error');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Aanmelding verwerken...';
         alertEl.className = 'form-alert';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Aanmelding verwerken…';
 
         const payload = {
-            companyName: companyName,
-            contactName: document.getElementById('contactName').value.trim() || null,
-            email: document.getElementById('email').value.trim() || null,
-            phone: document.getElementById('phone').value.trim() || null,
-            address: document.getElementById('address').value.trim() || null,
-            postalCode: document.getElementById('postalCode').value.trim() || null,
-            city: document.getElementById('city').value.trim() || null,
-            kvkNumber: document.getElementById('kvkNumber').value.trim() || null,
+            companyName:  companyName,
+            contactName:  document.getElementById('contactName').value.trim() || null,
+            email:        document.getElementById('email').value.trim() || null,
+            phone:        document.getElementById('phone').value.trim() || null,
+            address:      document.getElementById('address').value.trim() || null,
+            postalCode:   document.getElementById('postalCode').value.trim() || null,
+            city:         document.getElementById('city').value.trim() || null,
+            kvkNumber:    document.getElementById('kvkNumber').value.trim() || null,
             goDutchEnabled: goDutch,
-            myPosEnabled: myPos
+            myPosEnabled:   myPos
         };
 
         try {
@@ -623,15 +504,15 @@
             });
 
             if (resp.ok) {
-                form.innerHTML = `
-                    <div style="text-align:center;padding:32px 0">
-                        <div style="font-size:3rem;margin-bottom:16px">&#10003;</div>
-                        <h3 style="font-size:1.4rem;font-weight:800;margin-bottom:8px">Aanmelding ontvangen!</h3>
-                        <p style="color:var(--text-muted)">Uw proefperiode van <strong>7 dagen</strong> is gestart. U ontvangt binnen 24 uur toegangsgegevens voor het portaal op <strong>${API_BASE_URL}</strong>.</p>
+                document.querySelector('.modal-body').innerHTML = `
+                    <div class="success-box">
+                        <div class="success-icon">&#9989;</div>
+                        <h3>Aanmelding ontvangen!</h3>
+                        <p>Uw proefperiode van <strong>7 dagen</strong> is gestart. U ontvangt binnenkort toegangsgegevens voor het portaal.</p>
                     </div>`;
             } else {
                 const data = await resp.json().catch(() => ({}));
-                showAlert(data.error || 'Er is een fout opgetreden. Probeer het opnieuw of neem contact op via info@padans.eu.', 'error');
+                showAlert(data.error || 'Er is een fout opgetreden. Probeer het opnieuw of mail naar info@padans.eu.', 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Gratis aanmelden — 7 dagen proefperiode starten';
             }
