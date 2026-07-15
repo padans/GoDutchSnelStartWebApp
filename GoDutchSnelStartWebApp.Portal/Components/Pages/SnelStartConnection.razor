@@ -299,7 +299,7 @@ else
                                             <option value="">-- Geen koppeling --</option>
                                             @foreach (var admin in administrations)
                                             {
-                                                <option value="@admin.Id">@admin.Name</option>
+                                                <option value="@admin.Id">@(admin.NameSnelStartAdministration ?? admin.Name)</option>
                                             }
                                         </select>
                                     </td>

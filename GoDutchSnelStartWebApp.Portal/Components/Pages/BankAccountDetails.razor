@@ -409,8 +409,20 @@
 
                                     @if (snelStartLink is not null && snelStartLink.SnelStartAdministrationId != Guid.Empty)
                                     {
+                                        var linkedAdminInfo = snelStartAdministrations
+                                            .FirstOrDefault(a => a.Id == snelStartLink.SnelStartAdministrationId);
+                                        var linkedAdminName = linkedAdminInfo?.NameSnelStartAdministration
+                                            ?? linkedAdminInfo?.Name;
                                         <div class="small text-success mt-2">
-                                            Interne koppeling aanwezig: @snelStartLink.SnelStartAdministrationId
+                                            Interne koppeling aanwezig:
+                                            @if (!string.IsNullOrWhiteSpace(linkedAdminName))
+                                            {
+                                                <strong>@linkedAdminName</strong>
+                                            }
+                                            else
+                                            {
+                                                @snelStartLink.SnelStartAdministrationId
+                                            }
                                         </div>
                                     }
                                 </div>
@@ -1522,9 +1534,10 @@
 
     private static string GetAdministrationDisplayName(SnelStartAdministrationViewModel administration)
     {
-        return string.IsNullOrWhiteSpace(administration.Name)
+        var displayName = administration.NameSnelStartAdministration ?? administration.Name;
+        return string.IsNullOrWhiteSpace(displayName)
             ? administration.Id.ToString()
-            : $"{administration.Name} ({administration.Id})";
+            : displayName;
     }
 
     private static Guid ParseRequiredGuid(string? value, string fieldName)
