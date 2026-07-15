@@ -73,6 +73,25 @@
                                 </span>
                             </dd>
 
+                            <dt class="col-sm-4">SnelStart administratie</dt>
+                            <dd class="col-sm-8">
+                                @{
+                                    var linkedAdmin = snelStartLink is not null
+                                        ? snelStartAdministrations.FirstOrDefault(a => a.Id == snelStartLink.SnelStartAdministrationId)
+                                        : null;
+                                    var adminDisplay = linkedAdmin?.NameSnelStartAdministration
+                                        ?? linkedAdmin?.Name;
+                                }
+                                @if (!string.IsNullOrWhiteSpace(adminDisplay))
+                                {
+                                    <span>@adminDisplay</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic">Niet gekoppeld</span>
+                                }
+                            </dd>
+
                             <dt class="col-sm-4">TenantId</dt>
                             <dd class="col-sm-8">@bankAccount.TenantId</dd>
 
