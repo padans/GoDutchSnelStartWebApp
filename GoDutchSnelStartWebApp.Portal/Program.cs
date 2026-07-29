@@ -16,9 +16,11 @@ namespace GoDutchSnelStartWebApp.Portal
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+            var apiBaseUrl = builder.Configuration["BackendApi:BaseUrl"] ?? "http://localhost:5275/";
+
             builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>(client =>
             {
-                client.BaseAddress = new Uri("http://localhost:5275/");
+                client.BaseAddress = new Uri(apiBaseUrl);
             });
             builder.Services.Configure<PortalTenantOptions>(
                     builder.Configuration.GetSection(PortalTenantOptions.SectionName));
@@ -26,7 +28,7 @@ namespace GoDutchSnelStartWebApp.Portal
 
             builder.Services.AddHttpClient<IGoDutchBackendApiClient, GoDutchBackendApiClient>(client =>
             {
-                client.BaseAddress = new Uri("http://localhost:5275/");
+                client.BaseAddress = new Uri(apiBaseUrl);
             });
 
             var app = builder.Build();
