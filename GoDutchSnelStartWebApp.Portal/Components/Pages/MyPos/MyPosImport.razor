@@ -1156,14 +1156,22 @@
             return;
         }
 
-        exportBatches = (await BackendApiClient.GetMyPosExportBatchesAsync(
-                TenantId,
-                fromUtc,
-                toUtc))
-            .OrderByDescending(x => x.CreatedUtc)
-            .ToList();
+        try
+        {
+            exportBatches = (await BackendApiClient.GetMyPosExportBatchesAsync(
+                    TenantId,
+                    fromUtc,
+                    toUtc))
+                .OrderByDescending(x => x.CreatedUtc)
+                .ToList();
 
-        currentExportBatch = exportBatches.FirstOrDefault();
+            currentExportBatch = exportBatches.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exportbatches laden mislukt.");
+            errorMessage = $"Exportbatches laden mislukt: {ex.Message}";
+        }
     }
 
     private async Task CreateExportBatchAsync()
