@@ -1,7 +1,12 @@
 ﻿@inherits LayoutComponentBase
+@using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Configuration
 @using GoDutchSnelStartWebApp.Portal.Services
+@using Microsoft.Extensions.Options
 @inject AppSession Session
 @inject IJSRuntime JSRuntime
+@inject IBackendApiClient ApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
 @implements IDisposable
 
 <LoginModal />
@@ -20,6 +25,11 @@
                     <div class="app-topbar-subtitle">@TopbarSubtitle</div>
                 </div>
                 <div class="app-topbar-user">
+                    @if (!string.IsNullOrEmpty(Session.TenantName))
+                    {
+                        <span class="app-topbar-tenant">@Session.TenantName</span>
+                        <span class="app-topbar-divider">|</span>
+                    }
                     <span>@Session.Username</span>
                     <button class="btn-logout" @onclick="HandleLogout">Uitloggen</button>
                 </div>
@@ -61,6 +71,17 @@
             if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(module))
             {
                 Session.Login(username, module);
+
+                var tenantName = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_tenantname");
+                if (string.IsNullOrEmpty(tenantName))
+                {
+                    tenantName = await ApiClient.GetTenantNameAsync(TenantOptions.Value.TenantId);
+                    if (!string.IsNullOrEmpty(tenantName))
+                        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_tenantname", tenantName);
+                }
+                if (!string.IsNullOrEmpty(tenantName))
+                    Session.SetTenantName(tenantName);
+
                 StateHasChanged();
             }
         }
@@ -70,6 +91,7 @@
     {
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_username");
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_module");
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_tenantname");
         Session.Logout();
     }
 
@@ -144,6 +166,17 @@
         gap: 12px;
         color: #DDEEFF;
         font-size: .9rem;
+    }
+
+    .app-topbar-tenant {
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: .01em;
+    }
+
+    .app-topbar-divider {
+        color: rgba(255,255,255,.4);
+        font-weight: 300;
     }
 
     .btn-logout {

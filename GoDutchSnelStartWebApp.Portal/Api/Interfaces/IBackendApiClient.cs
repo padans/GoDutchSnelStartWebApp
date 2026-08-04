@@ -214,4 +214,8 @@ public interface IBackendApiClient
         Guid id,
         UpdateTenantSnelStartConnectionRequestViewModel request,
         CancellationToken cancellationToken = default);
+
+    Task<string?> GetTenantNameAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
 }

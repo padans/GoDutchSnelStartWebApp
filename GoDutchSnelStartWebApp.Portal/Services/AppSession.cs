@@ -5,6 +5,7 @@ public sealed class AppSession
     public bool IsLoggedIn { get; private set; }
     public string Username { get; private set; } = string.Empty;
     public string Module { get; private set; } = string.Empty;
+    public string TenantName { get; private set; } = string.Empty;
 
     public event Action? OnChange;
 
@@ -16,10 +17,17 @@ public sealed class AppSession
         NotifyChanged();
     }
 
+    public void SetTenantName(string tenantName)
+    {
+        TenantName = tenantName;
+        NotifyChanged();
+    }
+
     public void Logout()
     {
         Username = string.Empty;
         Module = string.Empty;
+        TenantName = string.Empty;
         IsLoggedIn = false;
         NotifyChanged();
     }

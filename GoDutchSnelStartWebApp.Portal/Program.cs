@@ -3,6 +3,8 @@ using GoDutchSnelStartWebApp.Portal.Components;
 using GoDutchSnelStartWebApp.Portal.Configuration;
 using GoDutchSnelStartWebApp.Portal.Api.Services;
 using GoDutchSnelStartWebApp.Portal.Services;
+using Serilog;
+using Serilog.Events;
 
 
 namespace GoDutchSnelStartWebApp.Portal
@@ -11,7 +13,20 @@ namespace GoDutchSnelStartWebApp.Portal
     {
         public static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .WriteTo.File(
+                    path: "logs/portal-.log",
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 30,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
+
             var builder = WebApplication.CreateBuilder(args);
+            builder.Host.UseSerilog();
 
             // Add services to the container.
             builder.Services.AddRazorComponents()

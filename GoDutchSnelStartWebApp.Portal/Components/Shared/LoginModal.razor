@@ -1,10 +1,14 @@
 @using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Configuration
 @using GoDutchSnelStartWebApp.Portal.Models
 @using GoDutchSnelStartWebApp.Portal.Services
+@using Microsoft.Extensions.Options
 @inject IBackendApiClient ApiClient
 @inject AppSession Session
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<LoginModal> Logger
 
 @if (!Session.IsLoggedIn)
 {
@@ -91,6 +95,14 @@
             Session.Login(user.Username, user.Module);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_username", user.Username);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_module", user.Module);
+
+            var tenantId = TenantOptions.Value.TenantId;
+            var tenantName = await ApiClient.GetTenantNameAsync(tenantId) ?? tenantId.ToString();
+            Session.SetTenantName(tenantName);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_tenantname", tenantName);
+
+            Logger.LogInformation("Login: gebruiker={Username} module={Module} tenant={TenantName} tenantId={TenantId}",
+                user.Username, user.Module, tenantName, tenantId);
 
             var startPage = user.Module switch
             {

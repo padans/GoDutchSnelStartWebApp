@@ -1174,4 +1174,22 @@ public sealed class BackendApiClient : IBackendApiClient
             cancellationToken);
     }
 
+    public async Task<string?> GetTenantNameAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}";
+
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<TenantNameDto>(url, cancellationToken);
+            return result?.CompanyName ?? result?.Name;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private sealed record TenantNameDto(string? Name, string? CompanyName);
 }
