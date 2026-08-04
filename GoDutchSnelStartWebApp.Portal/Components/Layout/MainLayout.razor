@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using GoDutchSnelStartWebApp.Portal.Services
 @inject AppSession Session
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <LoginModal />
@@ -20,7 +21,7 @@
                 </div>
                 <div class="app-topbar-user">
                     <span>@Session.Username</span>
-                    <button class="btn-logout" @onclick="Session.Logout">Uitloggen</button>
+                    <button class="btn-logout" @onclick="HandleLogout">Uitloggen</button>
                 </div>
             </div>
 
@@ -49,6 +50,27 @@
     protected override void OnInitialized()
     {
         Session.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !Session.IsLoggedIn)
+        {
+            var username = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_username");
+            var module = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_module");
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(module))
+            {
+                Session.Login(username, module);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_username");
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_module");
+        Session.Logout();
     }
 
     public void Dispose()

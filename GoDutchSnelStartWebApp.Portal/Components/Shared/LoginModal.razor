@@ -4,6 +4,7 @@
 @inject IBackendApiClient ApiClient
 @inject AppSession Session
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 @if (!Session.IsLoggedIn)
 {
@@ -88,6 +89,8 @@
             }
 
             Session.Login(user.Username, user.Module);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_username", user.Username);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_module", user.Module);
 
             var startPage = user.Module switch
             {
