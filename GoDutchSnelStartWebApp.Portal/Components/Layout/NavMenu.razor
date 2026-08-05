@@ -104,6 +104,19 @@
             </NavLink>
         </div>
     }
+
+    <div class="app-nav-footer">
+        <div class="app-nav-user-info">
+            @if (!string.IsNullOrEmpty(Session.TenantName))
+            {
+                <div class="app-nav-tenant">@Session.TenantName</div>
+            }
+            <div class="app-nav-username">@Session.Username</div>
+        </div>
+        <button class="app-nav-logout-btn" @onclick="HandleLogout">
+            <span>⬅</span> Uitloggen
+        </button>
+    </div>
 </nav>
 
 @code {
@@ -127,5 +140,17 @@
     private async Task ScrollToContent()
     {
         try { await JSRuntime.InvokeVoidAsync("scrollToContentOnMobile"); } catch { }
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_username");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_module");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_tenantname");
+        }
+        catch { }
+        Session.Logout();
     }
 }
