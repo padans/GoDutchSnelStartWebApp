@@ -5,5 +5,6 @@ public enum MyPosExportBatchStatus
     Concept,
     Ready,
     Exported,
-    Failed
+    Failed,
+    ExportFailed
 }
