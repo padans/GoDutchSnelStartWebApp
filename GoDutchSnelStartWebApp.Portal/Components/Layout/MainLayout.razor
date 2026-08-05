@@ -7,7 +7,6 @@
 @inject IJSRuntime JSRuntime
 @inject IBackendApiClient ApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
-@inject NavigationManager Navigation
 @implements IDisposable
 
 <LoginModal />
@@ -61,21 +60,6 @@
     protected override void OnInitialized()
     {
         Session.OnChange += StateHasChanged;
-        Navigation.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-    {
-        _ = ScrollToContentOnMobileAsync();
-    }
-
-    private async Task ScrollToContentOnMobileAsync()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("scrollToContentOnMobile");
-        }
-        catch { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -114,7 +98,6 @@
     public void Dispose()
     {
         Session.OnChange -= StateHasChanged;
-        Navigation.LocationChanged -= OnLocationChanged;
     }
 }
 
