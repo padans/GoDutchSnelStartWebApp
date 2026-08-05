@@ -533,6 +533,37 @@
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <div class="batch-balance mt-3">
+                                    <div class="batch-balance-row">
+                                        <span class="batch-balance-label">Debet (ontvangsten)</span>
+                                        <span class="batch-balance-amount debet">+ @BatchDebetTotaal.ToString("N2") @currentExportBatch.Currency</span>
+                                    </div>
+                                    <div class="batch-balance-row">
+                                        <span class="batch-balance-label">Credit (uitgaven)</span>
+                                        <span class="batch-balance-amount credit">@BatchCreditTotaal.ToString("N2") @currentExportBatch.Currency</span>
+                                    </div>
+                                    <div class="batch-balance-divider"></div>
+                                    <div class="batch-balance-row saldo-row">
+                                        <span class="batch-balance-label"><strong>Saldo</strong></span>
+                                        <span class="batch-balance-amount @(BatchInEvenwicht ? "saldo-ok" : (BatchSaldo > 0 ? "saldo-pos" : "saldo-neg"))">
+                                            <strong>@(BatchSaldo >= 0 ? "+" : "")@BatchSaldo.ToString("N2") @currentExportBatch.Currency</strong>
+                                        </span>
+                                    </div>
+                                    @if (BatchInEvenwicht)
+                                    {
+                                        <div class="batch-balance-note note-ok">
+                                            ✓ Debet en credit zijn in evenwicht.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="batch-balance-note note-info">
+                                            ℹ Het saldo van @BatchSaldo.ToString("N2") @currentExportBatch.Currency vertegenwoordigt het lopende saldo op de MyPos-rekening.
+                                            Dit is geen fout — het vereffent zodra er in de volgende periode overschrijvingen of betalingen worden ontvangen.
+                                        </div>
+                                    }
+                                </div>
                             }
                         }
                         else if (exportBatches.Count == 0)
@@ -628,6 +659,58 @@
         background: #f8f9fa;
         border-bottom: 1px solid rgba(0, 0, 0, 0.125);
     }
+
+    .batch-balance {
+        background: #f8f9fb;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px 16px;
+        max-width: 420px;
+        font-size: .9rem;
+    }
+
+    .batch-balance-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 0;
+    }
+
+    .batch-balance-label {
+        color: #495057;
+    }
+
+    .batch-balance-amount {
+        font-family: monospace;
+        font-size: .95rem;
+    }
+
+    .batch-balance-divider {
+        border-top: 1px solid #ced4da;
+        margin: 6px 0;
+    }
+
+    .saldo-row {
+        padding-top: 4px;
+    }
+
+    .debet  { color: #198754; }
+    .credit { color: #dc3545; }
+
+    .saldo-ok  { color: #198754; }
+    .saldo-pos { color: #0d6efd; }
+    .saldo-neg { color: #fd7e14; }
+
+    .batch-balance-note {
+        font-size: .82rem;
+        margin-top: 8px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        line-height: 1.4;
+    }
+
+    .note-ok   { background: #d1e7dd; color: #0a3622; }
+    .note-info { background: #fff3cd; color: #664d03; }
 </style>
 
 
@@ -654,6 +737,11 @@
     private MyPosExportBatchViewModel? currentExportBatch;
     private List<MyPosExportBatchViewModel> exportBatches = [];
     private bool isCreatingExportBatch;
+
+    private decimal BatchDebetTotaal  => currentExportBatch?.Lines.Where(l => l.TotalAmount > 0).Sum(l => l.TotalAmount) ?? 0;
+    private decimal BatchCreditTotaal => currentExportBatch?.Lines.Where(l => l.TotalAmount < 0).Sum(l => l.TotalAmount) ?? 0;
+    private decimal BatchSaldo        => BatchDebetTotaal + BatchCreditTotaal;
+    private bool    BatchInEvenwicht  => Math.Abs(BatchSaldo) < 0.01m;
 
     private decimal TotalAmount => transactionTotals.Sum(x => x.TotalAmount);
 
