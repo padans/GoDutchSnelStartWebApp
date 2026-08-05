@@ -17,8 +17,15 @@
     <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
     <script src="_framework/blazor.web.js"></script>
     <script>
-        function scrollToContentOnMobile() {
-            if (window.innerWidth <= 900) {
+        var _scrollToContentRequested = false;
+
+        function requestScrollToContent() {
+            _scrollToContentRequested = true;
+        }
+
+        function scrollToContentIfRequested() {
+            if (_scrollToContentRequested && window.innerWidth <= 900) {
+                _scrollToContentRequested = false;
                 var el = document.getElementById('app-content');
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });

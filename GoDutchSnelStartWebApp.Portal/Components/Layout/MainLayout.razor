@@ -85,6 +85,8 @@
                 StateHasChanged();
             }
         }
+
+        try { await JSRuntime.InvokeVoidAsync("scrollToContentIfRequested"); } catch { }
     }
 
     private async Task HandleLogout()

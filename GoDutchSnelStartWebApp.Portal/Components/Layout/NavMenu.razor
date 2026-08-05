@@ -139,7 +139,7 @@
 
     private async Task ScrollToContent()
     {
-        try { await JSRuntime.InvokeVoidAsync("scrollToContentOnMobile"); } catch { }
+        try { await JSRuntime.InvokeVoidAsync("requestScrollToContent"); } catch { }
     }
 
     private async Task HandleLogout()
