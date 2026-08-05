@@ -13,13 +13,14 @@ namespace GoDutchSnelStartWebApp.Portal
     {
         public static void Main(string[] args)
         {
+            var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "portal-.log");
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .WriteTo.File(
-                    path: "logs/portal-.log",
+                    path: logPath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30,
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -52,12 +53,11 @@ namespace GoDutchSnelStartWebApp.Portal
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
+                app.UseHttpsRedirection();
             }
 
             app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-            app.UseHttpsRedirection();
 
             app.UseAntiforgery();
 
