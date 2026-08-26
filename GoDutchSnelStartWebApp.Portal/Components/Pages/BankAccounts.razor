@@ -9,6 +9,7 @@
 @inject IGoDutchBackendApiClient GoDutchBackendApiClient
 @inject ILogger<BankAccounts> Logger
 @inject IOptions<PortalTenantOptions> TenantOptions
+@inject AppSession Session
 
 <PageTitle>Bankaccounts</PageTitle>
 
@@ -109,7 +110,7 @@
                     </div>
 
                     <div class="form-text mt-2">
-                        Deze gegevens gelden voor de hele tenant. Bankaccount-instellingen bevatten straks alleen nog SnelStart/configuratie.
+                        Deze gegevens gelden voor uw account. Bankaccount-instellingen bevatten straks alleen nog SnelStart/configuratie.
                     </div>
                 </div>
             </div>
@@ -330,7 +331,7 @@
     }
 
 @code {
-    private Guid TenantId => TenantOptions.Value.TenantId;
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
     private readonly List<BankAccountRowViewModel> rows = [];
     private readonly List<GoDutchAccountLookupViewModel> goDutchAccounts = [];
     private readonly List<SnelStartAdministrationViewModel> snelStartAdministrations = [];

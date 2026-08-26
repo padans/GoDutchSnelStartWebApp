@@ -120,6 +120,45 @@ public sealed class TenantSnelStartConnectionRepository : ITenantSnelStartConnec
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TenantSnelStartConnection>> GetExpiringCustomKeyConnectionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand("dbo.TenantSnelStartConnections_GetExpiringCustomKey", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var results = new List<TenantSnelStartConnection>();
+        while (await reader.ReadAsync(cancellationToken))
+            results.Add(Map(reader));
+
+        return results;
+    }
+
+    public async Task MarkExpirySentAsync(
+        Guid id,
+        DateTime sentUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand("dbo.TenantSnelStartConnections_MarkExpirySent", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        command.Parameters.Add(new SqlParameter("@Id", SqlDbType.UniqueIdentifier) { Value = id });
+        command.Parameters.Add(new SqlParameter("@ExpiryWarningSentUtc", SqlDbType.DateTime2) { Value = sentUtc });
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task DeleteAsync(
         Guid id,
         DateTime modifiedUtc,
@@ -171,6 +210,8 @@ public sealed class TenantSnelStartConnectionRepository : ITenantSnelStartConnec
         }
 
         command.Parameters.Add(new SqlParameter("@ModifiedUtc", SqlDbType.DateTime2) { Value = (object?)connection.ModifiedUtc ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@KeyExpiresUtc", SqlDbType.DateTime2) { Value = (object?)connection.KeyExpiresUtc ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@ExpiryWarningSentUtc", SqlDbType.DateTime2) { Value = (object?)connection.ExpiryWarningSentUtc ?? DBNull.Value });
     }
 
     private static TenantSnelStartConnection Map(SqlDataReader reader)
@@ -201,7 +242,13 @@ public sealed class TenantSnelStartConnectionRepository : ITenantSnelStartConnec
             CreatedUtc = reader.GetDateTime(reader.GetOrdinal("CreatedUtc")),
             ModifiedUtc = reader.IsDBNull(reader.GetOrdinal("ModifiedUtc"))
                 ? null
-                : reader.GetDateTime(reader.GetOrdinal("ModifiedUtc"))
+                : reader.GetDateTime(reader.GetOrdinal("ModifiedUtc")),
+            KeyExpiresUtc = reader.IsDBNull(reader.GetOrdinal("KeyExpiresUtc"))
+                ? null
+                : reader.GetDateTime(reader.GetOrdinal("KeyExpiresUtc")),
+            ExpiryWarningSentUtc = reader.IsDBNull(reader.GetOrdinal("ExpiryWarningSentUtc"))
+                ? null
+                : reader.GetDateTime(reader.GetOrdinal("ExpiryWarningSentUtc"))
         };
     }
 }

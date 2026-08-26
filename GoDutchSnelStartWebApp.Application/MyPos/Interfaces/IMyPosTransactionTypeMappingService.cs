@@ -8,4 +8,5 @@ public interface IMyPosTransactionTypeMappingService
     Task<MyPosTransactionTypeMappingDto> UpsertAsync(Guid tenantId, UpsertMyPosTransactionTypeMappingRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default);
     Task<MyPosTransactionTypeStatusResultDto> GetTransactionTypeStatusAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    Task<int> SeedDefaultMappingsAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

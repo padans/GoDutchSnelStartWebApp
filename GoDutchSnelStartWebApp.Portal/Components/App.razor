@@ -15,6 +15,15 @@
 
 <body>
     <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
+
+    <!-- Verborgen form voor browser-credentialopslag (buiten het zichtbare scherm) -->
+    <iframe name="_cred_target" style="position:absolute;left:-9999px;top:-9999px;width:0;height:0;border:0;" aria-hidden="true"></iframe>
+    <form id="_cred_form" method="post" action="/login-ok" target="_cred_target" autocomplete="on"
+          style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
+        <input id="_cred_u" type="text"     name="username" autocomplete="username"         tabindex="-1" />
+        <input id="_cred_p" type="password" name="password" autocomplete="current-password" tabindex="-1" />
+    </form>
+
     <script src="_framework/blazor.web.js"></script>
     <script>
         var _scrollToContentRequested = false;
@@ -31,6 +40,28 @@
                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
+        }
+
+        async function saveCredentials(username, password) {
+            // Methode 1: Credential Management API (Chrome/Edge met HTTPS)
+            if (window.PasswordCredential) {
+                try {
+                    var cred = new PasswordCredential({ id: username, password: password, name: username });
+                    await navigator.credentials.store(cred);
+                } catch (e) { }
+            }
+
+            // Methode 2: Verborgen form POST in iframe (brede browserondersteuning)
+            try {
+                var u = document.getElementById('_cred_u');
+                var p = document.getElementById('_cred_p');
+                var f = document.getElementById('_cred_form');
+                if (u && p && f) {
+                    u.value = username;
+                    p.value = password;
+                    f.submit();
+                }
+            } catch (e) { }
         }
     </script>
 </body>

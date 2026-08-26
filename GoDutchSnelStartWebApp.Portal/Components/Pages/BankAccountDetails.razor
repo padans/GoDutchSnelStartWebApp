@@ -7,6 +7,7 @@
 @inject IBackendApiClient BackendApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<BankAccountDetails> Logger
+@inject AppSession Session
 
 <PageTitle>Bankaccount details</PageTitle>
 
@@ -264,7 +265,7 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Client key (maatwerksleutel)</label>
+                                <label class="form-label">Client key (subscription key)</label>
                                 <InputText class="form-control"
                                            @bind-Value="settings.SnelStartClientKey" />
                             </div>
@@ -402,7 +403,7 @@
                                 <div class="alert alert-light border mb-0">
                                     <div class="fw-semibold">SnelStart administratie</div>
                                     <div class="small text-muted">
-                                        De administratie wordt bepaald door de ingevoerde SnelStart maatwerksleutel.
+                                        De administratie wordt bepaald door de ingevoerde SnelStart subscription key.
                                         De applicatie maakt automatisch een interne technische SnelStart-koppeling aan voor deze bankrekening.
                                     </div>
 
@@ -773,7 +774,7 @@
     [Parameter]
     public Guid BankAccountId { get; set; }
 
-    private Guid TenantId => TenantOptions.Value.TenantId;
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
 
     private bool isLoading = true;
     private bool isResyncing;
@@ -1228,12 +1229,12 @@
 
         if (string.IsNullOrWhiteSpace(clientKey))
         {
-            throw new InvalidOperationException("SnelStart maatwerksleutel/client key is verplicht om de interne SnelStart-koppeling aan te maken.");
+            throw new InvalidOperationException("SnelStart subscription key/client key is verplicht om de interne SnelStart-koppeling aan te maken.");
         }
 
         if (requireFreshClientKey && string.IsNullOrWhiteSpace(clientKey))
         {
-            throw new InvalidOperationException("Vul de SnelStart maatwerksleutel/client key in en sla de credentials opnieuw op.");
+            throw new InvalidOperationException("Vul de SnelStart subscription key/client key in en sla de credentials opnieuw op.");
         }
 
         var administrationName = BuildInternalSnelStartAdministrationName();
@@ -1460,7 +1461,7 @@
 
         if (string.IsNullOrWhiteSpace(settings.SnelStartClientKey))
         {
-            return "Vul de SnelStart client key (maatwerksleutel) in voordat je de credentials opslaat.";
+            return "Vul de SnelStart client key (subscription key) in voordat je de credentials opslaat.";
         }
 
         if (!settings.HasSnelStartSubscriptionKey &&

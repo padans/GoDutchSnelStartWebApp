@@ -60,16 +60,25 @@ public sealed class GoDutchAutoSyncBackgroundWorker : BackgroundService
 
     private async Task RunOnceAsync(CancellationToken stoppingToken)
     {
-        using var scope = _serviceScopeFactory.CreateScope();
+        if (stoppingToken.IsCancellationRequested) return;
 
-        var service = scope.ServiceProvider
-            .GetRequiredService<IGoDutchAutoSyncService>();
+        try
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IGoDutchAutoSyncService>();
 
-        _logger.LogInformation("GoDutch auto sync pollronde gestart.");
-
-        await service.RunOnceAsync(stoppingToken);
-
-        _logger.LogInformation("GoDutch auto sync pollronde afgerond.");
+            _logger.LogInformation("GoDutch auto sync pollronde gestart.");
+            await service.RunOnceAsync(stoppingToken);
+            _logger.LogInformation("GoDutch auto sync pollronde afgerond.");
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("GoDutch auto sync pollronde geannuleerd (app stopt).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GoDutch auto sync pollronde mislukt — wordt overgeslagen tot volgende run.");
+        }
     }
 
     private static int NormalizePollIntervalMinutes(int intervalMinutes)

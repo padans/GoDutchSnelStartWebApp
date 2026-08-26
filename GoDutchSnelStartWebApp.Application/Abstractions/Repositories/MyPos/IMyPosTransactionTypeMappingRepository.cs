@@ -9,4 +9,5 @@ public interface IMyPosTransactionTypeMappingRepository
     Task<IReadOnlyList<MyPosTransactionTypeMapping>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task UpsertAsync(MyPosTransactionTypeMapping mapping, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, DateTime modifiedUtc, CancellationToken cancellationToken = default);
+    Task<int> SeedFromDefinitionsAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

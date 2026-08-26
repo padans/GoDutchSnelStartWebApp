@@ -2,84 +2,268 @@
 @using GoDutchSnelStartWebApp.Portal.Services
 @inject AppSession Session
 
-<PageTitle>GoDutch SnelStart Portal</PageTitle>
+<PageTitle>Start</PageTitle>
 
-<h1 class="mb-1">GoDutch SnelStart Portal</h1>
-<p class="text-muted mb-4">
-    Automatisch banktransacties en betaalterminaltransacties verwerken naar SnelStart — per klant, per koppeling.
-</p>
+<h1 class="page-title mb-1">Welkom@(!string.IsNullOrEmpty(Session.TenantName) ? $", {Session.TenantName}" : "")</h1>
+<p class="text-muted mb-4">Volg de stappen hieronder om de koppeling in te stellen en transacties naar SnelStart te verwerken.</p>
 
-<div class="row g-4 mb-5">
-
-    @if (Session.Module == "GoDutch" || Session.Module == "Beheerder")
-    {
-        <div class="col-12">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header fw-bold" style="background:#0066CC; color:#fff;">
-                    <span class="me-2">🏦</span> GoDutch → SnelStart
-                </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-3">
-                        Banktransacties vanuit het GoDutch-betaalplatform worden automatisch opgehaald en als bankafschrift geïmporteerd in SnelStart.
-                    </p>
-                    <ul class="list-unstyled feature-list">
-                        <li><span class="badge bg-success me-2">✓</span> Transacties ophalen per bankrekening (IBAN) en datumperiode</li>
-                        <li><span class="badge bg-success me-2">✓</span> Export naar SnelStart in <strong>MT940</strong> of <strong>CAMT053</strong> formaat</li>
-                        <li><span class="badge bg-success me-2">✓</span> Automatische berekening van openings- en eindsaldo per exportperiode</li>
-                        <li><span class="badge bg-success me-2">✓</span> Auto-sync via achtergrondworker met instelbaar interval per bankrekening</li>
-                        <li><span class="badge bg-success me-2">✓</span> Handmatige resync vanaf een zelfgekozen datum</li>
-                        <li><span class="badge bg-success me-2">✓</span> Webhook-ontvangst: SnelStart-import getriggerd door GoDutch-events</li>
-                        <li><span class="badge bg-success me-2">✓</span> Retry-mechanisme bij tijdelijke SnelStart-uploadfouten (exponential backoff)</li>
-                        <li><span class="badge bg-success me-2">✓</span> Elke sync-run vastgelegd met status, triggerobron en statistieken</li>
-                        <li><span class="badge bg-success me-2">✓</span> Syncperiode automatisch bepaald op basis van laatste succesvolle run</li>
-                        <li><span class="badge bg-success me-2">✓</span> GoDutch-rekeningen opvragen rechtstreeks vanuit de GoDutch API</li>
-                    </ul>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <a class="btn btn-sm btn-primary" href="/godutch/sync">Sync &amp; instellingen</a>
-                    <a class="btn btn-sm btn-outline-secondary ms-2" href="/bankaccounts">Bankrekeningen</a>
-                </div>
+@if (Session.Module == "MyPos" || Session.Module == "Beheerder")
+{
+    <div class="start-card mb-4">
+        <div class="start-card-header">
+            <span class="start-card-icon">🖥️</span>
+            <div>
+                <div class="start-card-title">MyPos → SnelStart — Aan de slag</div>
+                <div class="start-card-sub">Volg deze stappen in volgorde om de koppeling volledig in te stellen.</div>
             </div>
         </div>
-    }
 
-    @if (Session.Module == "MyPos" || Session.Module == "Beheerder")
-    {
-        <div class="col-12">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header fw-bold" style="background:#0066CC; color:#fff;">
-                    <span class="me-2">🖥️</span> MyPos → SnelStart
+        <ol class="start-steps">
+            <li>
+                <div class="step-title">
+                    <a href="snelstart/connection">SnelStart verbinding instellen</a>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-3">
-                        Transacties vanuit MyPos-betaalterminals worden geïmporteerd en als exportbatch naar SnelStart verzonden.
-                    </p>
-                    <ul class="list-unstyled feature-list">
-                        <li><span class="badge bg-success me-2">✓</span> MyPos transacties importeren per periode</li>
-                        <li><span class="badge bg-success me-2">✓</span> Transactietype mappings beheren per tenant</li>
-                        <li><span class="badge bg-success me-2">✓</span> Exportbatches aanmaken en naar SnelStart bankboek exporteren</li>
-                        <li><span class="badge bg-success me-2">✓</span> Auto-sync via achtergrondworker</li>
-                        <li><span class="badge bg-success me-2">✓</span> Transactietype status bewaking</li>
-                    </ul>
+                <div class="step-desc">
+                    Voer uw SnelStart maatwerksleutel in via het menu <strong>SnelStart koppeling</strong>.
+                    Zonder werkende SnelStart-koppeling kunnen er geen dagboeken worden opgehaald en kunnen
+                    transacties niet naar SnelStart worden geboekt.
                 </div>
-                <div class="card-footer bg-transparent">
-                    <a class="btn btn-sm btn-primary" href="/mypos/import">Import</a>
-                    <a class="btn btn-sm btn-outline-secondary ms-2" href="/mypos/mappings">Mappings</a>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/snelstart-verbinding">SnelStart-verbinding instellen</a>
                 </div>
+                <div class="step-desc">
+                    Maak in SnelStart een bankdagboek aan voor myPOS (bijv. <em>1150 – MyPos Bank</em>) en
+                    selecteer dit hier. Het virtuele IBAN (<strong>IE91MPOS99039025035759</strong>) moet ook
+                    als bankrekening in SnelStart bestaan, gekoppeld aan dit dagboek.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/verbinding">myPOS verbinding instellen</a>
+                </div>
+                <div class="step-desc">
+                    Vul uw myPOS Klantnummer en Klantgeheim in. De API-gegevens vindt u in het
+                    myPOS-portaal onder <em>Instellingen → Integraties → API</em>.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/administrations">MyPos administratie instellen</a>
+                </div>
+                <div class="step-desc">
+                    Koppel uw SnelStart-administratie aan de myPOS-module. Stel hier de grootboekrekening
+                    en het myPOS IBAN-bankrekeningnummer in.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/mappings">Transactietype mappings instellen</a>
+                </div>
+                <div class="step-desc">
+                    Koppel elk myPOS-transactietype aan een SnelStart-grootboekrekening. Klik op
+                    <strong>Standaard transactietypes laden</strong> om de 32 bekende types automatisch toe te voegen.
+                    Wijs vervolgens per type de bijbehorende grootboekrekening toe. Zonder mappings kunnen transacties
+                    niet naar SnelStart worden geëxporteerd.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/import">Transacties importeren</a>
+                </div>
+                <div class="step-desc">
+                    Haal myPOS-transacties op voor een gewenste periode. De transacties worden opgeslagen als ruwe
+                    data en gegroepeerd per transactietype. Controleer de totalen voordat u exporteert.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/import">Exportbatch aanmaken en naar SnelStart verzenden</a>
+                </div>
+                <div class="step-desc">
+                    Maak een exportbatch aan voor de gewenste periode. De batch wordt aangemaakt als concept — controleer
+                    de bedragen en klik daarna op <strong>Exporteren naar SnelStart</strong>. De transacties worden dan
+                    als bankboekingen ingeboekt in SnelStart.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="mypos/auto-sync">Auto-sync inschakelen <span class="step-optional">optioneel</span></a>
+                </div>
+                <div class="step-desc">
+                    Stel automatisch ophalen en exporteren in via de achtergrondworker. Zodra de koppeling werkt
+                    en mappings volledig zijn ingevuld, worden transacties dagelijks automatisch verwerkt zonder
+                    handmatig ingrijpen.
+                </div>
+            </li>
+        </ol>
+    </div>
+}
+
+@if (Session.Module == "GoDutch" || Session.Module == "Beheerder")
+{
+    <div class="start-card mb-4">
+        <div class="start-card-header">
+            <span class="start-card-icon">🏦</span>
+            <div>
+                <div class="start-card-title">GoDutch → SnelStart — Aan de slag</div>
+                <div class="start-card-sub">Volg deze stappen in volgorde om de koppeling volledig in te stellen.</div>
             </div>
         </div>
-    }
 
-</div>
+        <ol class="start-steps">
+            <li>
+                <div class="step-title">
+                    <a href="snelstart/connection">SnelStart koppeling instellen</a>
+                </div>
+                <div class="step-desc">
+                    Vul uw SnelStart API-sleutel in. Deze vindt u in SnelStart onder
+                    <em>Instellingen → API-koppelingen</em>. Zonder geldige sleutel kunnen er geen transacties
+                    worden geüpload naar SnelStart.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="snelstart/administrations">SnelStart administratie toevoegen</a>
+                </div>
+                <div class="step-desc">
+                    Voeg de SnelStart-administratie toe die u wilt gebruiken voor de import. U kunt meerdere
+                    administraties koppelen voor verschillende bankrekeningen.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="bankaccounts">Bankaccount koppelen</a>
+                </div>
+                <div class="step-desc">
+                    Voeg uw GoDutch-bankrekening(en) toe en koppel ze aan de juiste SnelStart-administratie.
+                    Stel het exportformaat in (MT940 of CAMT053) en koppel de dagboek- en grootboekrekening.
+                </div>
+            </li>
+            <li>
+                <div class="step-title">
+                    <a href="godutch/sync">Sync &amp; instellingen configureren</a>
+                </div>
+                <div class="step-desc">
+                    Importeer transacties handmatig voor een gewenste periode, of schakel de auto-sync in voor
+                    automatische dagelijkse verwerking. De achtergrondworker haalt transacties op en uploadt
+                    ze rechtstreeks naar SnelStart.
+                </div>
+            </li>
+        </ol>
+    </div>
+}
 
 <style>
-    .feature-list li {
-        padding: 5px 0;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: .9rem;
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
     }
 
-    .feature-list li:last-child {
+    .start-card {
+        background: #ffffff;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+
+    .start-card-header {
+        background: #0066CC;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 24px;
+    }
+
+    .start-card-icon {
+        font-size: 1.8rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .start-card-title {
+        font-weight: 700;
+        font-size: 1rem;
+        line-height: 1.2;
+    }
+
+    .start-card-sub {
+        font-size: .82rem;
+        color: rgba(255,255,255,.8);
+        margin-top: 3px;
+    }
+
+    .start-steps {
+        list-style: none;
+        counter-reset: steps;
+        padding: 8px 0;
+        margin: 0;
+    }
+
+    .start-steps li {
+        counter-increment: steps;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 18px 24px 18px 72px;
+        position: relative;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .start-steps li:last-child {
         border-bottom: none;
+    }
+
+    .start-steps li::before {
+        content: counter(steps);
+        position: absolute;
+        left: 24px;
+        top: 18px;
+        width: 32px;
+        height: 32px;
+        background: #EFF6FF;
+        color: #0066CC;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: .9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .step-title {
+        font-weight: 600;
+        font-size: .95rem;
+        color: #111827;
+    }
+
+    .step-title a {
+        color: #0066CC;
+        text-decoration: none;
+    }
+
+    .step-title a:hover {
+        text-decoration: underline;
+    }
+
+    .step-desc {
+        font-size: .86rem;
+        color: #4B5563;
+        line-height: 1.6;
+    }
+
+    .step-optional {
+        font-size: .75rem;
+        font-weight: 600;
+        background: #F3F4F6;
+        color: #6B7280;
+        border-radius: 20px;
+        padding: 2px 9px;
+        vertical-align: middle;
+        margin-left: 6px;
     }
 </style>

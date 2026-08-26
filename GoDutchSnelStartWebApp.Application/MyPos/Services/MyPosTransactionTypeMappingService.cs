@@ -103,6 +103,14 @@ public sealed class MyPosTransactionTypeMappingService : IMyPosTransactionTypeMa
         await _mappingRepository.DeleteAsync(id, DateTime.UtcNow, cancellationToken);
     }
 
+    public async Task<int> SeedDefaultMappingsAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureTenantExistsAsync(tenantId, cancellationToken);
+        return await _mappingRepository.SeedFromDefinitionsAsync(tenantId, cancellationToken);
+    }
+
     public async Task<MyPosTransactionTypeStatusResultDto> GetTransactionTypeStatusAsync(
         Guid tenantId,
         CancellationToken cancellationToken = default)

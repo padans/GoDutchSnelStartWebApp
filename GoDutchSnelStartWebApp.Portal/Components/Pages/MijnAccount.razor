@@ -1,0 +1,669 @@
+@page "/mijn-account"
+@using GoDutchSnelStartWebApp.Portal.Api.Interfaces
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Services
+@using Microsoft.Extensions.Options
+@inject AppSession Session
+@inject IBackendApiClient ApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject ILogger<MijnAccount> Logger
+
+<PageTitle>Mijn account</PageTitle>
+
+@if (Session.RequirePasswordChange)
+{
+    <div class="pw-required-banner">
+        <span class="pw-required-icon">🔐</span>
+        <div>
+            <strong>Wijzig eerst uw wachtwoord</strong>
+            <p>U ontving uw inloggegevens per e-mail. Stel hieronder een eigen wachtwoord in om uw account te beveiligen. U kunt daarna het portaal volledig gebruiken.</p>
+        </div>
+    </div>
+}
+
+<div class="account-grid">
+
+    <!-- Wachtwoord wijzigen -->
+    <div class="account-card">
+        <div class="account-card-title">🔒 Wachtwoord wijzigen</div>
+
+        @if (_pwSuccess)
+        {
+            <div class="result-box result-ok">
+                <div class="result-icon">✅</div>
+                <div class="result-title">Wachtwoord gewijzigd!</div>
+                <p>Uw nieuwe wachtwoord is actief. Er is een bevestigingse-mail verzonden.</p>
+                @if (!Session.RequirePasswordChange)
+                {
+                    <button class="btn-primary" @onclick="NavigateHome">Naar het portaal</button>
+                }
+            </div>
+        }
+        else
+        {
+            <EditForm Model="@_pwForm" OnValidSubmit="HandlePasswordChange" FormName="pw-change-form">
+                <div class="form-field">
+                    <label>Huidig wachtwoord</label>
+                    <div class="pw-wrap">
+                        <input class="form-control" type="@(_showCurrent ? "text" : "password")" @bind="_pwForm.CurrentPassword"
+                               placeholder="Uw huidige wachtwoord" autocomplete="current-password" />
+                        <button type="button" class="pw-toggle" @onclick="() => _showCurrent = !_showCurrent" tabindex="-1">@EyeIcon(_showCurrent)</button>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Nieuw wachtwoord <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input class="form-control" type="@(_showNew ? "text" : "password")" @bind="_pwForm.NewPassword"
+                               placeholder="Minimaal 8 tekens" autocomplete="new-password" />
+                        <button type="button" class="pw-toggle" @onclick="() => _showNew = !_showNew" tabindex="-1">@EyeIcon(_showNew)</button>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Nieuw wachtwoord (herhaling)</label>
+                    <div class="pw-wrap">
+                        <input class="form-control" type="@(_showRepeat ? "text" : "password")" @bind="_pwForm.NewPasswordRepeat"
+                               placeholder="Herhaal nieuw wachtwoord" autocomplete="new-password" />
+                        <button type="button" class="pw-toggle" @onclick="() => _showRepeat = !_showRepeat" tabindex="-1">@EyeIcon(_showRepeat)</button>
+                    </div>
+                </div>
+                @if (_pwError is not null)
+                {
+                    <div class="form-error">@_pwError</div>
+                }
+                <button class="btn-primary" type="submit" disabled="@_pwLoading">
+                    @(_pwLoading ? "Bezig…" : "Wachtwoord opslaan")
+                </button>
+            </EditForm>
+        }
+    </div>
+
+    <!-- Abonnementsgegevens + beheer -->
+    <div class="account-card">
+        <div class="account-card-title">📋 Abonnement</div>
+
+        @if (_tenant is null && _tenantLoading)
+        {
+            <p class="muted">Gegevens laden…</p>
+        }
+        else if (_tenant is null)
+        {
+            <p class="muted">Gegevens konden niet worden geladen.</p>
+        }
+        else if (_cancelled)
+        {
+            <div class="result-box result-ok">
+                <div class="result-icon">👋</div>
+                <div class="result-title">Abonnement opgezegd</div>
+                <p>Uw abonnement is opgezegd. U ontvangt een bevestigingse-mail. Uw toegang is beëindigd.</p>
+            </div>
+        }
+        else if (_subChanged)
+        {
+            <div class="result-box result-ok">
+                <div class="result-icon">✅</div>
+                <div class="result-title">Abonnement bijgewerkt!</div>
+                <p>Uw wijziging is verwerkt en u ontvangt een bevestigingse-mail.</p>
+                @if (_newCredentials.Any())
+                {
+                    <p style="margin-top:12px;font-weight:600;color:#0057AD;">Nieuwe inloggegevens:</p>
+                    @foreach (var c in _newCredentials)
+                    {
+                        <div class="cred-box">
+                            <div class="cred-label">@c.Label</div>
+                            <div class="cred-row"><span>Gebruikersnaam</span><code>@c.Username</code></div>
+                            <div class="cred-row"><span>Wachtwoord</span><code>@c.Password</code></div>
+                        </div>
+                    }
+                    <p class="muted" style="margin-top:8px;">⚠️ Noteer deze gegevens. Wijzig het wachtwoord via <em>Mijn account</em> na inloggen.</p>
+                }
+                <button class="btn-secondary" @onclick="() => _subChanged = false" style="margin-top:16px;">
+                    Terug naar abonnement
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Huidige gegevens -->
+            <dl class="info-list">
+                <dt>Bedrijf</dt>
+                <dd>@(_tenant.CompanyName ?? _tenant.Name)</dd>
+                <dt>Contactpersoon</dt>
+                <dd>@(_tenant.ContactName ?? "—")</dd>
+                <dt>E-mail</dt>
+                <dd>@(_tenant.Email ?? "—")</dd>
+                <dt>Status</dt>
+                <dd><span class="status-badge status-@(_tenant.Status.ToLower())">@_tenant.Status</span></dd>
+                @if (_tenant.TrialEndsUtc.HasValue)
+                {
+                    <dt>Proefperiode tot</dt>
+                    <dd>@_tenant.TrialEndsUtc.Value.ToLocalTime().ToString("dd-MM-yyyy")</dd>
+                }
+            </dl>
+
+            <div class="section-divider">Modules wijzigen</div>
+
+            <div class="module-toggles">
+                <label class="module-toggle-label">
+                    <input type="checkbox" @bind="_subGoDutch" />
+                    <span>🏦 GoDutch → SnelStart</span>
+                    @if (_tenant.GoDutchEnabled && !_subGoDutch)
+                    {
+                        <span class="toggle-warning">wordt verwijderd</span>
+                    }
+                    @if (!_tenant.GoDutchEnabled && _subGoDutch)
+                    {
+                        <span class="toggle-new">nieuw — nieuwe inloggegevens volgen</span>
+                    }
+                </label>
+                <label class="module-toggle-label">
+                    <input type="checkbox" @bind="_subMyPos" />
+                    <span>🖥️ MyPos → SnelStart</span>
+                    @if (_tenant.MyPosEnabled && !_subMyPos)
+                    {
+                        <span class="toggle-warning">wordt verwijderd</span>
+                    }
+                    @if (!_tenant.MyPosEnabled && _subMyPos)
+                    {
+                        <span class="toggle-new">nieuw — nieuwe inloggegevens volgen</span>
+                    }
+                </label>
+            </div>
+
+            @if (_subError is not null)
+            {
+                <div class="form-error">@_subError</div>
+            }
+
+            <button class="btn-primary" @onclick="HandleSubscriptionChange"
+                    disabled="@(_subLoading || (!_subGoDutch && !_subMyPos))"
+                    style="margin-top:12px;">
+                @(_subLoading ? "Bezig…" : "Abonnement bijwerken")
+            </button>
+
+            <!-- Opzeggen -->
+            @if (!_showCancelConfirm)
+            {
+                <button class="btn-cancel-trigger" @onclick="() => _showCancelConfirm = true">
+                    Abonnement opzeggen…
+                </button>
+            }
+            else
+            {
+                <div class="cancel-confirm-box">
+                    <p><strong>Weet u het zeker?</strong><br>Uw toegang wordt direct beëindigd en alle gebruikers worden gedeactiveerd.</p>
+                    <div class="form-field">
+                        <label>Reden (optioneel)</label>
+                        <input class="form-control" type="text" @bind="_cancelReason"
+                               placeholder="bijv. te duur, niet meer nodig" />
+                    </div>
+                    @if (_cancelError is not null)
+                    {
+                        <div class="form-error">@_cancelError</div>
+                    }
+                    <div style="display:flex;gap:10px;margin-top:12px;">
+                        <button class="btn-danger" @onclick="HandleCancellation" disabled="@_cancelLoading">
+                            @(_cancelLoading ? "Bezig…" : "Ja, abonnement opzeggen")
+                        </button>
+                        <button class="btn-secondary" @onclick="() => _showCancelConfirm = false">
+                            Annuleren
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+</div>
+
+@code {
+    private TenantViewModel? _tenant;
+    private bool _tenantLoading = true;
+
+    // Wachtwoord
+    private PwChangeForm _pwForm = new();
+    private string? _pwError;
+    private bool _pwLoading;
+    private bool _pwSuccess;
+    private bool _showCurrent;
+    private bool _showNew;
+    private bool _showRepeat;
+
+    private static RenderFragment EyeIcon(bool visible) => visible
+        ? @<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        : @<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+    // Abonnement wijzigen
+    private bool _subGoDutch;
+    private bool _subMyPos;
+    private string? _subError;
+    private bool _subLoading;
+    private bool _subChanged;
+    private List<NewModuleCredentialViewModel> _newCredentials = [];
+
+    // Opzeggen
+    private bool _showCancelConfirm;
+    private string? _cancelReason;
+    private string? _cancelError;
+    private bool _cancelLoading;
+    private bool _cancelled;
+
+    private sealed class PwChangeForm
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string NewPasswordRepeat { get; set; } = string.Empty;
+    }
+
+    private Guid EffectiveTenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _tenant = await ApiClient.GetTenantAsync(EffectiveTenantId);
+            if (_tenant is not null)
+            {
+                _subGoDutch = _tenant.GoDutchEnabled;
+                _subMyPos = _tenant.MyPosEnabled;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Tenant ophalen mislukt");
+        }
+        finally
+        {
+            _tenantLoading = false;
+        }
+    }
+
+    private async Task HandlePasswordChange()
+    {
+        _pwError = null;
+
+        if (string.IsNullOrWhiteSpace(_pwForm.CurrentPassword))
+        {
+            _pwError = "Voer uw huidige wachtwoord in.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_pwForm.NewPassword) || _pwForm.NewPassword.Length < 8)
+        {
+            _pwError = "Nieuw wachtwoord moet minimaal 8 tekens zijn.";
+            return;
+        }
+        if (_pwForm.NewPassword != _pwForm.NewPasswordRepeat)
+        {
+            _pwError = "Nieuwe wachtwoorden komen niet overeen.";
+            return;
+        }
+
+        _pwLoading = true;
+        try
+        {
+            var ok = await ApiClient.SelfChangePasswordAsync(new SelfChangePasswordRequestViewModel
+            {
+                Username = Session.Username,
+                CurrentPassword = _pwForm.CurrentPassword,
+                NewPassword = _pwForm.NewPassword,
+                NotificationEmail = _tenant?.Email
+            });
+
+            if (!ok)
+            {
+                _pwError = "Huidig wachtwoord is onjuist.";
+                return;
+            }
+
+            Session.ClearPasswordChangeRequired();
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_require_pw_change", "false");
+            _pwSuccess = true;
+            _pwForm = new();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Wachtwoord wijzigen mislukt");
+            _pwError = $"Er is een fout opgetreden: {ex.Message}";
+        }
+        finally
+        {
+            _pwLoading = false;
+        }
+    }
+
+    private async Task HandleSubscriptionChange()
+    {
+        _subError = null;
+        _subLoading = true;
+        try
+        {
+            _newCredentials = (await ApiClient.ChangeSubscriptionAsync(
+                EffectiveTenantId,
+                new SubscriptionChangeRequestViewModel
+                {
+                    GoDutchEnabled = _subGoDutch,
+                    MyPosEnabled = _subMyPos
+                })).ToList();
+
+            // Tenant opnieuw laden
+            _tenant = await ApiClient.GetTenantAsync(EffectiveTenantId);
+            _subChanged = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Abonnementswijziging mislukt");
+            _subError = $"Er is een fout opgetreden: {ex.Message}";
+        }
+        finally
+        {
+            _subLoading = false;
+        }
+    }
+
+    private async Task HandleCancellation()
+    {
+        _cancelError = null;
+        _cancelLoading = true;
+        try
+        {
+            await ApiClient.CancelSubscriptionAsync(
+                EffectiveTenantId,
+                new SubscriptionCancelRequestViewModel { Reason = _cancelReason });
+
+            _cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Opzeggen mislukt");
+            _cancelError = $"Er is een fout opgetreden: {ex.Message}";
+        }
+        finally
+        {
+            _cancelLoading = false;
+        }
+    }
+
+    private void NavigateHome()
+    {
+        var startPage = Session.Module switch
+        {
+            "GoDutch" => "/bankaccounts",
+            "MyPos"   => "/mypos/import",
+            _         => "/"
+        };
+        Navigation.NavigateTo(startPage);
+    }
+}
+
+<style>
+    .pw-wrap { position: relative; display: flex; align-items: center; }
+    .pw-wrap .form-control { padding-right: 40px; }
+    .pw-toggle { position: absolute; right: 10px; background: none; border: none; padding: 0; cursor: pointer; color: #6B7280; display: flex; align-items: center; line-height: 1; }
+    .pw-toggle:hover { color: #0066CC; }
+
+    .pw-required-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        background: #FFFBEB;
+        border: 2px solid #F59E0B;
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 28px;
+    }
+
+    .pw-required-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+
+    .pw-required-banner strong {
+        display: block;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #92400E;
+        margin-bottom: 4px;
+    }
+
+    .pw-required-banner p {
+        font-size: .88rem;
+        color: #78350F;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .account-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    @@media (max-width: 900px) {
+        .account-grid { grid-template-columns: 1fr; }
+    }
+
+    .account-card {
+        background: #F8FAFF;
+        border: 1px solid #D7E7F8;
+        border-radius: 14px;
+        padding: 24px;
+    }
+
+    .account-card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0057AD;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #D7E7F8;
+    }
+
+    .info-list {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 16px;
+        margin: 0 0 20px 0;
+    }
+
+    .info-list dt { font-size: .82rem; font-weight: 600; color: #6B7280; align-self: center; }
+    .info-list dd { font-size: .88rem; color: #111827; margin: 0; align-self: center; }
+
+    .status-badge {
+        display: inline-block;
+        border-radius: 20px;
+        padding: 3px 10px;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .status-badge.status-trial    { background: #FFFBEB; color: #92400E; }
+    .status-badge.status-active   { background: #F0FDF4; color: #166534; }
+    .status-badge.status-draft,
+    .status-badge.status-suspended,
+    .status-badge.status-cancelled { background: #F3F4F6; color: #374151; }
+
+    .section-divider {
+        font-size: .78rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        padding: 12px 0 10px 0;
+        border-top: 1px solid #D7E7F8;
+        margin-top: 4px;
+    }
+
+    .module-toggles { display: flex; flex-direction: column; gap: 8px; }
+
+    .module-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        font-size: .875rem;
+        color: #374151;
+        font-weight: 500;
+        padding: 10px 12px;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        transition: border-color .15s, background .15s;
+        flex-wrap: wrap;
+    }
+
+    .module-toggle-label:hover { border-color: #0066CC; background: #F0F7FF; }
+    .module-toggle-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0066CC; flex-shrink: 0; }
+
+    .toggle-warning {
+        margin-left: auto;
+        background: #FEF2F2;
+        color: #DC2626;
+        font-size: .72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        border: 1px solid #FECACA;
+    }
+
+    .toggle-new {
+        margin-left: auto;
+        background: #F0FDF4;
+        color: #166534;
+        font-size: .72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        border: 1px solid #BBF7D0;
+    }
+
+    .btn-cancel-trigger {
+        display: block;
+        width: 100%;
+        margin-top: 20px;
+        background: none;
+        border: 1px solid #FECACA;
+        color: #DC2626;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: .875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .btn-cancel-trigger:hover { background: #FEF2F2; }
+
+    .cancel-confirm-box {
+        margin-top: 20px;
+        background: #FFF1F2;
+        border: 1px solid #FECACA;
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .cancel-confirm-box p {
+        font-size: .88rem;
+        color: #374151;
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+    }
+
+    .muted { color: #9CA3AF; font-size: .88rem; }
+    .req { color: #DC2626; }
+
+    .form-field { margin-bottom: 14px; }
+
+    .form-field label {
+        display: block;
+        font-weight: 600;
+        font-size: .84rem;
+        color: #374151;
+        margin-bottom: 5px;
+    }
+
+    .form-error {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        color: #DC2626;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: .84rem;
+        margin-bottom: 12px;
+    }
+
+    .btn-primary {
+        width: 100%;
+        background: #0066CC;
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        padding: 13px;
+        font-size: .95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #0052A8; }
+    .btn-primary:disabled { opacity: .7; cursor: not-allowed; }
+
+    .btn-secondary {
+        background: #F3F4F6;
+        color: #374151;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        padding: 10px 18px;
+        font-size: .875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .btn-secondary:hover { background: #E5E7EB; }
+
+    .btn-danger {
+        background: #DC2626;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 18px;
+        font-size: .875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+        flex: 1;
+    }
+
+    .btn-danger:hover:not(:disabled) { background: #B91C1C; }
+    .btn-danger:disabled { opacity: .7; cursor: not-allowed; }
+
+    .result-box {
+        text-align: center;
+        padding: 12px 0;
+    }
+
+    .result-box.result-ok { }
+    .result-icon { font-size: 2.2rem; margin-bottom: 10px; }
+    .result-title { font-size: 1.1rem; font-weight: 700; color: #166534; margin-bottom: 8px; }
+    .result-box p { font-size: .88rem; color: #374151; line-height: 1.55; }
+
+    .cred-box {
+        background: #F0F7FF;
+        border-left: 4px solid #0066CC;
+        border-radius: 6px;
+        padding: 12px 14px;
+        margin: 8px 0;
+        text-align: left;
+    }
+
+    .cred-label { font-weight: 700; color: #0057AD; font-size: .85rem; margin-bottom: 6px; }
+
+    .cred-row {
+        display: flex;
+        gap: 12px;
+        font-size: .84rem;
+        margin-bottom: 4px;
+    }
+
+    .cred-row span { color: #6B7280; min-width: 110px; }
+    .cred-row code { font-family: monospace; font-weight: 600; color: #111; }
+</style>

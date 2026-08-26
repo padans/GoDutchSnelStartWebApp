@@ -101,6 +101,10 @@ public interface IBackendApiClient
         Guid tenantId,
         CancellationToken cancellationToken = default);
 
+    Task<int> SeedMyPosDefaultMappingsAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
     Task<MyPosTransactionTypeMappingViewModel> UpsertMyPosTransactionTypeMappingAsync(
         Guid tenantId,
         UpsertMyPosTransactionTypeMappingRequestViewModel request,
@@ -109,6 +113,11 @@ public interface IBackendApiClient
 
     Task<TenantMyPosConnectionViewModel?> GetTenantMyPosConnectionAsync(
         Guid tenantId,
+        CancellationToken cancellationToken = default);
+
+    Task<Guid> CreateTenantMyPosConnectionAsync(
+        Guid tenantId,
+        CreateMyPosConnectionRequestViewModel request,
         CancellationToken cancellationToken = default);
 
     Task<MyPosTransactionImportResultViewModel> ImportMyPosTransactionsAsync(
@@ -217,5 +226,31 @@ public interface IBackendApiClient
 
     Task<string?> GetTenantNameAsync(
         Guid tenantId,
+        CancellationToken cancellationToken = default);
+
+    Task<(bool GoDutch, bool MyPos)> GetTenantModulesAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
+    Task<TenantViewModel?> GetTenantAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> SelfChangePasswordAsync(
+        SelfChangePasswordRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
+    Task ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
+
+    Task<bool> ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<NewModuleCredentialViewModel>> ChangeSubscriptionAsync(
+        Guid tenantId,
+        SubscriptionChangeRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
+    Task CancelSubscriptionAsync(
+        Guid tenantId,
+        SubscriptionCancelRequestViewModel request,
         CancellationToken cancellationToken = default);
 }

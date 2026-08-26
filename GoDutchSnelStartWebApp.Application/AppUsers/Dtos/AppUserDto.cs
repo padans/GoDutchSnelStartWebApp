@@ -9,4 +9,6 @@ public sealed class AppUserDto
     public AppModule Module { get; init; }
     public bool IsActive { get; init; }
     public DateTime CreatedUtc { get; init; }
+    public bool RequirePasswordChange { get; init; }
+    public Guid? TenantId { get; init; }
 }

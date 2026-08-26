@@ -23,4 +23,7 @@ public sealed class TenantSnelStartConnection
 
     public DateTime CreatedUtc { get; init; }
     public DateTime? ModifiedUtc { get; set; }
+
+    public DateTime? KeyExpiresUtc { get; set; }
+    public DateTime? ExpiryWarningSentUtc { get; set; }
 }

@@ -36,7 +36,7 @@ public sealed class AppUserService : IAppUserService
         return user is null ? null : MapToDto(user);
     }
 
-    public async Task<Guid> CreateAsync(string username, string password, AppModule module, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(string username, string password, AppModule module, bool requirePasswordChange = false, Guid? tenantId = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username is required.", nameof(username));
@@ -50,7 +50,9 @@ public sealed class AppUserService : IAppUserService
             PasswordHash = _passwordHasher.Hash(password),
             Module = module,
             IsActive = true,
-            CreatedUtc = DateTime.UtcNow
+            CreatedUtc = DateTime.UtcNow,
+            RequirePasswordChange = requirePasswordChange,
+            TenantId = tenantId
         };
 
         await _repository.CreateAsync(user, cancellationToken);
@@ -80,6 +82,7 @@ public sealed class AppUserService : IAppUserService
             ?? throw new KeyNotFoundException($"AppUser {id} not found.");
 
         user.PasswordHash = _passwordHasher.Hash(newPassword);
+        user.RequirePasswordChange = false;
         await _repository.UpdateAsync(user, cancellationToken);
         _logger.LogInformation("AppUser {UserId} password changed", id);
     }
@@ -119,6 +122,8 @@ public sealed class AppUserService : IAppUserService
         Username = user.Username,
         Module = user.Module,
         IsActive = user.IsActive,
-        CreatedUtc = user.CreatedUtc
+        CreatedUtc = user.CreatedUtc,
+        RequirePasswordChange = user.RequirePasswordChange,
+        TenantId = user.TenantId
     };
 }

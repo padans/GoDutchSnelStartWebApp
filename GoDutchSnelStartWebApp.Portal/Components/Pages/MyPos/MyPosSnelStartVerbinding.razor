@@ -1,0 +1,181 @@
+@page "/mypos/snelstart-verbinding"
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosSnelStartVerbinding> Logger
+@inject AppSession Session
+
+<PageTitle>myPOS SnelStart-verbinding</PageTitle>
+
+<h1>myPOS SnelStart-verbinding</h1>
+<p class="text-muted">Koppel het juiste SnelStart-bankdagboek aan uw myPOS-koppeling.</p>
+
+@if (isLoading)
+{
+    <p>Gegevens laden...</p>
+}
+else if (connection is null)
+{
+    <div class="alert alert-info">
+        Maak eerst een myPOS-koppeling aan via
+        <a href="/mypos/verbinding">myPOS-verbinding</a>.
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header">SnelStart-verbinding</div>
+        <div class="card-body">
+            @if (dagboeken.Count == 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <strong>Geen SnelStart-dagboeken beschikbaar</strong><br />
+                    Voer eerst uw <a href="/snelstart/connection" class="alert-link">SnelStart maatwerksleutel</a> in
+                    en maak in SnelStart een bankdagboek aan voor myPOS (bijv. <em>1150 – MyPos Bank</em>).
+                    Klik daarna op <strong>Vernieuwen</strong>.
+                </div>
+            }
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">SnelStart bankdagboek</label>
+                    <select class="form-select"
+                            value="@FormatGuid(connection.SnelStartBankDagboekId)"
+                            @onchange="OnDagboekChanged">
+                        <option value="">-- Kies een dagboek --</option>
+                        @foreach (var dagboek in dagboeken)
+                        {
+                            <option value="@dagboek.Id">@dagboek.Nummer - @dagboek.Omschrijving</option>
+                        }
+                    </select>
+                    <div class="form-text">Bijv. 1150 – MyPos Bank (aan te maken in SnelStart)</div>
+                </div>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger mt-3 py-2" role="alert">@errorMessage</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="alert alert-success mt-3 py-2" role="alert">@successMessage</div>
+            }
+            <hr />
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+                @(isSaving ? "Opslaan..." : "Opslaan")
+            </button>
+            <button class="btn btn-outline-secondary ms-2" @onclick="LoadDataAsync" disabled="@isSaving">
+                Vernieuwen
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    private TenantMyPosConnectionViewModel? connection;
+    private List<SnelStartDagboekLookupViewModel> dagboeken = [];
+
+    private bool isLoading;
+    private bool isSaving;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isLoading = true;
+
+        try
+        {
+            connection = await BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS koppeling laden mislukt.");
+            errorMessage = $"Laden mislukt: {ex.Message}";
+        }
+
+        try
+        {
+            var result = await BackendApiClient.GetTenantSnelStartDagboekenAsync(TenantId);
+            dagboeken = result.OrderBy(x => x.Nummer).ThenBy(x => x.Omschrijving).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SnelStart-dagboeken ophalen mislukt.");
+            dagboeken = [];
+        }
+
+        isLoading = false;
+    }
+
+    private void OnDagboekChanged(ChangeEventArgs args)
+    {
+        if (connection is null) return;
+        if (!Guid.TryParse(args.Value?.ToString(), out var id))
+        {
+            connection.SnelStartBankDagboekId = null;
+            connection.SnelStartBankDagboekNummer = null;
+            connection.SnelStartBankDagboekNaam = null;
+            return;
+        }
+        var d = dagboeken.FirstOrDefault(x => x.Id == id);
+        connection.SnelStartBankDagboekId = d?.Id;
+        connection.SnelStartBankDagboekNummer = d?.Nummer;
+        connection.SnelStartBankDagboekNaam = d?.Omschrijving;
+    }
+
+    private async Task SaveAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (connection is null || connection.Id == Guid.Empty) { errorMessage = "Geen geldige koppeling geladen."; return; }
+        if (connection.SnelStartBankDagboekId is null) { errorMessage = "Kies een SnelStart-bankdagboek."; return; }
+
+        isSaving = true;
+        try
+        {
+            var request = new UpdateTenantMyPosConnectionRequestViewModel
+            {
+                AuthUrl = "https://auth-api.mypos.com/oauth/token",
+                TransactionsApiBaseUrl = "https://transactions-api.mypos.com/v1.1",
+                ClientId = connection.ClientId ?? string.Empty,
+                ClientSecret = null,
+                ApiKey = null,
+                SnelStartBankDagboekId = connection.SnelStartBankDagboekId,
+                SnelStartBankDagboekNummer = NormalizeNullable(connection.SnelStartBankDagboekNummer),
+                SnelStartBankDagboekNaam = NormalizeNullable(connection.SnelStartBankDagboekNaam),
+                SnelStartBankIban = "IE91MPOS99039025035759",
+                IsActive = connection.IsActive
+            };
+
+            await BackendApiClient.UpdateTenantMyPosConnectionAsync(TenantId, connection.Id, request);
+            successMessage = "SnelStart-verbinding opgeslagen.";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SnelStart-verbinding opslaan mislukt.");
+            errorMessage = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string FormatGuid(Guid? value) =>
+        value.HasValue && value.Value != Guid.Empty ? value.Value.ToString() : string.Empty;
+
+    private static string? NormalizeNullable(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

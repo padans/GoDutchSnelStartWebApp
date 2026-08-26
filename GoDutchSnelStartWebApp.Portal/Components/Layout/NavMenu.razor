@@ -5,7 +5,7 @@
 
 <nav class="app-nav">
     <div class="app-brand">
-        <div class="app-brand-title">GoDutch SnelStart</div>
+        <div class="app-brand-title">@AppTitle</div>
         <div class="app-brand-subtitle">Koppelingen &amp; exports</div>
     </div>
 
@@ -60,14 +60,19 @@
         <div class="app-nav-section">
             <div class="app-nav-heading-dark">MyPos</div>
 
+            <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/snelstart-verbinding" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔗</span>
+                <span>SnelStart-verbinding</span>
+            </NavLink>
+
+            <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/verbinding" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔌</span>
+                <span>MyPos-verbinding</span>
+            </NavLink>
+
             <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/administrations" Match="NavLinkMatch.Prefix">
                 <span class="app-nav-link-icon">🏢</span>
                 <span>MyPos administratie</span>
-            </NavLink>
-
-            <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/connection" Match="NavLinkMatch.Prefix">
-                <span class="app-nav-link-icon">🔌</span>
-                <span>Verbinding</span>
             </NavLink>
 
             <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/import" Match="NavLinkMatch.Prefix">
@@ -92,6 +97,27 @@
         </div>
     }
 
+    @* Mijn account — voor GoDutch en MyPos (niet Beheerder) *@
+    @if (!IsBeheerder() && Session.IsLoggedIn)
+    {
+        var accountNavClass = Session.RequirePasswordChange
+            ? "app-nav-link app-nav-link-urgent"
+            : "app-nav-link";
+
+        <div class="app-nav-section">
+            <div class="app-nav-heading-dark">Account</div>
+
+            <NavLink class="@accountNavClass" @onclick="ScrollToContent" href="mijn-account" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">👤</span>
+                <span>Mijn account</span>
+                @if (Session.RequirePasswordChange)
+                {
+                    <span class="app-nav-link-badge">!</span>
+                }
+            </NavLink>
+        </div>
+    }
+
     @* Beheer — alleen voor Beheerder *@
     @if (IsBeheerder())
     {
@@ -101,6 +127,10 @@
             <NavLink class="app-nav-link" @onclick="ScrollToContent" href="tenants/onboard" Match="NavLinkMatch.Prefix">
                 <span class="app-nav-link-icon">🏢</span>
                 <span>Tenant onboarden</span>
+            </NavLink>
+            <NavLink class="app-nav-link" @onclick="ScrollToContent" href="beheerder/snelstart-api" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">🔑</span>
+                <span>SnelStart API-sleutel</span>
             </NavLink>
         </div>
     }
@@ -136,6 +166,13 @@
 
     private bool IsBeheerder() =>
         string.Equals(Session.Module, "Beheerder", StringComparison.OrdinalIgnoreCase);
+
+    private string AppTitle => Session.Module switch
+    {
+        "MyPos"   => "MyPos SnelStart",
+        "GoDutch" => "GoDutch SnelStart",
+        _         => "Padans Portal"
+    };
 
     private async Task ScrollToContent()
     {

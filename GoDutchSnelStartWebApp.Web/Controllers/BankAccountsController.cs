@@ -6,25 +6,17 @@ namespace GoDutchSnelStartWebApp.Web.Controllers;
 
 [ApiController]
 [Route("api/tenants/{tenantId:guid}/bankaccounts")]
-public sealed class BankAccountsController : ControllerBase
+public sealed class BankAccountsController(
+    IBankAccountService bankAccountService,
+    IBankAccountResyncService resyncService) : ControllerBase
 {
-    private readonly IBankAccountService _bankAccountService;
-    private readonly IBankAccountResyncService _resyncService;
-
-    public BankAccountsController(
-        IBankAccountService bankAccountService,
-        IBankAccountResyncService resyncService)
-    {
-        _bankAccountService = bankAccountService;
-        _resyncService = resyncService;
-    }
     [HttpGet("{bankAccountId:guid}")]
     public async Task<IActionResult> GetById(
     Guid tenantId,
     Guid bankAccountId,
     CancellationToken cancellationToken)
     {
-        var bankAccount = await _bankAccountService.GetByIdAsync(
+        var bankAccount = await bankAccountService.GetByIdAsync(
             tenantId,
             bankAccountId,
             cancellationToken);
@@ -40,14 +32,14 @@ public sealed class BankAccountsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<BankAccountDto>>> GetByTenantId(Guid tenantId, CancellationToken cancellationToken)
     {
-        var bankAccounts = await _bankAccountService.GetByTenantIdAsync(tenantId, cancellationToken);
+        var bankAccounts = await bankAccountService.GetByTenantIdAsync(tenantId, cancellationToken);
         return Ok(bankAccounts);
     }
 
     [HttpPost]
     public async Task<ActionResult> Create(Guid tenantId, [FromBody] CreateBankAccountRequest request, CancellationToken cancellationToken)
     {
-        var id = await _bankAccountService.CreateAsync(tenantId, request, cancellationToken);
+        var id = await bankAccountService.CreateAsync(tenantId, request, cancellationToken);
         return CreatedAtAction(nameof(GetByTenantId), new { tenantId }, new { id });
     }
     [HttpGet("{bankAccountId:guid}/sync-status")]
@@ -56,21 +48,21 @@ public sealed class BankAccountsController : ControllerBase
         Guid bankAccountId,
         CancellationToken cancellationToken)
     {
-        var status = await _bankAccountService.GetSyncStatusAsync(tenantId, bankAccountId, cancellationToken);
+        var status = await bankAccountService.GetSyncStatusAsync(tenantId, bankAccountId, cancellationToken);
         return Ok(status);
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult> Update(Guid tenantId, Guid id, [FromBody] UpdateBankAccountRequest request, CancellationToken cancellationToken)
     {
-        await _bankAccountService.UpdateAsync(tenantId, id, request, cancellationToken);
+        await bankAccountService.UpdateAsync(tenantId, id, request, cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult> Delete(Guid tenantId, Guid id, CancellationToken cancellationToken)
     {
-        await _bankAccountService.DeleteAsync(tenantId, id, cancellationToken);
+        await bankAccountService.DeleteAsync(tenantId, id, cancellationToken);
         return NoContent();
     }
     [HttpPost("{bankAccountId:guid}/resync")]
@@ -85,7 +77,7 @@ public sealed class BankAccountsController : ControllerBase
             return BadRequest("Request body is verplicht.");
         }
 
-        var result = await _resyncService.ForceResyncFromDateAsync(
+        var result = await resyncService.ForceResyncFromDateAsync(
             tenantId,
             bankAccountId,
             request.FromUtc,

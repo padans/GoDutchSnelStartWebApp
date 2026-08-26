@@ -9,6 +9,7 @@
 @inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<MyPosMappings> Logger
+@inject AppSession Session
 
 <PageTitle>myPOS mappings</PageTitle>
 
@@ -64,6 +65,10 @@
 
             <button type="button" class="btn btn-outline-success" @onclick="ToggleCreateGrootboek" disabled="@isLoading">
                 @(showCreateGrootboek ? "Nieuw grootboek verbergen" : "Nieuw SnelStart grootboek")
+            </button>
+
+            <button type="button" class="btn btn-outline-secondary" @onclick="SeedDefaultMappingsAsync" disabled="@(isLoading || isSeeding)">
+                @(isSeeding ? "Bezig…" : "Standaard transactietypes laden")
             </button>
 
             <span class="text-muted">
@@ -168,8 +173,10 @@
 }
 else if (mappings.Count == 0)
 {
-    <div class="alert alert-warning">
-        Geen myPOS mappings gevonden. Voer eerst het seed-script uit voor deze tenant.
+    <div class="alert alert-info">
+        Er zijn nog geen transactietype mappings voor dit account. Voer eerst een
+        <a href="/mypos/import">import</a> uit — de myPOS transactietypes worden dan opgehaald
+        en verschijnen hier. U kunt elk type vervolgens handmatig koppelen aan een SnelStart grootboekrekening.
     </div>
 }
 else
@@ -323,6 +330,7 @@ else
     private Guid tenantId;
     private bool isLoading;
     private bool isSaving;
+    private bool isSeeding;
     private bool isCreatingGrootboek;
     private bool showCreateGrootboek;
     private bool hasLoadedData;
@@ -376,7 +384,7 @@ else
 
     protected override void OnInitialized()
     {
-        tenantId = TenantOptions.Value.TenantId;
+        tenantId = Session.TenantId ?? TenantOptions.Value.TenantId;
 
         if (tenantId == Guid.Empty)
         {
@@ -414,69 +422,77 @@ else
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
 
+        await UpdateLoadingProgressAsync(5,
+            "Laden gestart",
+            "De tenantgegevens worden gecontroleerd.");
+
+        // Stap 1: mappings — 404 = nog geen mappings, geen fout
+        await UpdateLoadingProgressAsync(15,
+            "myPOS mappings ophalen...",
+            "Stap 1 van 4: de bestaande myPOS transactietype mappings worden opgehaald.");
         try
         {
-            await UpdateLoadingProgressAsync(5,
-                "Laden gestart",
-                "De tenantgegevens worden gecontroleerd.");
-
-            await UpdateLoadingProgressAsync(15,
-                "myPOS mappings ophalen...",
-                "Stap 1 van 4: de bestaande myPOS transactietype mappings worden opgehaald.");
-
             var mappingResult = await BackendApiClient.GetMyPosTransactionTypeMappingsAsync(tenantId);
+            mappings = mappingResult.OrderBy(x => x.TransactionCode).ToList();
+        }
+        catch (HttpRequestException ex) when ((int?)ex.StatusCode == 404)
+        {
+            mappings = [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS mappings ophalen mislukt.");
+            errorMessage = $"myPOS mappings ophalen mislukt: {ex.Message}";
+        }
 
-            await UpdateLoadingProgressAsync(45,
-                "SnelStart grootboeken ophalen...",
-                "Stap 2 van 4: de grootboekrekeningen worden via de tenantgerichte SnelStart-koppeling opgehaald. Dit kan even duren.");
-
+        // Stap 2: grootboeken — mag mislukken als SnelStart nog niet gekoppeld is
+        await UpdateLoadingProgressAsync(45,
+            "SnelStart grootboeken ophalen...",
+            "Stap 2 van 4: de grootboekrekeningen worden via de tenantgerichte SnelStart-koppeling opgehaald. Dit kan even duren.");
+        try
+        {
             var grootboekResult = await BackendApiClient.GetTenantSnelStartGrootboekenAsync(tenantId);
+            grootboeken = grootboekResult.OrderBy(x => x.Nummer).ThenBy(x => x.Omschrijving).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SnelStart grootboeken ophalen mislukt (nog geen koppeling?).");
+            grootboeken = [];
+        }
 
-            await UpdateLoadingProgressAsync(75,
-                "SnelStart btw-tarieven ophalen...",
-                "Stap 3 van 4: de actuele btw-tarieven worden opgehaald bij SnelStart.");
-
+        // Stap 3: btw-tarieven — mag mislukken als SnelStart nog niet gekoppeld is
+        await UpdateLoadingProgressAsync(75,
+            "SnelStart btw-tarieven ophalen...",
+            "Stap 3 van 4: de actuele btw-tarieven worden opgehaald bij SnelStart.");
+        try
+        {
             var btwTariefResult = await BackendApiClient.GetTenantSnelStartBtwTarievenAsync(tenantId);
-
-            await UpdateLoadingProgressAsync(92,
-                "Gegevens verwerken...",
-                "Stap 4 van 4: de mappings, grootboeken en btw-tarieven worden voorbereid voor weergave.");
-
-            mappings = mappingResult
-                .OrderBy(x => x.TransactionCode)
-                .ToList();
-
-            grootboeken = grootboekResult
-                .OrderBy(x => x.Nummer)
-                .ThenBy(x => x.Omschrijving)
-                .ToList();
-
             btwTarieven = btwTariefResult
                 .Where(IsActueelBtwTarief)
                 .OrderBy(x => x.BtwSoort)
                 .ThenBy(x => x.BtwPercentage)
                 .ToList();
-
-            foreach (var mapping in mappings)
-            {
-                mapping.SelectedGrootboekId = mapping.SnelStartGrootboekId;
-                NormalizeBtwForDisplay(mapping);
-            }
-
-            await UpdateLoadingProgressAsync(100,
-                "Gereed",
-                "Alle gegevens zijn geladen.");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "myPOS mappings laden mislukt.");
-            errorMessage = $"myPOS mappings laden mislukt: {ex.Message}";
+            Logger.LogWarning(ex, "SnelStart btw-tarieven ophalen mislukt (nog geen koppeling?).");
+            btwTarieven = [];
         }
-        finally
+
+        // Stap 4: verwerken
+        await UpdateLoadingProgressAsync(92,
+            "Gegevens verwerken...",
+            "Stap 4 van 4: de mappings worden voorbereid voor weergave.");
+
+        foreach (var mapping in mappings)
         {
-            isLoading = false;
-            await InvokeAsync(StateHasChanged);
+            mapping.SelectedGrootboekId = mapping.SnelStartGrootboekId;
+            NormalizeBtwForDisplay(mapping);
         }
+
+        await UpdateLoadingProgressAsync(100, "Gereed", "Alle gegevens zijn geladen.");
+        isLoading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task UpdateLoadingProgressAsync(
@@ -490,6 +506,31 @@ else
 
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
+    }
+
+    private async Task SeedDefaultMappingsAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isSeeding = true;
+
+        try
+        {
+            var seeded = await BackendApiClient.SeedMyPosDefaultMappingsAsync(tenantId);
+            successMessage = seeded > 0
+                ? $"{seeded} standaard transactietype(s) toegevoegd. Koppel elk type hieronder aan een SnelStart grootboekrekening."
+                : "Alle standaard transactietypes waren al aanwezig.";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Standaard transactietypes laden mislukt.");
+            errorMessage = $"Laden mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isSeeding = false;
+        }
     }
 
     private void ToggleCreateGrootboek()

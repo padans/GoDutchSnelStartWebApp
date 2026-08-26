@@ -10,4 +10,6 @@ public sealed class AppUser
     public AppModule Module { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; init; }
+    public bool RequirePasswordChange { get; set; }
+    public Guid? TenantId { get; set; }
 }

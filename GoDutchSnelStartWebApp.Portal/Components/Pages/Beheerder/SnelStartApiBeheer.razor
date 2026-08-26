@@ -1,0 +1,254 @@
+@page "/beheerder/snelstart-api"
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<SnelStartApiBeheer> Logger
+@inject AppSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>SnelStart API-beheer</PageTitle>
+
+@if (Session.Module != "Beheerder")
+{
+    <div class="alert alert-danger">Geen toegang.</div>
+    return;
+}
+
+<h1 class="mb-1">SnelStart API-beheer</h1>
+<p class="text-muted mb-4">
+    De Subscription Key is één applicatiebrede sleutel uit het SnelStart B2B-developerportaal.
+    Deze is centraal geconfigureerd op de server en wordt automatisch toegepast bij het aanmaken
+    van een verbinding. U hoeft deze sleutel hier niet in te voeren.
+</p>
+
+@if (isLoading)
+{
+    <p class="text-muted">Gegevens laden...</p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>SnelStart API-verbinding voor uw account</strong>
+            @if (connection is not null)
+            {
+                <span class="badge @(connection.IsActive ? "bg-success" : "bg-secondary")">
+                    @(connection.IsActive ? "Actief" : "Inactief")
+                </span>
+            }
+        </div>
+        <div class="card-body">
+
+            @if (!string.IsNullOrWhiteSpace(connSuccess))
+            {
+                <div class="alert alert-success py-2">@connSuccess</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(connError))
+            {
+                <div class="alert alert-danger py-2">@connError</div>
+            }
+
+            <div class="fixed-url-row mb-3">
+                <span class="fixed-url-chip"><span class="fixed-url-label">Auth URL</span> https://auth.snelstart.nl/b2b/token</span>
+                <span class="fixed-url-chip"><span class="fixed-url-label">API Base URL</span> https://b2bapi.snelstart.nl/v2</span>
+            </div>
+
+            @if (connection is null)
+            {
+                <div class="alert alert-warning mb-3">
+                    Nog geen verbinding aangemaakt. Klik op de knop hieronder om de verbinding aan te maken
+                    met de geconfigureerde Subscription Key.
+                </div>
+                <button class="btn btn-primary" @onclick="CreateAsync" disabled="@isSaving">
+                    @(isSaving ? "Aanmaken..." : "Verbinding aanmaken")
+                </button>
+            }
+            else
+            {
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="info-row">
+                            <span class="info-label">Subscription Key</span>
+                            <span class="info-value">@(connection.HasSubscriptionKey ? "✓ Geconfigureerd" : "✗ Ontbreekt")</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Maatwerksleutel (ClientKey)</span>
+                            <span class="info-value">@(connection.HasClientKey ? "✓ Ingesteld door abonnee" : "⚠ Nog niet ingesteld")</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Aangemaakt</span>
+                            <span class="info-value">@connection.CreatedUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</span>
+                        </div>
+                        @if (connection.KeyExpiresUtc.HasValue)
+                        {
+                            <div class="info-row">
+                                <span class="info-label">Sleutel verloopt</span>
+                                <span class="info-value @(connection.IsKeyExpired ? "text-danger fw-bold" : (connection.KeyExpiresInDays < 14 ? "text-warning" : ""))">
+                                    @connection.KeyExpiresUtc.Value.ToLocalTime().ToString("dd-MM-yyyy")
+                                    @if (connection.KeyExpiresInDays.HasValue)
+                                    {
+                                        @(" (")@connection.KeyExpiresInDays.Value @(" dagen)")
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="connActive" @bind="connection.IsActive" />
+                            <label class="form-check-label" for="connActive">Actief</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+                            @(isSaving ? "Opslaan..." : "Opslaan")
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" @onclick="LoadAsync" disabled="@isSaving">
+                            Vernieuwen
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .fixed-url-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .fixed-url-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #F3F4F6;
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: .82rem;
+        color: #374151;
+        font-family: monospace;
+    }
+
+    .fixed-url-label {
+        font-family: sans-serif;
+        font-weight: 600;
+        font-size: .75rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-right: 2px;
+    }
+
+    .info-row {
+        display: flex;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid #E5E7EB;
+        font-size: .9rem;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        flex: 0 0 220px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .info-value {
+        color: #6B7280;
+    }
+</style>
+
+@code {
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    private TenantSnelStartConnectionViewModel? connection;
+    private bool isSaving;
+    private bool isLoading;
+    private string? connSuccess;
+    private string? connError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        connSuccess = null;
+        connError = null;
+        try
+        {
+            connection = await BackendApiClient.GetTenantSnelStartConnectionAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SnelStart verbinding laden mislukt.");
+            connError = $"Laden mislukt: {ex.Message}";
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task CreateAsync()
+    {
+        connError = null;
+        connSuccess = null;
+        isSaving = true;
+        try
+        {
+            var request = new CreateTenantSnelStartConnectionRequestViewModel
+            {
+                AuthUrl         = "https://auth.snelstart.nl/b2b/token",
+                ApiBaseUrl      = "https://b2bapi.snelstart.nl/v2",
+                SubscriptionKey = null, // backend uses the globally configured key
+                ConnectionType  = "CustomKey",
+                IsActive        = true
+            };
+            await BackendApiClient.CreateTenantSnelStartConnectionAsync(TenantId, request);
+            connSuccess = "Verbinding aangemaakt.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            connError = $"Aanmaken mislukt: {ex.Message}";
+        }
+        finally { isSaving = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        connError = null;
+        connSuccess = null;
+        if (connection is null) return;
+
+        isSaving = true;
+        try
+        {
+            var request = new UpdateTenantSnelStartConnectionRequestViewModel
+            {
+                ConnectionType  = connection.ConnectionType,
+                AuthUrl         = "https://auth.snelstart.nl/b2b/token",
+                ApiBaseUrl      = "https://b2bapi.snelstart.nl/v2",
+                SubscriptionKey = null, // keep existing; backend auto-fills from config if missing
+                IsActive        = connection.IsActive
+            };
+            await BackendApiClient.UpdateTenantSnelStartConnectionAsync(TenantId, connection.Id, request);
+            connSuccess = "Verbinding opgeslagen.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            connError = $"Opslaan mislukt: {ex.Message}";
+        }
+        finally { isSaving = false; }
+    }
+}

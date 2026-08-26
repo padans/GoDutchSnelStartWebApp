@@ -7,6 +7,7 @@
 @inject IBackendApiClient BackendApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<GoDutchSync> Logger
+@inject AppSession Session
 
 <PageTitle>GoDutch synchronisatie</PageTitle>
 
@@ -32,7 +33,7 @@
 }
 else if (rows.Count == 0)
 {
-    <div class="alert alert-info">Geen bankrekeningen gevonden voor deze tenant.</div>
+    <div class="alert alert-info">Geen bankrekeningen gevonden voor uw account.</div>
 }
 else
 {
@@ -194,7 +195,7 @@ else
 
         try
         {
-            var tenantId = TenantOptions.Value.TenantId;
+            var tenantId = Session.TenantId ?? TenantOptions.Value.TenantId;
             var bankAccounts = await BackendApiClient.GetBankAccountsAsync(tenantId);
 
             List<SnelStartAdministrationViewModel> administrations = [];
@@ -251,7 +252,7 @@ else
 
         try
         {
-            var tenantId = TenantOptions.Value.TenantId;
+            var tenantId = Session.TenantId ?? TenantOptions.Value.TenantId;
             var fromUtc = row.SyncStatus?.LastRunAt?.AddMinutes(-5) ?? DateTime.UtcNow.AddDays(-30);
             var result = await BackendApiClient.ForceResyncAsync(tenantId, row.BankAccount.Id, fromUtc);
 

@@ -12,4 +12,5 @@ public sealed class EmailOptions
     public string FromAddress { get; set; } = string.Empty;
     public string FromName { get; set; } = "GoDutch SnelStart";
     public string ToAddress { get; set; } = string.Empty;
+    public string PortalUrl { get; set; } = "https://postma.padans.eu";
 }

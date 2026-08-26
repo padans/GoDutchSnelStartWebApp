@@ -61,6 +61,8 @@ namespace GoDutchSnelStartWebApp.Portal
 
             app.UseAntiforgery();
 
+            app.MapPost("/login-ok", () => Results.Ok());
+
             app.MapStaticAssets();
             app.MapRazorComponents<App>()
                .AddInteractiveServerRenderMode();

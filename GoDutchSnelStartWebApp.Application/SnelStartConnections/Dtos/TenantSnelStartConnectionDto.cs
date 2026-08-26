@@ -15,4 +15,7 @@ public sealed class TenantSnelStartConnectionDto
     public bool IsActive { get; set; }
     public DateTime CreatedUtc { get; set; }
     public DateTime? ModifiedUtc { get; set; }
+    public DateTime? KeyExpiresUtc { get; set; }
+    public bool IsKeyExpired => KeyExpiresUtc.HasValue && KeyExpiresUtc.Value < DateTime.UtcNow;
+    public int? KeyExpiresInDays => KeyExpiresUtc.HasValue ? (int)Math.Ceiling((KeyExpiresUtc.Value - DateTime.UtcNow).TotalDays) : null;
 }

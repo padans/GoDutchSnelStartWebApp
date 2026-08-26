@@ -8,6 +8,7 @@
 @inject IBackendApiClient BackendApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<MyPosAdministrations> Logger
+@inject AppSession Session
 
 <PageTitle>MyPos administratie</PageTitle>
 
@@ -32,7 +33,7 @@ else if (connection is null)
         <div class="card-header"><strong>Geen MyPos verbinding gevonden</strong></div>
         <div class="card-body">
             <p class="text-muted mb-3">
-                Er is nog geen MyPos verbinding aangemaakt voor deze tenant.
+                Er is nog geen MyPos verbinding aangemaakt voor uw account.
                 Ga naar <a href="mypos/connection">MyPos verbinding</a> om er een aan te maken.
             </p>
         </div>
@@ -91,7 +92,7 @@ else
 }
 
 @code {
-    private Guid TenantId => TenantOptions.Value.TenantId;
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
 
     private TenantMyPosConnectionViewModel? connection;
     private string? editName;

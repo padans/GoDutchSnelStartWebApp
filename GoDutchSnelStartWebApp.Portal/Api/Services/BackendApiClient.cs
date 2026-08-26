@@ -528,6 +528,19 @@ public sealed class BackendApiClient : IBackendApiClient
                ?? [];
     }
 
+    public async Task<int> SeedMyPosDefaultMappingsAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/mypos/transaction-type-mappings/seed";
+        var response = await _httpClient.PostAsync(url, null, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<SeedResultDto>(cancellationToken: cancellationToken);
+        return json?.Seeded ?? 0;
+    }
+
+    private sealed record SeedResultDto(int Seeded);
+
     public async Task<MyPosTransactionTypeMappingViewModel> UpsertMyPosTransactionTypeMappingAsync(
         Guid tenantId,
         UpsertMyPosTransactionTypeMappingRequestViewModel request,
@@ -979,7 +992,7 @@ public sealed class BackendApiClient : IBackendApiClient
         OnboardTenantRequestViewModel request,
         CancellationToken cancellationToken = default)
     {
-        const string url = "api/tenants";
+        const string url = "api/tenants/onboard";
 
         _logger.LogInformation("Nieuwe tenant aanmaken via {Url}", url);
 
@@ -1191,5 +1204,121 @@ public sealed class BackendApiClient : IBackendApiClient
         }
     }
 
+    public async Task<(bool GoDutch, bool MyPos)> GetTenantModulesAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}";
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<TenantModulesDto>(url, cancellationToken);
+            return (result?.GoDutchEnabled ?? true, result?.MyPosEnabled ?? true);
+        }
+        catch
+        {
+            return (true, true);
+        }
+    }
+
+    public async Task<TenantViewModel?> GetTenantAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}";
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<TenantViewModel>(url, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<bool> SelfChangePasswordAsync(
+        SelfChangePasswordRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync("api/appusers/self/change-password", request, cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            return false;
+
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<IReadOnlyList<NewModuleCredentialViewModel>> ChangeSubscriptionAsync(
+        Guid tenantId,
+        SubscriptionChangeRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"api/tenants/{tenantId}/subscription/change", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<List<NewModuleCredentialViewModel>>(
+            cancellationToken: cancellationToken);
+        return result ?? [];
+    }
+
+    public async Task CancelSubscriptionAsync(
+        Guid tenantId,
+        SubscriptionCancelRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"api/tenants/{tenantId}/subscription/cancel", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<Guid> CreateTenantMyPosConnectionAsync(
+        Guid tenantId,
+        CreateMyPosConnectionRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/mypos/connection";
+
+        var payload = new
+        {
+            AuthUrl = request.AuthUrl,
+            TransactionsApiBaseUrl = request.TransactionsApiBaseUrl,
+            ClientId = request.ClientId,
+            ClientSecret = request.ClientSecret,
+            ApiKey = request.ApiKey,
+            IsActive = request.IsActive,
+            SnelStartBankDagboekId = request.SnelStartBankDagboekId,
+            SnelStartBankDagboekNummer = request.SnelStartBankDagboekNummer,
+            SnelStartBankDagboekNaam = request.SnelStartBankDagboekNaam,
+            SnelStartBankIban = request.SnelStartBankIban
+        };
+
+        using var response = await _httpClient.PostAsJsonAsync(url, payload, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CreateIdResponseDto>(
+            cancellationToken: cancellationToken);
+        return result?.Id ?? Guid.Empty;
+    }
+
+    public async Task ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/appusers/forgot-password",
+            new { Email = email },
+            cancellationToken);
+        // Altijd succesvol (200) om enumeration te voorkomen — negeer statuscode
+    }
+
+    public async Task<bool> ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/appusers/reset-password",
+            new { Token = token, NewPassword = newPassword },
+            cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     private sealed record TenantNameDto(string? Name, string? CompanyName);
+    private sealed record TenantModulesDto(bool GoDutchEnabled, bool MyPosEnabled);
+    private sealed record CreateIdResponseDto(Guid Id);
 }

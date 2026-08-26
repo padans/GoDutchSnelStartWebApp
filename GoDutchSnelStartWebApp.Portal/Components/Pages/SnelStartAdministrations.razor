@@ -7,12 +7,13 @@
 @inject IBackendApiClient BackendApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<SnelStartAdministrations> Logger
+@inject AppSession Session
 
 <PageTitle>SnelStart administraties</PageTitle>
 
 <h1 class="mb-1">SnelStart administraties</h1>
 <p class="text-muted mb-4">
-    Beheer de SnelStart administraties voor deze tenant. Elke administratie heeft een eigen naam en client key.
+    Beheer de SnelStart administraties voor uw account. Elke administratie heeft een eigen naam en client key.
     Bankaccounts worden per administratie gekoppeld via de pagina <a href="snelstart/connection">SnelStart koppeling</a>.
 </p>
 
@@ -188,7 +189,7 @@ else
 }
 
 @code {
-    private Guid TenantId => TenantOptions.Value.TenantId;
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
 
     private List<SnelStartAdministrationViewModel> administrations = [];
 

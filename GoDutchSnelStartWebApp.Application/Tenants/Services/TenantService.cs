@@ -49,6 +49,12 @@ public sealed class TenantService : ITenantService
         return MapToDto(tenant);
     }
 
+    public async Task<TenantDto?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var tenant = await _tenantRepository.GetByEmailAsync(email, cancellationToken);
+        return tenant is null ? null : MapToDto(tenant);
+    }
+
     public async Task<Guid> CreateAsync(CreateTenantRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Name))

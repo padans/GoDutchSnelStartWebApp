@@ -8,28 +8,20 @@ using Microsoft.Extensions.Logging;
 
 namespace GoDutchSnelStartWebApp.Infrastructure.Repositories.MyPos;
 
-public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepository
+public sealed class TenantMyPosConnectionRepository(
+    ISqlConnectionFactory sqlConnectionFactory,
+    ILogger<TenantMyPosConnectionRepository> logger) : ITenantMyPosConnectionRepository
 {
-    private readonly ISqlConnectionFactory _sqlConnectionFactory;
-    private readonly ILogger<TenantMyPosConnectionRepository> _logger;
-
-    public TenantMyPosConnectionRepository(
-        ISqlConnectionFactory sqlConnectionFactory,
-        ILogger<TenantMyPosConnectionRepository> logger)
-    {
-        _sqlConnectionFactory = sqlConnectionFactory;
-        _logger = logger;
-    }
 
     public async Task<TenantMyPosConnection?> GetByTenantIdAsync(
         Guid tenantId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(
+        logger.LogDebug(
             "Executing dbo.TenantMyPosConnections_GetByTenantId for tenant {TenantId}",
             tenantId);
 
-        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await using var connection = sqlConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_GetByTenantId", connection)
@@ -53,11 +45,11 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(
+        logger.LogDebug(
             "Executing dbo.TenantMyPosConnections_GetById for connection {ConnectionId}",
             id);
 
-        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await using var connection = sqlConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_GetById", connection)
@@ -80,9 +72,11 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
     public async Task<IReadOnlyList<TenantMyPosConnection>> GetAllActiveAsync(
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Executing dbo.TenantMyPosConnections_GetAllActive");
+        logger.LogDebug("Executing dbo.TenantMyPosConnections_GetAllActive");
 
-        await using var connection = _sqlConnectionFactory.CreateConnection();
+#pragma warning disable CA2016
+        await using var connection = sqlConnectionFactory.CreateConnection();
+#pragma warning restore CA2016
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_GetAllActive", connection)
@@ -105,11 +99,11 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         TenantMyPosConnection connection,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(
+        logger.LogDebug(
             "Executing dbo.TenantMyPosConnections_Insert for connection {ConnectionId}",
             connection.Id);
 
-        await using var sqlConnection = _sqlConnectionFactory.CreateConnection();
+        await using var sqlConnection = sqlConnectionFactory.CreateConnection();
         await sqlConnection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_Insert", sqlConnection)
@@ -126,11 +120,11 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         TenantMyPosConnection connection,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(
+        logger.LogDebug(
             "Executing dbo.TenantMyPosConnections_Update for connection {ConnectionId}",
             connection.Id);
 
-        await using var sqlConnection = _sqlConnectionFactory.CreateConnection();
+        await using var sqlConnection = sqlConnectionFactory.CreateConnection();
         await sqlConnection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_Update", sqlConnection)
@@ -149,11 +143,11 @@ public sealed class TenantMyPosConnectionRepository : ITenantMyPosConnectionRepo
         DateTime modifiedUtc,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(
+        logger.LogDebug(
             "Executing dbo.TenantMyPosConnections_Delete for connection {ConnectionId}",
             id);
 
-        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await using var connection = sqlConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand("dbo.TenantMyPosConnections_Delete", connection)

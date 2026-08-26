@@ -52,6 +52,16 @@ public sealed class MyPosTransactionTypeMappingsController : ControllerBase
         return Ok(mapping);
     }
 
+    [HttpPost("seed")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SeedDefaultMappingsAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        var seeded = await _mappingService.SeedDefaultMappingsAsync(tenantId, cancellationToken);
+        return Ok(new { seeded });
+    }
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -9,6 +9,7 @@
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<MyPosImport> Logger
 @inject IJSRuntime JSRuntime
+@inject AppSession Session
 
 <PageTitle>myPOS transacties ophalen</PageTitle>
 
@@ -715,7 +716,7 @@
 
 
 @code {
-    private Guid TenantId => TenantOptions.Value.TenantId;
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
 
     private TenantMyPosConnectionViewModel? connection;
     private MyPosTransactionImportResultViewModel? importResult;
@@ -813,11 +814,11 @@
 
             if (connection is null)
             {
-                errorMessage = "Er is nog geen myPOS-koppeling ingesteld voor deze tenant.";
+                errorMessage = "Er is nog geen myPOS-koppeling ingesteld voor uw account.";
             }
             else if (!connection.IsActive)
             {
-                errorMessage = "De myPOS-koppeling voor deze tenant is niet actief.";
+                errorMessage = "De myPOS-koppeling voor uw account is niet actief.";
             }
             myPosConnection = connection;
         }
@@ -904,7 +905,7 @@
 
         if (myPosConnection is null || myPosConnection.Id == Guid.Empty)
         {
-            errorMessage = "Er is geen geldige myPOS-koppeling gevonden voor deze tenant.";
+            errorMessage = "Er is geen geldige myPOS-koppeling gevonden voor uw account.";
             return;
         }
 
@@ -1275,7 +1276,7 @@
 
         if (myPosConnection is null)
         {
-            errorMessage = "Er is geen myPOS-koppeling gevonden voor deze tenant.";
+            errorMessage = "Er is geen myPOS-koppeling gevonden voor uw account.";
             return;
         }
 

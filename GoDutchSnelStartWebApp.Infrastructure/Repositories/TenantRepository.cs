@@ -148,6 +148,26 @@ public sealed class TenantRepository : ITenantRepository
         _logger.LogInformation("Tenant {TenantId} updated successfully", tenant.Id);
     }
 
+    public async Task<Tenant?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand("dbo.Tenants_GetByEmail", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        command.Parameters.Add(new SqlParameter("@Email", SqlDbType.NVarChar, 255) { Value = email });
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (await reader.ReadAsync(cancellationToken))
+            return MapTenant(reader);
+
+        return null;
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Executing stored procedure dbo.Tenants_Delete for tenant {TenantId}", id);

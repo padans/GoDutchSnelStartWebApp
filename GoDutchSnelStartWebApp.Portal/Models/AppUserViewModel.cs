@@ -7,6 +7,8 @@ public sealed class AppUserViewModel
     public string Module { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public DateTime CreatedUtc { get; set; }
+    public bool RequirePasswordChange { get; set; }
+    public Guid? TenantId { get; set; }
 }
 
 public sealed class LoginRequestViewModel

@@ -158,6 +158,26 @@
         {
             var id = await BackendApiClient.OnboardTenantAsync(form);
             Logger.LogInformation("Nieuwe tenant aangemaakt: {TenantId}", id);
+
+            // Automatisch SnelStart verbinding aanmaken met de globale SubscriptionKey.
+            // ClientKey (Maatwerksleutel) wordt later door de klant zelf ingesteld.
+            try
+            {
+                await BackendApiClient.CreateTenantSnelStartConnectionAsync(id, new CreateTenantSnelStartConnectionRequestViewModel
+                {
+                    AuthUrl        = "https://auth.snelstart.nl/b2b/token",
+                    ApiBaseUrl     = "https://b2bapi.snelstart.nl/v2",
+                    SubscriptionKey = null, // backend gebruikt de globaal geconfigureerde sleutel
+                    ConnectionType = "CustomKey",
+                    IsActive       = true
+                });
+                Logger.LogInformation("SnelStart verbinding aangemaakt voor tenant {TenantId}", id);
+            }
+            catch (Exception ssEx)
+            {
+                Logger.LogWarning(ssEx, "SnelStart verbinding kon niet automatisch aangemaakt worden voor tenant {TenantId}", id);
+            }
+
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)

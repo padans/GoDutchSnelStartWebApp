@@ -7,6 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject IBackendApiClient ApiClient
 @inject IOptions<PortalTenantOptions> TenantOptions
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <LoginModal />
@@ -34,6 +35,27 @@
                     <button class="btn-logout" @onclick="HandleLogout">Uitloggen</button>
                 </div>
             </div>
+
+            @if (Session.SnelStartKeyExpired)
+            {
+                <div class="key-expiry-banner key-expiry-expired">
+                    <span class="key-expiry-icon">⛔</span>
+                    <div>
+                        <strong>SnelStart maatwerksleutel verlopen</strong> — de koppeling met SnelStart werkt niet meer.
+                        <a href="/snelstart/connection" class="key-expiry-link">Sleutel vernieuwen</a>
+                    </div>
+                </div>
+            }
+            else if (Session.SnelStartKeyExpiringSoon)
+            {
+                <div class="key-expiry-banner key-expiry-warning">
+                    <span class="key-expiry-icon">⚠️</span>
+                    <div>
+                        <strong>SnelStart maatwerksleutel verloopt over @Session.SnelStartKeyExpiresInDays dag@(Session.SnelStartKeyExpiresInDays == 1 ? "" : "en")</strong> — vernieuw de sleutel op tijd.
+                        <a href="/snelstart/connection" class="key-expiry-link">Nu vernieuwen</a>
+                    </div>
+                </div>
+            }
 
             <section class="app-content" id="app-content">
                 @Body
@@ -70,12 +92,19 @@
             var module = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_module");
             if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(module))
             {
-                Session.Login(username, module);
+                var userIdStr = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_userid");
+                var requirePwChangeStr = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_require_pw_change");
+                var tenantIdStr = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_tenantid");
+                var userId = Guid.TryParse(userIdStr, out var id) ? id : Guid.Empty;
+                var requirePwChange = requirePwChangeStr == "true";
+                var tenantId = Guid.TryParse(tenantIdStr, out var tid) ? (Guid?)tid : null;
+
+                Session.Login(username, module, userId, requirePwChange, tenantId);
 
                 var tenantName = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "session_tenantname");
                 if (string.IsNullOrEmpty(tenantName))
                 {
-                    tenantName = await ApiClient.GetTenantNameAsync(TenantOptions.Value.TenantId);
+                    tenantName = await ApiClient.GetTenantNameAsync(tenantId ?? TenantOptions.Value.TenantId);
                     if (!string.IsNullOrEmpty(tenantName))
                         await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_tenantname", tenantName);
                 }
@@ -86,6 +115,14 @@
             }
         }
 
+        // Afdwingen wachtwoordwijziging: stuur gebruiker naar /mijn-account zolang vlag actief is
+        if (Session.IsLoggedIn && Session.RequirePasswordChange)
+        {
+            var currentPath = new Uri(Navigation.Uri).AbsolutePath;
+            if (!currentPath.StartsWith("/mijn-account", StringComparison.OrdinalIgnoreCase))
+                Navigation.NavigateTo("/mijn-account");
+        }
+
         try { await JSRuntime.InvokeVoidAsync("scrollToContentIfRequested"); } catch { }
     }
 
@@ -94,6 +131,7 @@
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_username");
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_module");
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_tenantname");
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "session_tenantid");
         Session.Logout();
     }
 
@@ -124,11 +162,13 @@
     }
 
     .app-shell {
-        min-height: 100vh;
+        height: 100vh;
+        box-sizing: border-box;
         display: flex;
         gap: 10px;
         padding: 10px 10px 10px 0;
         background: var(--app-blue-darker);
+        overflow: hidden;
     }
 
     .app-sidebar {
@@ -136,10 +176,8 @@
         flex: 0 0 280px;
         background: linear-gradient(180deg, var(--app-blue) 0%, var(--app-blue-dark) 100%);
         color: #ffffff;
-        min-height: 100vh;
-        position: sticky;
-        top: 0;
-        align-self: flex-start;
+        height: 100%;
+        overflow-y: auto;
         box-shadow: 4px 0 18px rgba(0, 68, 136, .18);
         border-bottom-left-radius: 16px;
         border-bottom-right-radius: 16px;
@@ -148,13 +186,19 @@
     .app-main {
         flex: 1;
         min-width: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow: hidden;
     }
 
     .app-topbar {
+        flex-shrink: 0;
         min-height: 86px;
         background: var(--app-blue);
         border-bottom: 1px solid var(--app-blue-dark);
-        border-radius: 16px 16px 16px 16px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         padding: 0 28px;
@@ -212,10 +256,12 @@
     }
 
     .app-content {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
         padding: 28px;
         background: #ffffff;
         border-radius: 16px;
-        min-height: calc(100vh - 86px);
     }
 
     .app-nav {
@@ -358,8 +404,68 @@
         background: rgba(255,255,255,.22);
     }
 
+    .key-expiry-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        font-size: .88rem;
+        font-weight: 500;
+    }
+
+    .key-expiry-expired {
+        background: #FEF2F2;
+        border: 1.5px solid #FECACA;
+        color: #991B1B;
+    }
+
+    .key-expiry-warning {
+        background: #FFFBEB;
+        border: 1.5px solid #FCD34D;
+        color: #78350F;
+    }
+
+    .key-expiry-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    .key-expiry-link {
+        margin-left: 10px;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: underline;
+    }
+
+    .key-expiry-link:hover { opacity: .8; }
+
+    .app-nav-link-urgent {
+        background: #B45309 !important;
+        border-color: #FCD34D !important;
+    }
+
+    .app-nav-link-urgent:hover {
+        background: #92400E !important;
+    }
+
+    .app-nav-link-badge {
+        margin-left: auto;
+        background: #FCD34D;
+        color: #92400E;
+        font-weight: 800;
+        font-size: .72rem;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
     @@media (max-width: 900px) {
         .app-shell {
+            height: auto;
+            overflow: visible;
             display: block;
             padding: 0;
             gap: 0;
@@ -367,10 +473,16 @@
 
         .app-sidebar {
             width: 100%;
-            min-height: auto;
-            position: static;
+            height: auto;
+            overflow-y: visible;
             box-shadow: none;
             border-radius: 0;
+        }
+
+        .app-main {
+            height: auto;
+            overflow: visible;
+            gap: 0;
         }
 
         .app-topbar {
@@ -384,9 +496,10 @@
         }
 
         .app-content {
+            flex: none;
+            overflow-y: visible;
             padding: 16px;
             border-radius: 0;
-            min-height: auto;
         }
     }
 </style>

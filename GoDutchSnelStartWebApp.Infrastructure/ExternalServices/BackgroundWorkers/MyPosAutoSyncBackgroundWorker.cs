@@ -60,12 +60,25 @@ public sealed class MyPosAutoSyncBackgroundWorker : BackgroundService
 
     private async Task RunOnceAsync(CancellationToken stoppingToken)
     {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<IMyPosAutoSyncService>();
+        if (stoppingToken.IsCancellationRequested) return;
 
-        _logger.LogInformation("myPOS auto sync pollronde gestart.");
-        await service.RunOnceAsync(stoppingToken);
-        _logger.LogInformation("myPOS auto sync pollronde afgerond.");
+        try
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IMyPosAutoSyncService>();
+
+            _logger.LogInformation("myPOS auto sync pollronde gestart.");
+            await service.RunOnceAsync(stoppingToken);
+            _logger.LogInformation("myPOS auto sync pollronde afgerond.");
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("myPOS auto sync pollronde geannuleerd (app stopt).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "myPOS auto sync pollronde mislukt — wordt overgeslagen tot volgende run.");
+        }
     }
 
     private async Task<int> GetIntervalMinutesAsync(CancellationToken cancellationToken)

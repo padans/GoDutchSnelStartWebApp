@@ -47,6 +47,8 @@ public static class InfrastructureServiceRegistration
             configuration.GetSection(GoDutchApiRetryOptions.SectionName));
         services.Configure<EmailOptions>(
             configuration.GetSection(EmailOptions.SectionName));
+        services.Configure<SnelStartGlobalOptions>(
+            configuration.GetSection(SnelStartGlobalOptions.SectionName));
 
         // Repositories
         services.AddScoped<ITenantRepository, TenantRepository>();
@@ -61,6 +63,7 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IGoDutchImportRunRepository, GoDutchImportRunRepository>();
         services.AddScoped<IMyPosExportBatchRepository, MyPosExportBatchRepository>();
         services.AddScoped<IMyPosRawTransactionRepository, MyPosRawTransactionRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
         // HTTP clients (external services)
         services.AddHttpClient<IGoDutchTransactionService, GoDutchTransactionService>();
@@ -98,6 +101,7 @@ public static class InfrastructureServiceRegistration
         // Background workers
         services.AddHostedService<GoDutchAutoSyncBackgroundWorker>();
         services.AddHostedService<MyPosAutoSyncBackgroundWorker>();
+        services.AddHostedService<SnelStartKeyExpiryBackgroundWorker>();
 
         return services;
     }

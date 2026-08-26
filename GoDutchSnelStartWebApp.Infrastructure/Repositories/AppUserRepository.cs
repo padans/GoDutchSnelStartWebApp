@@ -81,6 +81,19 @@ public sealed class AppUserRepository : IAppUserRepository
         _logger.LogInformation("AppUser {UserId} deleted", id);
     }
 
+    public async Task<IReadOnlyList<AppUser>> GetByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        var users = new List<AppUser>();
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("dbo.AppUsers_GetByTenantId", connection) { CommandType = CommandType.StoredProcedure };
+        command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = tenantId });
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            users.Add(Map(reader));
+        return users;
+    }
+
     private static void AddParameters(SqlCommand command, AppUser user)
     {
         command.Parameters.Add(new SqlParameter("@Id", SqlDbType.UniqueIdentifier) { Value = user.Id });
@@ -89,6 +102,8 @@ public sealed class AppUserRepository : IAppUserRepository
         command.Parameters.Add(new SqlParameter("@Module", SqlDbType.NVarChar, 50) { Value = user.Module.ToString() });
         command.Parameters.Add(new SqlParameter("@IsActive", SqlDbType.Bit) { Value = user.IsActive });
         command.Parameters.Add(new SqlParameter("@CreatedUtc", SqlDbType.DateTime2) { Value = user.CreatedUtc });
+        command.Parameters.Add(new SqlParameter("@RequirePasswordChange", SqlDbType.Bit) { Value = user.RequirePasswordChange });
+        command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = (object?)user.TenantId ?? DBNull.Value });
     }
 
     private static AppUser Map(SqlDataReader reader) => new()
@@ -98,6 +113,8 @@ public sealed class AppUserRepository : IAppUserRepository
         PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
         Module = Enum.Parse<AppModule>(reader.GetString(reader.GetOrdinal("Module")), ignoreCase: true),
         IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-        CreatedUtc = reader.GetDateTime(reader.GetOrdinal("CreatedUtc"))
+        CreatedUtc = reader.GetDateTime(reader.GetOrdinal("CreatedUtc")),
+        RequirePasswordChange = reader.GetBoolean(reader.GetOrdinal("RequirePasswordChange")),
+        TenantId = reader.IsDBNull(reader.GetOrdinal("TenantId")) ? null : reader.GetGuid(reader.GetOrdinal("TenantId"))
     };
 }

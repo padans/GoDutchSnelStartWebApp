@@ -12,91 +12,356 @@
 
 @if (!Session.IsLoggedIn)
 {
-    <div class="login-overlay">
-        <div class="login-card">
-            <div class="login-logo">
-                <div class="login-logo-title">GoDutch SnelStart</div>
-                <div class="login-logo-sub">Koppelingen &amp; exports</div>
+    <div class="landing-page">
+
+        <!-- ── Hero / linkerpaneel ── -->
+        <div class="landing-hero">
+            <div class="landing-brand">
+                <div class="landing-brand-logo">GS</div>
+                <div>
+                    <div class="landing-brand-title">GoDutch MyPos SnelStart</div>
+                    <div class="landing-brand-sub">Slimme boekhoudkoppelingen</div>
+                </div>
             </div>
 
-            <EditForm Model="@_model" OnValidSubmit="HandleLogin" FormName="login-form">
-                <div class="login-field">
-                    <label>Module</label>
-                    <select class="form-select" @bind="_model.Module">
-                        <option value="">-- Selecteer module --</option>
-                        <option value="Beheerder">Beheerder</option>
-                        <option value="GoDutch">GoDutch</option>
-                        <option value="MyPos">MyPos</option>
-                    </select>
+            <div class="landing-hero-body">
+                <h1 class="landing-headline">
+                    Uw betaaldata automatisch in SnelStart
+                </h1>
+                <p class="landing-desc">
+                    Koppel GoDutch of MyPos aan uw SnelStart-administratie en verwerk transacties automatisch
+                    — zonder handmatig invoerwerk, zonder fouten.
+                </p>
+
+                <div class="landing-modules">
+
+                    <div class="landing-module">
+                        <div class="landing-module-header">
+                            <span class="module-icon">🏦</span>
+                            <div>
+                                <div class="module-title">GoDutch → SnelStart</div>
+                                <div class="module-sub">Banktransacties automatisch importeren</div>
+                            </div>
+                        </div>
+                        <ul class="module-features">
+                            <li>Transacties ophalen per bankrekening (IBAN) en datumperiode</li>
+                            <li>Export in <strong>MT940</strong> of <strong>CAMT053</strong> formaat</li>
+                            <li>Automatisch openings- en eindsaldo berekenen</li>
+                            <li>Auto-sync via achtergrondworker met instelbaar interval</li>
+                            <li>Handmatige resync vanaf zelfgekozen datum</li>
+                            <li>Webhook-ontvangst: SnelStart-import getriggerd door GoDutch-events</li>
+                        </ul>
+                    </div>
+
+                    <div class="landing-module">
+                        <div class="landing-module-header">
+                            <span class="module-icon">🖥️</span>
+                            <div>
+                                <div class="module-title">MyPos → SnelStart</div>
+                                <div class="module-sub">Pinbetalingen automatisch boeken</div>
+                            </div>
+                        </div>
+                        <ul class="module-features">
+                            <li>MyPos-transacties importeren per periode</li>
+                            <li>Transactietype mappings beheren per tenant</li>
+                            <li>Exportbatches aanmaken en naar SnelStart bankboek verzenden</li>
+                            <li>Auto-sync via achtergrondworker</li>
+                            <li>Transactietype-status bewaking en rapportage</li>
+                        </ul>
+                    </div>
+
                 </div>
 
-                <div class="login-field">
-                    <label>Gebruikersnaam</label>
-                    <input class="form-control" type="text" @bind="_model.Username" placeholder="gebruikersnaam" autocomplete="username" />
+                <div class="landing-usp-row">
+                    <div class="landing-usp">
+                        <span class="usp-icon">⚡</span>
+                        <span>Volledig automatisch</span>
+                    </div>
+                    <div class="landing-usp">
+                        <span class="usp-icon">🔒</span>
+                        <span>Veilig &amp; versleuteld</span>
+                    </div>
+                    <div class="landing-usp">
+                        <span class="usp-icon">🆓</span>
+                        <span>Gratis proberen</span>
+                    </div>
                 </div>
+            </div>
 
-                <div class="login-field">
-                    <label>Wachtwoord</label>
-                    <input class="form-control" type="password" @bind="_model.Password" placeholder="wachtwoord" autocomplete="current-password" />
-                </div>
+            <div class="landing-hero-footer">
+                &copy; @DateTime.Now.Year Padans &mdash; Administratieve koppeldiensten
+            </div>
+        </div>
 
-                @if (_error is not null)
+        <!-- ── Rechterpaneel: Inloggen / Account aanmaken ── -->
+        <div class="landing-login-panel">
+            <div class="login-card">
+
+                @if (_registerSuccess)
                 {
-                    <div class="login-error">@_error</div>
+                    <div class="register-success">
+                        <div class="register-success-icon">✅</div>
+                        <div class="register-success-title">Account aangemaakt!</div>
+                        <p>
+                            Bedankt, <strong>@_registerForm.ContactName</strong>. Uw proefaccount voor
+                            <strong>@_registerForm.CompanyName</strong> is aangemaakt.
+                        </p>
+                        <p>
+                            Uw inloggegevens zijn verzonden naar <strong>@_registerForm.Email</strong>.
+                            Controleer ook uw spammap als u de e-mail niet direct ziet.
+                        </p>
+                        <button class="login-btn" @onclick="() => { _registerSuccess = false; _showRegister = false; }">
+                            Terug naar inloggen
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Tab-switcher (verberg bij "wachtwoord vergeten") -->
+                    @if (!_showForgotPassword)
+                    {
+                        <div class="panel-tabs">
+                            <button class="panel-tab @(_showRegister ? "" : "panel-tab-active")"
+                                    @onclick="() => _showRegister = false">
+                                Inloggen
+                            </button>
+                            <button class="panel-tab @(_showRegister ? "panel-tab-active" : "")"
+                                    @onclick="() => _showRegister = true">
+                                Account aanmaken
+                            </button>
+                        </div>
+                    }
+
+                    @if (!_showRegister && !_showForgotPassword)
+                    {
+                        <!-- Inlogformulier -->
+                        <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin" FormName="login-form">
+                            <div class="login-field">
+                                <label>Module</label>
+                                <select class="form-select" @bind="_loginModel.Module">
+                                    <option value="">-- Selecteer module --</option>
+                                    <option value="GoDutch">GoDutch → SnelStart</option>
+                                    <option value="MyPos">MyPos → SnelStart</option>
+                                    <option value="Beheerder">Beheerder</option>
+                                </select>
+                            </div>
+                            <div class="login-field">
+                                <label>Gebruikersnaam</label>
+                                <input class="form-control" type="text" @bind="_loginModel.Username"
+                                       placeholder="gebruikersnaam" name="username" autocomplete="username" />
+                            </div>
+                            <div class="login-field">
+                                <label>Wachtwoord</label>
+                                <div class="pw-wrap">
+                                    <input class="form-control" type="@(_showPw ? "text" : "password")"
+                                           @bind="_loginModel.Password"
+                                           placeholder="wachtwoord" name="password" autocomplete="current-password" />
+                                    <button type="button" class="pw-toggle" @onclick="() => _showPw = !_showPw" tabindex="-1" title="@(_showPw ? "Verberg wachtwoord" : "Toon wachtwoord")">
+                                        @if (_showPw) {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                        } else {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (_loginError is not null)
+                            {
+                                <div class="login-error">@_loginError</div>
+                            }
+
+                            <button class="login-btn" type="submit" disabled="@_loginLoading">
+                                @(_loginLoading ? "Bezig…" : "Inloggen")
+                            </button>
+                        </EditForm>
+
+                        <p class="panel-switch-hint">
+                            <button class="link-btn" @onclick="() => { _showForgotPassword = true; _forgotEmail = string.Empty; _forgotSent = false; _forgotError = null; }">
+                                Wachtwoord vergeten?
+                            </button>
+                        </p>
+                        <p class="panel-switch-hint">
+                            Nog geen account?
+                            <button class="link-btn" @onclick="() => _showRegister = true">Maak er vrijblijvend een aan.</button>
+                        </p>
+                    }
+                    else if (_showForgotPassword)
+                    {
+                        <!-- Wachtwoord vergeten formulier -->
+                        @if (_forgotSent)
+                        {
+                            <div style="text-align:center;padding:8px 0;">
+                                <div style="font-size:2.2rem;margin-bottom:12px;">📧</div>
+                                <div style="font-weight:700;font-size:1.05rem;color:#0057AD;margin-bottom:10px;">E-mail verzonden</div>
+                                <p style="font-size:.87rem;color:#374151;line-height:1.55;margin-bottom:20px;">
+                                    Als het e-mailadres bekend is, ontvangt u binnen enkele minuten een resetlink.<br>
+                                    Controleer ook uw spammap.
+                                </p>
+                                <button class="login-btn" @onclick="() => { _showForgotPassword = false; }">
+                                    Terug naar inloggen
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="margin-bottom:20px;">
+                                <div style="font-weight:700;font-size:1.05rem;color:#111827;margin-bottom:6px;">Wachtwoord vergeten?</div>
+                                <p style="font-size:.86rem;color:#4B5563;line-height:1.5;margin:0;">
+                                    Vul uw e-mailadres in. Als dit bekend is, ontvangt u een link om een nieuw wachtwoord in te stellen.
+                                </p>
+                            </div>
+                            <div class="login-field">
+                                <label>E-mailadres</label>
+                                <input class="form-control" type="email" @bind="_forgotEmail"
+                                       placeholder="uw@email.nl" autocomplete="email" />
+                            </div>
+                            @if (_forgotError is not null)
+                            {
+                                <div class="login-error">@_forgotError</div>
+                            }
+                            <button class="login-btn" @onclick="HandleForgotPassword" disabled="@_forgotLoading">
+                                @(_forgotLoading ? "Bezig…" : "Resetlink verzenden")
+                            </button>
+                            <p class="panel-switch-hint">
+                                <button class="link-btn" @onclick="() => _showForgotPassword = false">
+                                    Terug naar inloggen
+                                </button>
+                            </p>
+                        }
+                    }
+                    else if (_showRegister)
+                    {
+                        <!-- Registratieformulier -->
+                        <EditForm Model="@_registerForm" OnValidSubmit="HandleRegister" FormName="register-form">
+                            <div class="login-field">
+                                <label>Bedrijfsnaam <span class="req">*</span></label>
+                                <input class="form-control" type="text" @bind="_registerForm.CompanyName"
+                                       placeholder="Officiële bedrijfsnaam" />
+                            </div>
+                            <div class="login-field">
+                                <label>Contactpersoon <span class="req">*</span></label>
+                                <input class="form-control" type="text" @bind="_registerForm.ContactName"
+                                       placeholder="Voor- en achternaam" />
+                            </div>
+                            <div class="login-field">
+                                <label>E-mailadres <span class="req">*</span></label>
+                                <input class="form-control" type="email" @bind="_registerForm.Email"
+                                       placeholder="contact@bedrijf.nl" />
+                            </div>
+                            <div class="login-field">
+                                <label>Telefoonnummer</label>
+                                <input class="form-control" type="tel" @bind="_registerForm.Phone"
+                                       placeholder="+31 6 12345678" />
+                            </div>
+
+                            <div class="login-field">
+                                <label>Module(s) <span class="req">*</span></label>
+                                <div class="module-checks">
+                                    <label class="module-check-label">
+                                        <input type="checkbox" @bind="_registerForm.GoDutchEnabled" />
+                                        <span>🏦 GoDutch → SnelStart</span>
+                                    </label>
+                                    <label class="module-check-label">
+                                        <input type="checkbox" @bind="_registerForm.MyPosEnabled" />
+                                        <span>🖥️ MyPos → SnelStart</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            @if (_registerError is not null)
+                            {
+                                <div class="login-error">@_registerError</div>
+                            }
+
+                            <button class="login-btn" type="submit" disabled="@_registerLoading">
+                                @(_registerLoading ? "Bezig…" : "Gratis proefaccount aanmaken")
+                            </button>
+                        </EditForm>
+
+                        <p class="panel-switch-hint">
+                            Al een account?
+                            <button class="link-btn" @onclick="() => _showRegister = false">Log hier in.</button>
+                        </p>
+                    }
                 }
 
-                <button class="login-btn" type="submit" disabled="@_loading">
-                    @if (_loading)
-                    {
-                        <span>Bezig...</span>
-                    }
-                    else
-                    {
-                        <span>Inloggen</span>
-                    }
-                </button>
-            </EditForm>
+            </div>
         </div>
+
     </div>
 }
 
 @code {
-    private readonly LoginRequestViewModel _model = new();
-    private string? _error;
-    private bool _loading;
+    private bool _showRegister;
+    private bool _showForgotPassword;
+    private bool _showPw;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        if (query.ContainsKey("register"))
+            _showRegister = true;
+    }
+    private bool _registerSuccess;
+
+    // Login
+    private readonly LoginRequestViewModel _loginModel = new();
+    private string? _loginError;
+    private bool _loginLoading;
+
+    // Wachtwoord vergeten
+    private string _forgotEmail = string.Empty;
+    private string? _forgotError;
+    private bool _forgotLoading;
+    private bool _forgotSent;
+
+    // Registratie
+    private readonly OnboardTenantRequestViewModel _registerForm = new()
+    {
+        IsTrial = true,
+        TrialDurationDays = 30
+    };
+    private string? _registerError;
+    private bool _registerLoading;
 
     private async Task HandleLogin()
     {
-        if (string.IsNullOrWhiteSpace(_model.Module))
+        if (string.IsNullOrWhiteSpace(_loginModel.Module))
         {
-            _error = "Selecteer een module.";
+            _loginError = "Selecteer een module.";
             return;
         }
 
-        _error = null;
-        _loading = true;
+        _loginError = null;
+        _loginLoading = true;
 
         try
         {
-            var user = await ApiClient.LoginAsync(_model);
+            var user = await ApiClient.LoginAsync(_loginModel);
 
             if (user is null)
             {
-                _error = "Gebruikersnaam of wachtwoord is onjuist.";
+                _loginError = "Gebruikersnaam of wachtwoord is onjuist.";
                 return;
             }
 
-            if (!string.Equals(user.Module, _model.Module, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(user.Module, _loginModel.Module, StringComparison.OrdinalIgnoreCase))
             {
-                _error = $"Dit account heeft geen toegang tot de module '{_model.Module}'.";
+                _loginError = $"Dit account heeft geen toegang tot de module '{_loginModel.Module}'.";
                 return;
             }
 
-            Session.Login(user.Username, user.Module);
+            Session.Login(user.Username, user.Module, user.Id, user.RequirePasswordChange, user.TenantId);
+            await JSRuntime.InvokeVoidAsync("saveCredentials", _loginModel.Username, _loginModel.Password);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_username", user.Username);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_module", user.Module);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_userid", user.Id.ToString());
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_require_pw_change", user.RequirePasswordChange ? "true" : "false");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_tenantid", user.TenantId?.ToString() ?? "");
 
-            var tenantId = TenantOptions.Value.TenantId;
+            var tenantId = user.TenantId ?? TenantOptions.Value.TenantId;
             var tenantName = await ApiClient.GetTenantNameAsync(tenantId) ?? tenantId.ToString();
             Session.SetTenantName(tenantName);
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "session_tenantname", tenantName);
@@ -104,76 +369,353 @@
             Logger.LogInformation("Login: gebruiker={Username} module={Module} tenant={TenantName} tenantId={TenantId}",
                 user.Username, user.Module, tenantName, tenantId);
 
-            var startPage = user.Module switch
+            // SnelStart sleutelverval controleren voor GoDutch/MyPos gebruikers
+            if (user.TenantId.HasValue && user.Module is "GoDutch" or "MyPos")
             {
-                "GoDutch"    => "/bankaccounts",
-                "MyPos"      => "/mypos/import",
-                _            => "/"
-            };
+                try
+                {
+                    var snelConn = await ApiClient.GetTenantSnelStartConnectionAsync(user.TenantId.Value);
+                    if (snelConn is not null)
+                        Session.SetSnelStartKeyExpiry(snelConn.KeyExpiresUtc);
+                }
+                catch { /* niet-kritiek, doorgaan */ }
+            }
+
+            var startPage = user.RequirePasswordChange
+                ? "/mijn-account"
+                : "/";
             Navigation.NavigateTo(startPage);
         }
         catch (HttpRequestException ex)
         {
-            _error = $"API fout: {(int?)ex.StatusCode} — {ex.Message}";
+            _loginError = $"API fout: {(int?)ex.StatusCode} — {ex.Message}";
         }
         catch (Exception ex)
         {
-            _error = $"Fout: {ex.Message}";
+            _loginError = $"Fout: {ex.Message}";
         }
         finally
         {
-            _loading = false;
+            _loginLoading = false;
+        }
+    }
+
+    private async Task HandleForgotPassword()
+    {
+        if (string.IsNullOrWhiteSpace(_forgotEmail))
+        {
+            _forgotError = "Vul een e-mailadres in.";
+            return;
+        }
+
+        _forgotError = null;
+        _forgotLoading = true;
+
+        try
+        {
+            await ApiClient.ForgotPasswordAsync(_forgotEmail.Trim());
+            _forgotSent = true;
+        }
+        catch
+        {
+            // Altijd succes tonen om email-enumeration te voorkomen
+            _forgotSent = true;
+        }
+        finally
+        {
+            _forgotLoading = false;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        if (string.IsNullOrWhiteSpace(_registerForm.CompanyName))
+        {
+            _registerError = "Bedrijfsnaam is verplicht.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_registerForm.ContactName))
+        {
+            _registerError = "Contactpersoon is verplicht.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_registerForm.Email))
+        {
+            _registerError = "E-mailadres is verplicht.";
+            return;
+        }
+        if (!_registerForm.GoDutchEnabled && !_registerForm.MyPosEnabled)
+        {
+            _registerError = "Selecteer minimaal één module.";
+            return;
+        }
+
+        _registerError = null;
+        _registerLoading = true;
+
+        try
+        {
+            await ApiClient.OnboardTenantAsync(_registerForm);
+            Logger.LogInformation("Zelfregistratie: bedrijf={CompanyName} email={Email}",
+                _registerForm.CompanyName, _registerForm.Email);
+            _registerSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Zelfregistratie mislukt voor {CompanyName}", _registerForm.CompanyName);
+            _registerError = $"Aanmaken mislukt: {ex.Message}";
+        }
+        finally
+        {
+            _registerLoading = false;
         }
     }
 }
 
 <style>
-    .login-overlay {
-        position: fixed;
-        inset: 0;
-        background: linear-gradient(135deg, #0066CC 0%, #004A94 100%);
+    /* ── Shell ──────────────────────────────────────────────────── */
+    .landing-page {
+        min-height: 100vh;
+        display: flex;
+    }
+
+    /* ── Hero / linkerpaneel ────────────────────────────────────── */
+    .landing-hero {
+        flex: 1 1 0;
+        background: linear-gradient(150deg, #005FBF 0%, #003D8A 55%, #002260 100%);
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        padding: 36px 48px 32px 48px;
+        overflow-y: auto;
+    }
+
+    .landing-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 40px;
+        flex-shrink: 0;
+    }
+
+    .landing-brand-logo {
+        width: 44px;
+        height: 44px;
+        background: rgba(255,255,255,.18);
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 800;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 9999;
+        letter-spacing: -.03em;
+        flex-shrink: 0;
+    }
+
+    .landing-brand-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .landing-brand-sub {
+        font-size: .8rem;
+        color: rgba(255,255,255,.75);
+        margin-top: 2px;
+    }
+
+    .landing-hero-body {
+        flex: 1;
+    }
+
+    .landing-headline {
+        font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -.02em;
+        margin-bottom: 14px;
+        color: #ffffff;
+    }
+
+    .landing-desc {
+        font-size: 1rem;
+        line-height: 1.65;
+        color: rgba(255,255,255,.88);
+        margin-bottom: 32px;
+        max-width: 560px;
+    }
+
+    /* ── Module-blokken ─────────────────────────────────────────── */
+    .landing-modules {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .landing-module {
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 14px;
+        padding: 18px 20px;
+    }
+
+    .landing-module-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 12px;
+    }
+
+    .module-icon {
+        font-size: 1.6rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .module-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #ffffff;
+        line-height: 1.2;
+    }
+
+    .module-sub {
+        font-size: .8rem;
+        color: rgba(255,255,255,.72);
+        margin-top: 2px;
+    }
+
+    .module-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .module-features li {
+        font-size: .84rem;
+        color: rgba(255,255,255,.85);
+        line-height: 1.4;
+        padding-left: 18px;
+        position: relative;
+    }
+
+    .module-features li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #5DC87A;
+        font-weight: 700;
+        font-size: .8rem;
+    }
+
+    .module-features li strong {
+        color: #ffffff;
+    }
+
+    /* ── USP-balk ───────────────────────────────────────────────── */
+    .landing-usp-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+
+    .landing-usp {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.25);
+        border-radius: 30px;
+        padding: 6px 14px;
+        font-size: .82rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .usp-icon {
+        font-size: 1rem;
+    }
+
+    .landing-hero-footer {
+        margin-top: 32px;
+        font-size: .76rem;
+        color: rgba(255,255,255,.3);
+        flex-shrink: 0;
+    }
+
+    /* ── Rechterpaneel ──────────────────────────────────────────── */
+    .landing-login-panel {
+        flex: 0 0 420px;
+        background: #F3F7FB;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 28px;
+        overflow-y: auto;
     }
 
     .login-card {
         background: #ffffff;
         border-radius: 20px;
-        padding: 44px 40px 36px 40px;
+        padding: 32px 32px 28px 32px;
         width: 100%;
-        max-width: 400px;
-        box-shadow: 0 20px 60px rgba(0, 46, 92, .35);
+        max-width: 370px;
+        box-shadow: 0 8px 32px rgba(0, 46, 92, .10);
     }
 
-    .login-logo {
-        text-align: center;
-        margin-bottom: 32px;
+    /* ── Tabs ───────────────────────────────────────────────────── */
+    .panel-tabs {
+        display: flex;
+        background: #F0F4F9;
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 24px;
+        gap: 4px;
     }
 
-    .login-logo-title {
-        font-size: 1.5rem;
-        font-weight: 700;
+    .panel-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        border-radius: 7px;
+        padding: 9px 4px;
+        font-size: .875rem;
+        font-weight: 600;
+        color: #6B7280;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+
+    .panel-tab:hover {
         color: #0066CC;
     }
 
-    .login-logo-sub {
-        color: #6B7280;
-        font-size: .9rem;
-        margin-top: 4px;
+    .panel-tab-active {
+        background: #ffffff;
+        color: #0057AD;
+        box-shadow: 0 2px 8px rgba(0,46,92,.10);
     }
 
+    /* ── Formuliervelden ────────────────────────────────────────── */
     .login-field {
-        margin-bottom: 18px;
+        margin-bottom: 14px;
     }
 
     .login-field label {
         display: block;
         font-weight: 600;
-        font-size: .875rem;
+        font-size: .84rem;
         color: #374151;
-        margin-bottom: 6px;
+        margin-bottom: 5px;
+    }
+
+    .req {
+        color: #DC2626;
     }
 
     .login-error {
@@ -182,8 +724,8 @@
         color: #DC2626;
         border-radius: 8px;
         padding: 10px 14px;
-        font-size: .875rem;
-        margin-bottom: 16px;
+        font-size: .84rem;
+        margin-bottom: 12px;
     }
 
     .login-btn {
@@ -193,19 +735,164 @@
         border: none;
         border-radius: 10px;
         padding: 13px;
-        font-size: 1rem;
+        font-size: .95rem;
         font-weight: 600;
         cursor: pointer;
         transition: background .15s;
-        margin-top: 8px;
+        margin-top: 4px;
     }
 
     .login-btn:hover:not(:disabled) {
-        background: #0057AD;
+        background: #0052A8;
     }
 
     .login-btn:disabled {
         opacity: .7;
         cursor: not-allowed;
+    }
+
+    /* ── Module-checkboxes in registratie ───────────────────────── */
+    .module-checks {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .module-check-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        font-size: .875rem;
+        color: #374151;
+        font-weight: 500;
+        padding: 8px 12px;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        transition: border-color .15s, background .15s;
+    }
+
+    .module-check-label:hover {
+        border-color: #0066CC;
+        background: #F0F7FF;
+    }
+
+    .module-check-label input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        accent-color: #0066CC;
+    }
+
+    /* ── Succesbericht ──────────────────────────────────────────── */
+    .register-success {
+        text-align: center;
+        padding: 8px 0 4px 0;
+    }
+
+    .register-success-icon {
+        font-size: 2.5rem;
+        margin-bottom: 12px;
+    }
+
+    .register-success-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0057AD;
+        margin-bottom: 14px;
+    }
+
+    .register-success p {
+        font-size: .88rem;
+        color: #374151;
+        line-height: 1.55;
+        margin-bottom: 10px;
+    }
+
+    /* ── Schakellinks ───────────────────────────────────────────── */
+    .panel-switch-hint {
+        font-size: .82rem;
+        color: #6B7280;
+        text-align: center;
+        margin-top: 16px;
+        margin-bottom: 0;
+    }
+
+    .link-btn {
+        background: none;
+        border: none;
+        color: #0066CC;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        font-size: inherit;
+        text-decoration: underline;
+    }
+
+    .link-btn:hover {
+        color: #0052A8;
+    }
+
+    /* ── Wachtwoord-toggle ──────────────────────────────────────── */
+    .pw-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .pw-wrap .form-control {
+        padding-right: 40px;
+    }
+
+    .pw-toggle {
+        position: absolute;
+        right: 10px;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        color: #6B7280;
+        display: flex;
+        align-items: center;
+        line-height: 1;
+    }
+
+    .pw-toggle:hover {
+        color: #0066CC;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @@media (max-width: 900px) {
+        .landing-page {
+            flex-direction: column;
+        }
+
+        .landing-hero {
+            flex: none;
+            padding: 28px 20px 24px 20px;
+            overflow-y: visible;
+        }
+
+        .landing-brand {
+            margin-bottom: 24px;
+        }
+
+        .landing-desc {
+            margin-bottom: 20px;
+        }
+
+        .landing-hero-footer {
+            display: none;
+        }
+
+        .landing-login-panel {
+            flex: none;
+            padding: 24px 16px 40px 16px;
+            overflow-y: visible;
+        }
+
+        .login-card {
+            padding: 24px 18px 20px 18px;
+        }
     }
 </style>

@@ -155,6 +155,28 @@ public sealed class MyPosTransactionTypeMappingRepository : IMyPosTransactionTyp
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task<int> SeedFromDefinitionsAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug(
+            "Executing dbo.MyPosTransactionTypeMappings_SeedFromDefinitions for tenant {TenantId}",
+            tenantId);
+
+        await using var connection = _sqlConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand("dbo.MyPosTransactionTypeMappings_SeedFromDefinitions", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        command.Parameters.Add(new SqlParameter("@TenantId", SqlDbType.UniqueIdentifier) { Value = tenantId });
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is int seeded ? seeded : 0;
+    }
+
     private static void AddParameters(SqlCommand command, MyPosTransactionTypeMapping mapping)
     {
         command.Parameters.Add(new SqlParameter("@Id", SqlDbType.UniqueIdentifier) { Value = mapping.Id });

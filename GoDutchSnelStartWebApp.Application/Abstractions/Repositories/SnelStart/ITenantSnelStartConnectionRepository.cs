@@ -6,7 +6,9 @@ public interface ITenantSnelStartConnectionRepository
 {
     Task<TenantSnelStartConnection?> GetByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken = default);
     Task<TenantSnelStartConnection?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TenantSnelStartConnection>> GetExpiringCustomKeyConnectionsAsync(CancellationToken cancellationToken = default);
     Task CreateAsync(TenantSnelStartConnection connection, CancellationToken cancellationToken = default);
     Task UpdateAsync(TenantSnelStartConnection connection, CancellationToken cancellationToken = default);
+    Task MarkExpirySentAsync(Guid id, DateTime sentUtc, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, DateTime modifiedUtc, CancellationToken cancellationToken = default);
 }
