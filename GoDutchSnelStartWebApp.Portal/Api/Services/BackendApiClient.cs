@@ -235,6 +235,38 @@ public sealed class BackendApiClient : IBackendApiClient
                };
     }
 
+    public async Task<ConnectionTestResultViewModel> TestTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/snelstart-connection/test";
+
+        return await ExecuteWithRetryAsync(
+                   async ct =>
+                   {
+                       using var response = await _httpClient.PostAsync(url, content: null, ct);
+                       response.EnsureSuccessStatusCode();
+
+                       var result = await response.Content.ReadFromJsonAsync<ConnectionTestResultViewModel>(
+                           cancellationToken: ct);
+
+                       return result ?? new ConnectionTestResultViewModel
+                       {
+                           Success = false,
+                           Provider = "SnelStart",
+                           Message = "Geen testresultaat ontvangen van de backend."
+                       };
+                   },
+                   operationName: $"SnelStart verbindingstest voor tenant {tenantId}",
+                   cancellationToken)
+               ?? new ConnectionTestResultViewModel
+               {
+                   Success = false,
+                   Provider = "SnelStart",
+                   Message = "Geen testresultaat ontvangen van de backend."
+               };
+    }
+
     public async Task<IReadOnlyList<SnelStartDagboekLookupViewModel>> GetSnelStartDagboekenAsync(
     Guid tenantId,
     Guid bankAccountId,

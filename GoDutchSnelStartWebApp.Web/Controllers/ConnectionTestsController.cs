@@ -25,3 +25,24 @@ public sealed class ConnectionTestsController : ControllerBase
         return Ok(result);
     }
 }
+
+[ApiController]
+[Route("api/tenants/{tenantId:guid}/snelstart-connection")]
+public sealed class TenantSnelStartConnectionTestController : ControllerBase
+{
+    private readonly IConnectionTestService _connectionTestService;
+
+    public TenantSnelStartConnectionTestController(IConnectionTestService connectionTestService)
+    {
+        _connectionTestService = connectionTestService;
+    }
+
+    [HttpPost("test")]
+    public async Task<ActionResult<ConnectionTestResultDto>> Test(
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _connectionTestService.TestTenantSnelStartConnectionAsync(tenantId, cancellationToken);
+        return Ok(result);
+    }
+}

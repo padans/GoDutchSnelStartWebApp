@@ -169,8 +169,32 @@ else
                         <button class="btn btn-primary" @onclick="SaveClientKeyAsync" disabled="@isSavingClientKey">
                             @(isSavingClientKey ? "Opslaan..." : (connection.HasClientKey ? "Bijwerken" : "Opslaan"))
                         </button>
+                        @if (connection.HasClientKey)
+                        {
+                            <button class="btn btn-outline-secondary ms-2" @onclick="TestConnectionAsync" disabled="@_isTesting">
+                                @(_isTesting ? "Testen..." : "🔌 Verbinding testen")
+                            </button>
+                        }
                     </div>
                 </div>
+                @if (_testResult is not null)
+                {
+                    <div class="alert @(_testResult.Success ? "alert-success" : "alert-danger") mt-3 py-2" role="alert">
+                        @if (_testResult.Success)
+                        {
+                            <strong>✓ Verbinding geslaagd</strong>
+                        }
+                        else
+                        {
+                            <strong>✗ Verbinding mislukt</strong>
+                        }
+                        — @_testResult.Message
+                        @if (!string.IsNullOrWhiteSpace(_testResult.TestedUrl))
+                        {
+                            <div class="small text-muted mt-1">URL: @_testResult.TestedUrl</div>
+                        }
+                    </div>
+                }
                 @if (_showMaatwerkHelp)
                 {
                     <div class="maatwerk-help-panel">
@@ -574,6 +598,8 @@ else
     private bool isSavingClientKey;
     private string? clientKeySuccess;
     private string? clientKeyError;
+    private bool _isTesting;
+    private ConnectionTestResultViewModel? _testResult;
 
     // Sectie 2
     private List<SnelStartAdministrationViewModel> administrations = [];
@@ -708,6 +734,23 @@ else
             connError = $"Opslaan mislukt: {ex.Message}";
         }
         finally { isSavingConn = false; }
+    }
+
+    // ── Verbinding testen ─────────────────────────────────────────────────
+    private async Task TestConnectionAsync()
+    {
+        _testResult = null;
+        _isTesting = true;
+        try
+        {
+            _testResult = await BackendApiClient.TestTenantSnelStartConnectionAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SnelStart verbindingstest mislukt.");
+            _testResult = new ConnectionTestResultViewModel { Success = false, Provider = "SnelStart", Message = $"Test mislukt: {ex.Message}" };
+        }
+        finally { _isTesting = false; }
     }
 
     // ── Maatwerksleutel (ClientKey op verbindingsniveau) ──────────────────

@@ -8,4 +8,8 @@ public interface IConnectionTestService
         Guid tenantId,
         Guid bankAccountId,
         CancellationToken cancellationToken = default);
+
+    Task<ConnectionTestResultDto> TestTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
 }

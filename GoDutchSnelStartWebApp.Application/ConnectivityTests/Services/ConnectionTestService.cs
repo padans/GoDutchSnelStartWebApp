@@ -1,9 +1,12 @@
 ﻿using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
+using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Dtos;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Interfaces;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Domain.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Application.ConnectivityTests.Services;
 
@@ -12,23 +15,29 @@ public sealed class ConnectionTestService : IConnectionTestService
     private readonly ITenantRepository _tenantRepository;
     private readonly IBankAccountRepository _bankAccountRepository;
     private readonly IBankAccountSettingsRepository _bankAccountSettingsRepository;
+    private readonly ITenantSnelStartConnectionRepository _tenantSnelStartConnectionRepository;
     private readonly ISecretEncryptionService _secretEncryptionService;
     private readonly ISnelStartConnectionTestClient _snelStartConnectionTestClient;
+    private readonly IOptions<SnelStartGlobalOptions> _snelStartGlobal;
     private readonly ILogger<ConnectionTestService> _logger;
 
     public ConnectionTestService(
         ITenantRepository tenantRepository,
         IBankAccountRepository bankAccountRepository,
         IBankAccountSettingsRepository bankAccountSettingsRepository,
+        ITenantSnelStartConnectionRepository tenantSnelStartConnectionRepository,
         ISecretEncryptionService secretEncryptionService,
         ISnelStartConnectionTestClient snelStartConnectionTestClient,
+        IOptions<SnelStartGlobalOptions> snelStartGlobal,
         ILogger<ConnectionTestService> logger)
     {
         _tenantRepository = tenantRepository;
         _bankAccountRepository = bankAccountRepository;
         _bankAccountSettingsRepository = bankAccountSettingsRepository;
+        _tenantSnelStartConnectionRepository = tenantSnelStartConnectionRepository;
         _secretEncryptionService = secretEncryptionService;
         _snelStartConnectionTestClient = snelStartConnectionTestClient;
+        _snelStartGlobal = snelStartGlobal;
         _logger = logger;
     }
 
@@ -64,6 +73,36 @@ public sealed class ConnectionTestService : IConnectionTestService
             settings.SnelStartAuthUrl,
             settings.SnelStartApiBaseUrl,
             settings.SnelStartClientKey,
+            subscriptionKey,
+            cancellationToken);
+    }
+
+    public async Task<ConnectionTestResultDto> TestTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _tenantSnelStartConnectionRepository.GetByTenantIdAsync(tenantId, cancellationToken);
+        if (connection is null)
+            return new ConnectionTestResultDto { Success = false, Provider = "SnelStart", Message = "Geen SnelStart-koppeling gevonden voor deze tenant." };
+
+        if (string.IsNullOrWhiteSpace(connection.ClientKeyEncrypted))
+            return new ConnectionTestResultDto { Success = false, Provider = "SnelStart", Message = "Maatwerksleutel is nog niet ingesteld." };
+
+        var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted);
+
+        var subscriptionKey = !string.IsNullOrWhiteSpace(connection.SubscriptionKeyEncrypted)
+            ? _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted)
+            : _snelStartGlobal.Value.SubscriptionKey;
+
+        if (string.IsNullOrWhiteSpace(subscriptionKey))
+            return new ConnectionTestResultDto { Success = false, Provider = "SnelStart", Message = "SubscriptionKey is niet geconfigureerd." };
+
+        _logger.LogInformation("SnelStart verbindingstest gestart voor tenant {TenantId}", tenantId);
+
+        return await _snelStartConnectionTestClient.TestAsync(
+            connection.AuthUrl,
+            connection.ApiBaseUrl,
+            clientKey,
             subscriptionKey,
             cancellationToken);
     }

@@ -70,7 +70,7 @@ public static class InfrastructureServiceRegistration
         services.AddHttpClient<IGoDutchAccountLookupService, GoDutchAccountLookupService>();
         services.AddHttpClient<ISnelStartConnectionTestClient, SnelStartConnectionTestClient>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = TimeSpan.FromSeconds(45);
         });
         services.AddHttpClient<ISnelStartLookupService, SnelStartLookupService>(client =>
         {

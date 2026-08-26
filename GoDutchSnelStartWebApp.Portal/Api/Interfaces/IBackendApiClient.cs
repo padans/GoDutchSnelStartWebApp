@@ -47,6 +47,10 @@ public interface IBackendApiClient
         Guid bankAccountId,
         CancellationToken cancellationToken = default);
 
+    Task<ConnectionTestResultViewModel> TestTenantSnelStartConnectionAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<SnelStartDagboekLookupViewModel>> GetSnelStartDagboekenAsync(
         Guid tenantId,
         Guid bankAccountId,
