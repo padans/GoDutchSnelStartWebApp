@@ -32,3 +32,7 @@ Thumbs.db
 # Local secrets (never commit)
 appsettings.Local.json
 appsettings.Production.json
+
+# Publish / static output
+public/
+publish/
