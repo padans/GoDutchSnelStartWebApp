@@ -229,13 +229,17 @@ public sealed class SnelStartConnectionTestClient : ISnelStartConnectionTestClie
             (int)probeResponse.StatusCode,
             Truncate(probeBody));
 
+        var detail = probeResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(probeBody)
+            ? string.Empty
+            : $" Body: {Truncate(probeBody, 300)}";
+
         return new ConnectionTestResultDto
         {
             Success = probeResponse.IsSuccessStatusCode,
             Provider = "SnelStart",
             Message = probeResponse.IsSuccessStatusCode
                 ? "SnelStart token retrieval and API probe succeeded."
-                : $"SnelStart API probe failed with HTTP {(int)probeResponse.StatusCode}.",
+                : $"SnelStart API probe failed with HTTP {(int)probeResponse.StatusCode}.{detail}",
             TestedUrl = probeUrl,
             StatusCode = (int)probeResponse.StatusCode
         };
@@ -269,15 +273,15 @@ public sealed class SnelStartConnectionTestClient : ISnelStartConnectionTestClie
             : trimmed[^6..];
     }
 
-    private static string Truncate(string? value)
+    private static string Truncate(string? value, int maxLength = 500)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return string.Empty;
         }
 
-        return value.Length <= 500
+        return value.Length <= maxLength
             ? value
-            : value[..500] + "...";
+            : value[..maxLength] + "...";
     }
 }

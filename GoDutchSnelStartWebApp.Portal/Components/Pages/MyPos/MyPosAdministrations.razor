@@ -15,7 +15,7 @@
 <h1 class="mb-1">MyPos administratie</h1>
 <p class="text-muted mb-4">
     Geef de MyPos verbinding een herkenbare naam. Ga naar
-    <a href="mypos/connection">MyPos verbinding</a> voor de volledige API-instellingen.
+    <a href="mypos/verbinding">MyPos-verbinding</a> voor de volledige API-instellingen.
 </p>
 
 @if (!string.IsNullOrWhiteSpace(pageError))
@@ -34,7 +34,7 @@ else if (connection is null)
         <div class="card-body">
             <p class="text-muted mb-3">
                 Er is nog geen MyPos verbinding aangemaakt voor uw account.
-                Ga naar <a href="mypos/connection">MyPos verbinding</a> om er een aan te maken.
+                Ga naar <a href="mypos/verbinding">MyPos-verbinding</a> om er een aan te maken.
             </p>
         </div>
     </div>
@@ -84,7 +84,7 @@ else
             <button class="btn btn-primary" @onclick="SaveNameAsync" disabled="@isSaving">
                 @(isSaving ? "Opslaan..." : "Naam opslaan")
             </button>
-            <a class="btn btn-outline-secondary ms-2" href="mypos/connection">
+            <a class="btn btn-outline-secondary ms-2" href="mypos/verbinding">
                 Volledige instellingen
             </a>
         </div>
