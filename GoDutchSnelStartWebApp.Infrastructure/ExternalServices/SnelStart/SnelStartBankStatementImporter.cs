@@ -2,11 +2,12 @@
 using System.Text;
 using System.Text.Json;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
-using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.GoDutchTransactions.Dtos;
 using GoDutchSnelStartWebApp.Application.GoDutchTransactions.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Infrastructure.ExternalServices.SnelStart;
 
@@ -16,7 +17,7 @@ public sealed class SnelStartBankStatementImporter : ISnelStartBankStatementImpo
     private readonly IBankAccountSettingsRepository _bankAccountSettingsRepository;
     private readonly IBankAccountSnelStartLinkRepository _bankAccountSnelStartLinkRepository;
     private readonly ISnelStartAdministrationRepository _snelStartAdministrationRepository;
-    private readonly ISecretEncryptionService _encryptionService;
+    private readonly SnelStartGlobalOptions _snelStartGlobal;
     private readonly ILogger<SnelStartBankStatementImporter> _logger;
 
     public SnelStartBankStatementImporter(
@@ -24,14 +25,14 @@ public sealed class SnelStartBankStatementImporter : ISnelStartBankStatementImpo
         IBankAccountSettingsRepository bankAccountSettingsRepository,
         IBankAccountSnelStartLinkRepository bankAccountSnelStartLinkRepository,
         ISnelStartAdministrationRepository snelStartAdministrationRepository,
-        ISecretEncryptionService encryptionService,
+        IOptions<SnelStartGlobalOptions> snelStartGlobalOptions,
         ILogger<SnelStartBankStatementImporter> logger)
     {
         _httpClient = httpClient;
         _bankAccountSettingsRepository = bankAccountSettingsRepository;
         _bankAccountSnelStartLinkRepository = bankAccountSnelStartLinkRepository;
         _snelStartAdministrationRepository = snelStartAdministrationRepository;
-        _encryptionService = encryptionService;
+        _snelStartGlobal = snelStartGlobalOptions.Value;
         _logger = logger;
     }
 
@@ -124,23 +125,13 @@ public sealed class SnelStartBankStatementImporter : ISnelStartBankStatementImpo
             throw new InvalidOperationException("SnelStartApiBaseUrl missing.");
         }
 
-        if (string.IsNullOrWhiteSpace(bankAccountSettings.SnelStartSubscriptionKeyEncrypted))
-        {
-            throw new InvalidOperationException("SnelStartSubscriptionKey missing.");
-        }
-
         if (string.IsNullOrWhiteSpace(bankAccountSettings.SnelStartClientKey))
         {
             throw new InvalidOperationException("SnelStartClientKey missing.");
         }
 
-        var subscriptionKey = _encryptionService.Decrypt(
-            bankAccountSettings.SnelStartSubscriptionKeyEncrypted);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
+        // The subscription key is an application-wide secret sourced from configuration.
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
 
         var clientKey = bankAccountSettings.SnelStartClientKey.Trim();
 

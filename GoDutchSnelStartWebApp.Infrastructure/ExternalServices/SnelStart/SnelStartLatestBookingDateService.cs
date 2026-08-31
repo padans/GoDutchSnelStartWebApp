@@ -2,9 +2,10 @@
 using System.Text;
 using System.Text.Json;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
-using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.SnelStart.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Infrastructure.ExternalServices.SnelStart;
 
@@ -13,20 +14,20 @@ public sealed class SnelStartLatestBookingDateService : ISnelStartLatestBookingD
     private readonly HttpClient _httpClient;
     private readonly IBankAccountRepository _bankAccountRepository;
     private readonly IBankAccountSettingsRepository _settingsRepository;
-    private readonly ISecretEncryptionService _encryptionService;
+    private readonly SnelStartGlobalOptions _snelStartGlobal;
     private readonly ILogger<SnelStartLatestBookingDateService> _logger;
 
     public SnelStartLatestBookingDateService(
         HttpClient httpClient,
         IBankAccountRepository bankAccountRepository,
         IBankAccountSettingsRepository settingsRepository,
-        ISecretEncryptionService encryptionService,
+        IOptions<SnelStartGlobalOptions> snelStartGlobalOptions,
         ILogger<SnelStartLatestBookingDateService> logger)
     {
         _httpClient = httpClient;
         _bankAccountRepository = bankAccountRepository;
         _settingsRepository = settingsRepository;
-        _encryptionService = encryptionService;
+        _snelStartGlobal = snelStartGlobalOptions.Value;
         _logger = logger;
     }
 
@@ -64,7 +65,7 @@ public sealed class SnelStartLatestBookingDateService : ISnelStartLatestBookingD
                 settings.SnelStartClientKey!,
                 cancellationToken);
 
-            var subscriptionKey = _encryptionService.Decrypt(settings.SnelStartSubscriptionKeyEncrypted!);
+            var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
 
             var baseUrl = settings.SnelStartApiBaseUrl!.TrimEnd('/');
 

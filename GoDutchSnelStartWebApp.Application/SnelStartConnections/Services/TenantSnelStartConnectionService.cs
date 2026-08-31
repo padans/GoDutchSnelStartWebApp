@@ -58,17 +58,9 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
             throw new InvalidOperationException("An active SnelStart connection already exists for this tenant.");
         }
 
-        // Use the request key first; fall back to the globally configured application key.
-        var effectiveSubscriptionKey = !string.IsNullOrWhiteSpace(request.SubscriptionKey)
-            ? request.SubscriptionKey.Trim()
-            : _snelStartGlobal.SubscriptionKey;
-
-        if (string.IsNullOrWhiteSpace(effectiveSubscriptionKey))
-        {
-            throw new ArgumentException(
-                "SubscriptionKey is required. Provide it in the request or configure SnelStartGlobal:SubscriptionKey.",
-                nameof(request));
-        }
+        // The subscription key is an application-wide secret sourced from configuration; it is
+        // never stored per tenant. Fail fast if the server is not configured.
+        _snelStartGlobal.RequireSubscriptionKey();
 
         var now = DateTime.UtcNow;
 
@@ -79,7 +71,7 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
             ConnectionType = ParseConnectionType(request.ConnectionType),
             AuthUrl = NormalizeUrl(request.AuthUrl, DefaultAuthUrl),
             ApiBaseUrl = NormalizeApiBaseUrl(request.ApiBaseUrl),
-            SubscriptionKeyEncrypted = _secretEncryptionService.Encrypt(effectiveSubscriptionKey),
+            SubscriptionKeyEncrypted = null,
             ClientKeyEncrypted = string.IsNullOrWhiteSpace(request.ClientKey)
                 ? null
                 : _secretEncryptionService.Encrypt(request.ClientKey.Trim()),
@@ -120,40 +112,24 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
         existing.IsActive = request.IsActive;
         existing.ModifiedUtc = DateTime.UtcNow;
 
-        var keysChanged = false;
-
-        if (!string.IsNullOrWhiteSpace(request.SubscriptionKey))
-        {
-            existing.SubscriptionKeyEncrypted = _secretEncryptionService.Encrypt(request.SubscriptionKey.Trim());
-            keysChanged = true;
-        }
+        var clientKeyChanged = false;
 
         if (!string.IsNullOrWhiteSpace(request.ClientKey))
         {
             existing.ClientKeyEncrypted = _secretEncryptionService.Encrypt(request.ClientKey.Trim());
-            keysChanged = true;
+            clientKeyChanged = true;
         }
 
-        // Nieuwe sleutels ingevoerd → vervaldatum resetten naar 90 dagen vanaf nu
-        if (keysChanged && existing.ConnectionType == SnelStartConnectionType.CustomKey)
+        // Nieuwe maatwerksleutel ingevoerd → vervaldatum resetten naar 90 dagen vanaf nu
+        if (clientKeyChanged && existing.ConnectionType == SnelStartConnectionType.CustomKey)
         {
             existing.KeyExpiresUtc = existing.ModifiedUtc!.Value.AddDays(90);
             existing.ExpiryWarningSentUtc = null;
         }
 
-        if (existing.ConnectionType == SnelStartConnectionType.CustomKey)
-        {
-            // If the DB row has no encrypted key yet, auto-apply the global application key.
-            if (string.IsNullOrWhiteSpace(existing.SubscriptionKeyEncrypted))
-            {
-                if (string.IsNullOrWhiteSpace(_snelStartGlobal.SubscriptionKey))
-                    throw new InvalidOperationException("SubscriptionKey is required. Configure SnelStartGlobal:SubscriptionKey.");
-
-                existing.SubscriptionKeyEncrypted = _secretEncryptionService.Encrypt(_snelStartGlobal.SubscriptionKey);
-            }
-
-            // ClientKey may be set later (tenant adds their Maatwerksleutel separately).
-        }
+        // The subscription key is an application-wide secret sourced from configuration.
+        // Clear any value that legacy rows may still carry.
+        existing.SubscriptionKeyEncrypted = null;
 
         await _connectionRepository.UpdateAsync(existing, cancellationToken);
     }
@@ -188,7 +164,7 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
         }
     }
 
-    private static TenantSnelStartConnectionDto Map(TenantSnelStartConnection connection)
+    private TenantSnelStartConnectionDto Map(TenantSnelStartConnection connection)
     {
         return new TenantSnelStartConnectionDto
         {
@@ -197,7 +173,8 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
             ConnectionType = connection.ConnectionType.ToString(),
             AuthUrl = connection.AuthUrl,
             ApiBaseUrl = connection.ApiBaseUrl,
-            HasSubscriptionKey = !string.IsNullOrWhiteSpace(connection.SubscriptionKeyEncrypted),
+            // Reflects the application-wide configured key, not a per-tenant value.
+            HasSubscriptionKey = !string.IsNullOrWhiteSpace(_snelStartGlobal.SubscriptionKey),
             HasClientKey = !string.IsNullOrWhiteSpace(connection.ClientKeyEncrypted),
             HasOAuthAccessToken = !string.IsNullOrWhiteSpace(connection.OAuthAccessTokenEncrypted),
             HasOAuthRefreshToken = !string.IsNullOrWhiteSpace(connection.OAuthRefreshTokenEncrypted),

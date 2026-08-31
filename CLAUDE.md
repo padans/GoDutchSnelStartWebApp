@@ -55,6 +55,15 @@ Web → Application → Domain
 
 `SnelStartGrootboekRef(Guid Id, string Nummer, string Naam)` en `SnelStartDagboekRef(Guid Id, string Code, string Naam)` — toegepast op `BankAccount`, `TenantMyPosConnection`, `MyPosExportBatch`, `MyPosTransactionTypeMapping`, `MyPosExportBatchLine`.
 
+## SnelStart-authenticatie
+
+Elke SnelStart B2B-call gebruikt twee sleutels:
+
+- **Maatwerksleutel** (client key) — per tenant, versleuteld opgeslagen (`TenantSnelStartConnection.ClientKeyEncrypted`, of `BankAccountSetting.SnelStartClientKey`). Wordt ingewisseld voor een bearer-token.
+- **Subscription key** (`Ocp-Apim-Subscription-Key`) — **app-breed**, één waarde voor alle tenants. **Enige bron: configuratie** `SnelStartGlobal:SubscriptionKey` (in `appsettings.Production.json` op de server, niet in source control). Wordt nooit per tenant of per bankrekening opgeslagen.
+
+Alle SnelStart-verbruikers (`ConnectionTestService`, `SnelStartLookupService`, `SnelStartBankStatementImporter`, `SnelStartLatestBookingDateService`, `MyPosExportBatchExportService`) lezen de subscription key via `SnelStartGlobalOptions.RequireSubscriptionKey()`. De DB-kolommen `TenantSnelStartConnection.SubscriptionKeyEncrypted` en `BankAccountSetting.SnelStartSubscriptionKeyEncrypted` zijn dood (leeggemaakt in migratie `20260831_SnelStart_SubscriptionKey_ConfigOnly.sql`) en wachten op een latere drop-migratie; de DTO-velden `SubscriptionKey` / `SnelStartSubscriptionKey` worden server-side genegeerd.
+
 ---
 
 ## Clean Architecture-analyse (2026-06-25) — afgehandeld

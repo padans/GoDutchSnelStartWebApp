@@ -4,12 +4,14 @@ using System.Text.Json;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.SnelStartLookups;
 using GoDutchSnelStartWebApp.Application.SnelStartLookups.Dtos;
 using GoDutchSnelStartWebApp.Application.SnelStartLookups.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Entities.SnelStart;
 using GoDutchSnelStartWebApp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Infrastructure.ExternalServices.SnelStart;
 
@@ -21,6 +23,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
     private readonly IBankAccountSettingsRepository _bankAccountSettingsRepository;
     private readonly ITenantSnelStartConnectionRepository _tenantSnelStartConnectionRepository;
     private readonly ISecretEncryptionService _secretEncryptionService;
+    private readonly SnelStartGlobalOptions _snelStartGlobal;
     private readonly ILogger<SnelStartLookupService> _logger;
 
     public SnelStartLookupService(
@@ -29,6 +32,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
         IBankAccountSettingsRepository bankAccountSettingsRepository,
         ITenantSnelStartConnectionRepository tenantSnelStartConnectionRepository,
         ISecretEncryptionService secretEncryptionService,
+        IOptions<SnelStartGlobalOptions> snelStartGlobalOptions,
         ILogger<SnelStartLookupService> logger)
     {
         _httpClient = httpClient;
@@ -36,6 +40,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
         _bankAccountSettingsRepository = bankAccountSettingsRepository;
         _tenantSnelStartConnectionRepository = tenantSnelStartConnectionRepository;
         _secretEncryptionService = secretEncryptionService;
+        _snelStartGlobal = snelStartGlobalOptions.Value;
         _logger = logger;
     }
 
@@ -56,12 +61,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
             settings.SnelStartClientKey!,
             cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(settings.SnelStartSubscriptionKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
 
         var baseUrl = settings.SnelStartApiBaseUrl!.TrimEnd('/');
         var endpoint = $"{baseUrl}/dagboeken?$top=200";
@@ -104,12 +104,7 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
             settings.SnelStartClientKey!,
             cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(settings.SnelStartSubscriptionKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
 
         var baseUrl = settings.SnelStartApiBaseUrl!.TrimEnd('/');
 
@@ -131,13 +126,8 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
 
         var connection = await GetValidatedTenantConnectionAsync(tenantId, cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted!);
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
         var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
 
         if (string.IsNullOrWhiteSpace(clientKey))
         {
@@ -187,13 +177,8 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
 
         var connection = await GetValidatedTenantConnectionAsync(tenantId, cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted!);
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
         var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
 
         if (string.IsNullOrWhiteSpace(clientKey))
         {
@@ -423,11 +408,6 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
             throw new InvalidOperationException("SnelStartClientKey is missing.");
         }
 
-        if (string.IsNullOrWhiteSpace(settings.SnelStartSubscriptionKeyEncrypted))
-        {
-            throw new InvalidOperationException("SnelStartSubscriptionKey is missing.");
-        }
-
         return settings;
     }
 
@@ -472,11 +452,6 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
         if (string.IsNullOrWhiteSpace(connection.ClientKeyEncrypted))
         {
             throw new InvalidOperationException("SnelStart ClientKey is missing.");
-        }
-
-        if (string.IsNullOrWhiteSpace(connection.SubscriptionKeyEncrypted))
-        {
-            throw new InvalidOperationException("SnelStart SubscriptionKey is missing.");
         }
 
         return connection;
@@ -607,13 +582,8 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
 
         var connection = await GetValidatedTenantConnectionAsync(tenantId, cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted!);
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
         var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
 
         if (string.IsNullOrWhiteSpace(clientKey))
         {
@@ -719,13 +689,8 @@ public sealed class SnelStartLookupService : ISnelStartLookupService
 
         var connection = await GetValidatedTenantConnectionAsync(tenantId, cancellationToken);
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted!);
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
         var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted!);
-
-        if (string.IsNullOrWhiteSpace(subscriptionKey))
-        {
-            throw new InvalidOperationException("SnelStart subscription key could not be decrypted.");
-        }
 
         if (string.IsNullOrWhiteSpace(clientKey))
         {

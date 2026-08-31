@@ -1,12 +1,14 @@
 ﻿using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
 using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.SnelStart;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Entities.MyPos;
 using GoDutchSnelStartWebApp.Domain.Entities.SnelStart;
 using GoDutchSnelStartWebApp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -22,6 +24,7 @@ public sealed class MyPosExportBatchExportService : IMyPosExportBatchExportServi
     private readonly IMyPosRawTransactionRepository _rawTransactionRepository;
     private readonly ITenantSnelStartConnectionRepository _tenantSnelStartConnectionRepository;
     private readonly ISecretEncryptionService _secretEncryptionService;
+    private readonly SnelStartGlobalOptions _snelStartGlobal;
     private readonly ILogger<MyPosExportBatchExportService> _logger;
     private readonly HttpClient _httpClient;
 
@@ -30,6 +33,7 @@ public sealed class MyPosExportBatchExportService : IMyPosExportBatchExportServi
      IMyPosRawTransactionRepository rawTransactionRepository,
      ITenantSnelStartConnectionRepository tenantSnelStartConnectionRepository,
      ISecretEncryptionService secretEncryptionService,
+     IOptions<SnelStartGlobalOptions> snelStartGlobalOptions,
      ILogger<MyPosExportBatchExportService> logger,
      HttpClient httpClient)
     {
@@ -37,6 +41,7 @@ public sealed class MyPosExportBatchExportService : IMyPosExportBatchExportServi
         _rawTransactionRepository = rawTransactionRepository;
         _tenantSnelStartConnectionRepository = tenantSnelStartConnectionRepository;
         _secretEncryptionService = secretEncryptionService;
+        _snelStartGlobal = snelStartGlobalOptions.Value;
         _logger = logger;
         _httpClient = httpClient;
     }
@@ -86,9 +91,8 @@ public sealed class MyPosExportBatchExportService : IMyPosExportBatchExportServi
         }
 
         var snelStartConnection = await GetValidatedTenantConnectionAsync(tenantId, cancellationToken);
-        var subscriptionKey = DecryptRequired(
-            snelStartConnection.SubscriptionKeyEncrypted,
-            "SnelStart subscription key could not be decrypted.");
+        // The subscription key is an application-wide secret sourced from configuration.
+        var subscriptionKey = _snelStartGlobal.RequireSubscriptionKey();
         var clientKey = DecryptRequired(
             snelStartConnection.ClientKeyEncrypted,
             "SnelStart client key could not be decrypted.");
@@ -454,11 +458,6 @@ public sealed class MyPosExportBatchExportService : IMyPosExportBatchExportServi
         if (string.IsNullOrWhiteSpace(connection.ClientKeyEncrypted))
         {
             throw new InvalidOperationException("SnelStart ClientKey is missing.");
-        }
-
-        if (string.IsNullOrWhiteSpace(connection.SubscriptionKeyEncrypted))
-        {
-            throw new InvalidOperationException("SnelStart SubscriptionKey is missing.");
         }
 
         return connection;

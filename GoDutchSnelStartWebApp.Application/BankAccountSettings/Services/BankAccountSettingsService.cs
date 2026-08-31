@@ -1,12 +1,13 @@
 ﻿using GoDutchSnelStartWebApp.Application.Abstractions.Repositories;
-using GoDutchSnelStartWebApp.Application.Abstractions.Security;
 using GoDutchSnelStartWebApp.Application.BankAccountSettings.Dtos;
 using GoDutchSnelStartWebApp.Application.BankAccountSettings.Interfaces;
+using GoDutchSnelStartWebApp.Application.Configuration;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Dtos;
 using GoDutchSnelStartWebApp.Application.ConnectivityTests.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Entities;
 using GoDutchSnelStartWebApp.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace GoDutchSnelStartWebApp.Application.BankAccountSettings.Services;
 
@@ -15,23 +16,23 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
     private readonly IBankAccountSettingsRepository _settingsRepository;
     private readonly IBankAccountRepository _bankAccountRepository;
     private readonly ITenantRepository _tenantRepository;
-    private readonly ISecretEncryptionService _secretEncryptionService;
     private readonly ISnelStartConnectionTestClient _snelStartConnectionTestClient;
+    private readonly SnelStartGlobalOptions _snelStartGlobal;
     private readonly ILogger<BankAccountSettingsService> _logger;
 
     public BankAccountSettingsService(
         IBankAccountSettingsRepository settingsRepository,
         IBankAccountRepository bankAccountRepository,
         ITenantRepository tenantRepository,
-        ISecretEncryptionService secretEncryptionService,
         ISnelStartConnectionTestClient snelStartConnectionTestClient,
+        IOptions<SnelStartGlobalOptions> snelStartGlobalOptions,
         ILogger<BankAccountSettingsService> logger)
     {
         _settingsRepository = settingsRepository;
         _bankAccountRepository = bankAccountRepository;
         _tenantRepository = tenantRepository;
-        _secretEncryptionService = secretEncryptionService;
         _snelStartConnectionTestClient = snelStartConnectionTestClient;
+        _snelStartGlobal = snelStartGlobalOptions.Value;
         _logger = logger;
     }
 
@@ -96,9 +97,8 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             SnelStartAuthUrl = NormalizeSnelStartAuthUrl(request.SnelStartAuthUrl),
             SnelStartApiBaseUrl = NormalizeSnelStartApiBaseUrl(request.SnelStartApiBaseUrl),
             SnelStartClientKey = Normalize(request.SnelStartClientKey),
-            SnelStartSubscriptionKeyEncrypted = string.IsNullOrWhiteSpace(request.SnelStartSubscriptionKey)
-                ? null
-                : _secretEncryptionService.Encrypt(request.SnelStartSubscriptionKey),
+            // The subscription key is an application-wide secret sourced from configuration; never stored per bank account.
+            SnelStartSubscriptionKeyEncrypted = null,
 
             ExportFormat = exportFormat,
             SyncEnabled = request.SyncEnabled
@@ -145,16 +145,15 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             throw new KeyNotFoundException("Bank account settings not found.");
         }
 
-        ValidateUpdateSnelStartCredentials(existing, request);
+        ValidateUpdateSnelStartCredentials(request);
 
         existing.SnelStartAuthUrl = NormalizeSnelStartAuthUrl(request.SnelStartAuthUrl);
         existing.SnelStartApiBaseUrl = NormalizeSnelStartApiBaseUrl(request.SnelStartApiBaseUrl);
         existing.SnelStartClientKey = Normalize(request.SnelStartClientKey);
 
-        if (!string.IsNullOrWhiteSpace(request.SnelStartSubscriptionKey))
-        {
-            existing.SnelStartSubscriptionKeyEncrypted = _secretEncryptionService.Encrypt(request.SnelStartSubscriptionKey);
-        }
+        // The subscription key is an application-wide secret sourced from configuration.
+        // Clear any value that legacy rows may still carry.
+        existing.SnelStartSubscriptionKeyEncrypted = null;
 
         existing.ExportFormat = exportFormat;
         existing.SyncEnabled = request.SyncEnabled;
@@ -194,7 +193,17 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             };
         }
 
-        var decryptedSubscriptionKey = DecryptOptionalSecret(settings.SnelStartSubscriptionKeyEncrypted);
+        // The subscription key is an application-wide secret, sourced only from configuration.
+        var subscriptionKey = _snelStartGlobal.SubscriptionKey;
+        if (string.IsNullOrWhiteSpace(subscriptionKey))
+        {
+            return new ConnectionTestResultDto
+            {
+                Success = false,
+                Provider = "SnelStart",
+                Message = "SnelStart subscription key is niet geconfigureerd (SnelStartGlobal:SubscriptionKey)."
+            };
+        }
 
         var authUrl = NormalizeSnelStartAuthUrl(settings.SnelStartAuthUrl);
         var apiBaseUrl = NormalizeSnelStartApiBaseUrl(settings.SnelStartApiBaseUrl);
@@ -209,7 +218,7 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             authUrl,
             apiBaseUrl,
             settings.SnelStartClientKey,
-            decryptedSubscriptionKey,
+            subscriptionKey,
             cancellationToken);
 
         if (result.Success)
@@ -263,51 +272,19 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             id);
     }
 
-    private string? DecryptOptionalSecret(string? encryptedValue)
-    {
-        if (string.IsNullOrWhiteSpace(encryptedValue))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _secretEncryptionService.Decrypt(encryptedValue);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Decrypten van SnelStart subscription key is mislukt.");
-
-            return null;
-        }
-    }
-
     private static void ValidateCreateSnelStartCredentials(CreateBankAccountSettingsRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SnelStartClientKey))
         {
             throw new ArgumentException("SnelStart client key is required.", nameof(request.SnelStartClientKey));
         }
-
-        if (string.IsNullOrWhiteSpace(request.SnelStartSubscriptionKey))
-        {
-            throw new ArgumentException("SnelStart subscription key is required.", nameof(request.SnelStartSubscriptionKey));
-        }
     }
 
-    private static void ValidateUpdateSnelStartCredentials(
-        BankAccountSetting existing,
-        UpdateBankAccountSettingsRequest request)
+    private static void ValidateUpdateSnelStartCredentials(UpdateBankAccountSettingsRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SnelStartClientKey))
         {
             throw new ArgumentException("SnelStart client key is required.", nameof(request.SnelStartClientKey));
-        }
-
-        if (string.IsNullOrWhiteSpace(existing.SnelStartSubscriptionKeyEncrypted) &&
-            string.IsNullOrWhiteSpace(request.SnelStartSubscriptionKey))
-        {
-            throw new ArgumentException("SnelStart subscription key is required.", nameof(request.SnelStartSubscriptionKey));
         }
     }
 
@@ -354,7 +331,7 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
     }
 
 
-    private static BankAccountSettingsDto MapToDto(BankAccountSetting settings)
+    private BankAccountSettingsDto MapToDto(BankAccountSetting settings)
     {
         return new BankAccountSettingsDto
         {
@@ -369,7 +346,8 @@ public sealed class BankAccountSettingsService : IBankAccountSettingsService
             ExportFormat = settings.ExportFormat.ToString(),
             SyncEnabled = settings.SyncEnabled,
 
-            HasSnelStartSubscriptionKey = !string.IsNullOrWhiteSpace(settings.SnelStartSubscriptionKeyEncrypted),
+            // Reflects the application-wide configured key, not a per-bank-account value.
+            HasSnelStartSubscriptionKey = !string.IsNullOrWhiteSpace(_snelStartGlobal.SubscriptionKey),
 
             CreatedUtc = settings.CreatedUtc,
             ModifiedUtc = settings.ModifiedUtc

@@ -60,12 +60,18 @@ public sealed class ConnectionTestService : IConnectionTestService
             throw new ArgumentException("SnelStartClientKey is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(settings.SnelStartSubscriptionKeyEncrypted))
-        {
-            throw new ArgumentException("SnelStart subscription key is required.");
-        }
+        // The subscription key is an application-wide secret, sourced only from configuration.
+        var subscriptionKey = _snelStartGlobal.Value.SubscriptionKey;
 
-        var subscriptionKey = _secretEncryptionService.Decrypt(settings.SnelStartSubscriptionKeyEncrypted);
+        if (string.IsNullOrWhiteSpace(subscriptionKey))
+        {
+            return new ConnectionTestResultDto
+            {
+                Success = false,
+                Provider = "SnelStart",
+                Message = "SnelStart subscription key is niet geconfigureerd (SnelStartGlobal:SubscriptionKey)."
+            };
+        }
 
         _logger.LogInformation("Testing SnelStart connectivity for bank account {BankAccountId}", bankAccountId);
 
@@ -90,12 +96,11 @@ public sealed class ConnectionTestService : IConnectionTestService
 
         var clientKey = _secretEncryptionService.Decrypt(connection.ClientKeyEncrypted);
 
-        var subscriptionKey = !string.IsNullOrWhiteSpace(connection.SubscriptionKeyEncrypted)
-            ? _secretEncryptionService.Decrypt(connection.SubscriptionKeyEncrypted)
-            : _snelStartGlobal.Value.SubscriptionKey;
+        // The subscription key is an application-wide secret, sourced only from configuration.
+        var subscriptionKey = _snelStartGlobal.Value.SubscriptionKey;
 
         if (string.IsNullOrWhiteSpace(subscriptionKey))
-            return new ConnectionTestResultDto { Success = false, Provider = "SnelStart", Message = "SubscriptionKey is niet geconfigureerd." };
+            return new ConnectionTestResultDto { Success = false, Provider = "SnelStart", Message = "SnelStart subscription key is niet geconfigureerd (SnelStartGlobal:SubscriptionKey)." };
 
         _logger.LogInformation("SnelStart verbindingstest gestart voor tenant {TenantId}", tenantId);
 
