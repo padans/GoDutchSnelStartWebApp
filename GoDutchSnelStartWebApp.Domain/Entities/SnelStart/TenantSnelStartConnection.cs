@@ -12,6 +12,12 @@ public sealed class TenantSnelStartConnection
     public string AuthUrl { get; set; } = "https://auth.snelstart.nl/b2b/token";
     public string ApiBaseUrl { get; set; } = "https://b2bapi.snelstart.nl/v2";
 
+    /// <summary>
+    /// Free-text name of the SnelStart administration this maatwerksleutel belongs to.
+    /// Captured on key entry; the SnelStart B2B API does not expose it.
+    /// </summary>
+    public string? AdministrationName { get; set; }
+
     public string? SubscriptionKeyEncrypted { get; set; }
     public string? ClientKeyEncrypted { get; set; }
 

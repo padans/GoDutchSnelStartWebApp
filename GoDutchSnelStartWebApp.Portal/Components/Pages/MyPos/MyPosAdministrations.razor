@@ -126,11 +126,14 @@ else
         {
             try
             {
-                editName = await BackendApiClient.GetTenantNameAsync(TenantId);
+                var snelStartConnection = await BackendApiClient.GetTenantSnelStartConnectionAsync(TenantId);
+                editName = !string.IsNullOrWhiteSpace(snelStartConnection?.AdministrationName)
+                    ? snelStartConnection!.AdministrationName
+                    : await BackendApiClient.GetTenantNameAsync(TenantId);
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Tenantnaam ophalen mislukt.");
+                Logger.LogWarning(ex, "Standaardnaam bepalen mislukt.");
             }
         }
 

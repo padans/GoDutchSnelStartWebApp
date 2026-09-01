@@ -163,6 +163,15 @@ else
                         </button>
                     </div>
                 </div>
+                <div class="col-md-5">
+                    <label class="form-label">Naam administratie</label>
+                    <input class="form-control" @bind="administrationNameInput"
+                           placeholder="bijv. Taxi Cab4u B.V." maxlength="200" />
+                    <div class="form-text">
+                        De administratie waar deze maatwerksleutel bij hoort. SnelStart geeft deze naam
+                        niet terug via de API, dus vul 'm hier in. Wordt getoond in de myPOS-flow.
+                    </div>
+                </div>
                 <div class="col-12">
                     <button class="btn btn-primary" @onclick="SaveClientKeyAsync" disabled="@isSavingClientKey">
                         @(isSavingClientKey ? "Opslaan..." : (hasClientKey ? "Bijwerken" : "Opslaan"))
@@ -593,6 +602,7 @@ else
     // Maatwerksleutel (ClientKey op verbindingsniveau)
     private bool hasClientKey => connection?.HasClientKey == true;
     private string? clientKeyInput;
+    private string? administrationNameInput;
     private bool isSavingClientKey;
     private string? clientKeySuccess;
     private string? clientKeyError;
@@ -643,6 +653,7 @@ else
             connection      = connTask.Result;
             administrations = adminsTask.Result.OrderBy(a => a.Name).ToList();
             connSubscriptionKey = null;
+            administrationNameInput = connection?.AdministrationName;
 
             var accounts = accountsTask.Result;
             var rows = new List<BankAccountRow>();
@@ -758,7 +769,11 @@ else
         clientKeyError = null;
         clientKeySuccess = null;
 
-        if (string.IsNullOrWhiteSpace(clientKeyInput))
+        var newKey = clientKeyInput?.Trim();
+
+        // De sleutel is alleen verplicht bij de eerste keer aanmaken. Bestaat de koppeling al,
+        // dan mag je ook enkel de administratienaam bijwerken.
+        if (connection is null && string.IsNullOrWhiteSpace(newKey))
         {
             clientKeyError = "Maatwerksleutel is verplicht.";
             return;
@@ -772,7 +787,10 @@ else
                 await BackendApiClient.CreateTenantSnelStartConnectionAsync(TenantId,
                     new CreateTenantSnelStartConnectionRequestViewModel
                     {
-                        ClientKey = clientKeyInput.Trim()
+                        ClientKey = newKey,
+                        AdministrationName = string.IsNullOrWhiteSpace(administrationNameInput)
+                            ? null
+                            : administrationNameInput.Trim()
                         // ConnectionType / AuthUrl / ApiBaseUrl / IsActive use model defaults
                     });
             }
@@ -783,13 +801,17 @@ else
                     ConnectionType = connection.ConnectionType,
                     AuthUrl        = "https://auth.snelstart.nl/b2b/token",
                     ApiBaseUrl     = "https://b2bapi.snelstart.nl/v2",
-                    ClientKey      = clientKeyInput.Trim(),
+                    ClientKey      = string.IsNullOrWhiteSpace(newKey) ? null : newKey,
                     SubscriptionKey = null,
+                    // Altijd meesturen: "" wist de naam, een waarde overschrijft 'm.
+                    AdministrationName = administrationNameInput?.Trim() ?? string.Empty,
                     IsActive       = connection.IsActive
                 };
                 await BackendApiClient.UpdateTenantSnelStartConnectionAsync(TenantId, connection.Id, request);
             }
-            clientKeySuccess = "Maatwerksleutel opgeslagen.";
+            clientKeySuccess = string.IsNullOrWhiteSpace(newKey)
+                ? "Administratienaam opgeslagen."
+                : "Maatwerksleutel opgeslagen.";
             clientKeyInput = null;
             await LoadAsync();
         }

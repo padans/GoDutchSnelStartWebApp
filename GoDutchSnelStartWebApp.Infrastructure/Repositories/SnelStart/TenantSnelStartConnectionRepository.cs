@@ -197,6 +197,7 @@ public sealed class TenantSnelStartConnectionRepository : ITenantSnelStartConnec
         command.Parameters.Add(new SqlParameter("@ConnectionType", SqlDbType.NVarChar, 50) { Value = connection.ConnectionType.ToString() });
         command.Parameters.Add(new SqlParameter("@AuthUrl", SqlDbType.NVarChar, 500) { Value = connection.AuthUrl });
         command.Parameters.Add(new SqlParameter("@ApiBaseUrl", SqlDbType.NVarChar, 500) { Value = connection.ApiBaseUrl });
+        command.Parameters.Add(new SqlParameter("@AdministrationName", SqlDbType.NVarChar, 200) { Value = (object?)connection.AdministrationName ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@SubscriptionKeyEncrypted", SqlDbType.NVarChar, -1) { Value = (object?)connection.SubscriptionKeyEncrypted ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@ClientKeyEncrypted", SqlDbType.NVarChar, -1) { Value = (object?)connection.ClientKeyEncrypted ?? DBNull.Value });
         command.Parameters.Add(new SqlParameter("@OAuthAccessTokenEncrypted", SqlDbType.NVarChar, -1) { Value = (object?)connection.OAuthAccessTokenEncrypted ?? DBNull.Value });
@@ -223,6 +224,9 @@ public sealed class TenantSnelStartConnectionRepository : ITenantSnelStartConnec
             ConnectionType = Enum.Parse<SnelStartConnectionType>(reader.GetString(reader.GetOrdinal("ConnectionType")), ignoreCase: true),
             AuthUrl = reader.GetString(reader.GetOrdinal("AuthUrl")),
             ApiBaseUrl = reader.GetString(reader.GetOrdinal("ApiBaseUrl")),
+            AdministrationName = reader.IsDBNull(reader.GetOrdinal("AdministrationName"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("AdministrationName")),
             SubscriptionKeyEncrypted = reader.IsDBNull(reader.GetOrdinal("SubscriptionKeyEncrypted"))
                 ? null
                 : reader.GetString(reader.GetOrdinal("SubscriptionKeyEncrypted")),

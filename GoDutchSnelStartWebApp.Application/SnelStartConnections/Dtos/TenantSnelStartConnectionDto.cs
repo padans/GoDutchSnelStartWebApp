@@ -7,6 +7,7 @@ public sealed class TenantSnelStartConnectionDto
     public string ConnectionType { get; set; } = "CustomKey";
     public string AuthUrl { get; set; } = string.Empty;
     public string ApiBaseUrl { get; set; } = string.Empty;
+    public string? AdministrationName { get; set; }
     public bool HasSubscriptionKey { get; set; }
     public bool HasClientKey { get; set; }
     public bool HasOAuthAccessToken { get; set; }

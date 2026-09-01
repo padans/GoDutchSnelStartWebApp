@@ -71,6 +71,7 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
             ConnectionType = ParseConnectionType(request.ConnectionType),
             AuthUrl = NormalizeUrl(request.AuthUrl, DefaultAuthUrl),
             ApiBaseUrl = NormalizeApiBaseUrl(request.ApiBaseUrl),
+            AdministrationName = NormalizeName(request.AdministrationName),
             SubscriptionKeyEncrypted = null,
             ClientKeyEncrypted = string.IsNullOrWhiteSpace(request.ClientKey)
                 ? null
@@ -111,6 +112,12 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
         existing.ApiBaseUrl = NormalizeApiBaseUrl(request.ApiBaseUrl);
         existing.IsActive = request.IsActive;
         existing.ModifiedUtc = DateTime.UtcNow;
+
+        // null = keep existing; "" = clear; otherwise overwrite.
+        if (request.AdministrationName is not null)
+        {
+            existing.AdministrationName = NormalizeName(request.AdministrationName);
+        }
 
         var clientKeyChanged = false;
 
@@ -173,6 +180,7 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
             ConnectionType = connection.ConnectionType.ToString(),
             AuthUrl = connection.AuthUrl,
             ApiBaseUrl = connection.ApiBaseUrl,
+            AdministrationName = connection.AdministrationName,
             // Reflects the application-wide configured key, not a per-tenant value.
             HasSubscriptionKey = !string.IsNullOrWhiteSpace(_snelStartGlobal.SubscriptionKey),
             HasClientKey = !string.IsNullOrWhiteSpace(connection.ClientKeyEncrypted),
@@ -204,6 +212,12 @@ public sealed class TenantSnelStartConnectionService : ITenantSnelStartConnectio
         return normalized.EndsWith("/v2", StringComparison.OrdinalIgnoreCase)
             ? normalized
             : normalized + "/v2";
+    }
+
+    private static string? NormalizeName(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     private static string NormalizeUrl(string? value, string fallback)

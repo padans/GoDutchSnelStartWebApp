@@ -11,6 +11,12 @@ public sealed class UpdateTenantSnelStartConnectionRequest
     public string ApiBaseUrl { get; set; } = "https://b2bapi.snelstart.nl/v2";
 
     /// <summary>
+    /// Free-text name of the SnelStart administration. Null = keep the existing value;
+    /// empty string = clear it; any other value overwrites.
+    /// </summary>
+    public string? AdministrationName { get; set; }
+
+    /// <summary>
     /// Leave empty/null to keep the existing encrypted value.
     /// </summary>
     public string? SubscriptionKey { get; set; }

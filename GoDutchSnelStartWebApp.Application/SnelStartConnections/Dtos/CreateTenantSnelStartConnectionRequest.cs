@@ -11,6 +11,11 @@ public sealed class CreateTenantSnelStartConnectionRequest
     public string ApiBaseUrl { get; set; } = "https://b2bapi.snelstart.nl/v2";
 
     /// <summary>
+    /// Optional free-text name of the SnelStart administration this key belongs to.
+    /// </summary>
+    public string? AdministrationName { get; set; }
+
+    /// <summary>
     /// Required for CustomKey mode. Never returned by the API.
     /// </summary>
     public string? SubscriptionKey { get; set; }
