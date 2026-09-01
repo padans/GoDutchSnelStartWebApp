@@ -14,9 +14,17 @@
 
 <h1 class="mb-1">MyPos administratie</h1>
 <p class="text-muted mb-4">
-    Geef de MyPos verbinding een herkenbare naam. Ga naar
-    <a href="mypos/verbinding">MyPos-verbinding</a> voor de volledige API-instellingen.
+    Optioneel. De SnelStart-administratie zelf komt uit de maatwerksleutel — die hoef je hier niet in te voeren.
+    Dit veld is alleen een herkenbaar label voor deze MyPos-verbinding (handig bij meerdere terminals).
+    Ga naar <a href="mypos/verbinding">MyPos-verbinding</a> voor de volledige API-instellingen.
 </p>
+
+@if (!string.IsNullOrWhiteSpace(detectedAdministratie))
+{
+    <p class="text-muted mb-4">
+        Gekoppelde SnelStart-administratie: <strong>@detectedAdministratie</strong>
+    </p>
+}
 
 @if (!string.IsNullOrWhiteSpace(pageError))
 {
@@ -96,6 +104,7 @@ else
 
     private TenantMyPosConnectionViewModel? connection;
     private string? editName;
+    private string? detectedAdministratie;
 
     private bool isLoading;
     private bool isSaving;
@@ -120,10 +129,25 @@ else
             Logger.LogError(ex, "Laden MyPos verbinding mislukt.");
             pageError = $"Laden mislukt: {ex.Message}";
         }
-        finally
+
+        try
         {
-            isLoading = false;
+            var admins = await BackendApiClient.GetTenantSnelStartAdministratiesAsync(TenantId);
+            detectedAdministratie = admins is { Count: > 0 }
+                ? string.Join(", ", admins.Where(a => !string.IsNullOrWhiteSpace(a.Naam)).Select(a => a.Naam))
+                : null;
+
+            if (string.IsNullOrWhiteSpace(editName) && !string.IsNullOrWhiteSpace(detectedAdministratie))
+            {
+                editName = detectedAdministratie;
+            }
         }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SnelStart-administratie ophalen mislukt.");
+        }
+
+        isLoading = false;
     }
 
     private async Task SaveNameAsync()

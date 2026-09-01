@@ -24,6 +24,14 @@
 }
 else
 {
+    @if (!string.IsNullOrWhiteSpace(snelStartAdministratieNaam))
+    {
+        <div class="stappenplan-admin-note mb-4">
+            <span class="stappenplan-admin-label">Gekoppelde SnelStart-administratie</span>
+            <strong>@snelStartAdministratieNaam</strong>
+        </div>
+    }
+
     <div class="stappenplan-progress mb-4">
         <div class="stappenplan-progress-bar">
             <div class="stappenplan-progress-fill" style="width:@(ProgressPercent)%"></div>
@@ -54,6 +62,8 @@ else
     private bool isLoading = true;
     private bool isRefreshing;
 
+    private string? snelStartAdministratieNaam;
+
     private List<StepInfo> coreSteps = [];
     private List<StepInfo> optionalSteps = [];
 
@@ -69,15 +79,36 @@ else
 
         var snelStartConnection = await SafeGetAsync(() => BackendApiClient.GetTenantSnelStartConnectionAsync(TenantId), "SnelStart-koppeling");
         var myPosConnection = await SafeGetAsync(() => BackendApiClient.GetTenantMyPosConnectionAsync(TenantId), "myPOS-koppeling");
+        var mappings = await SafeGetAsync(() => BackendApiClient.GetMyPosTransactionTypeMappingsAsync(TenantId), "transactietype-mappings");
         var typeStatus = await SafeGetAsync(() => BackendApiClient.GetMyPosTransactionTypeStatusAsync(TenantId), "transactietype-status");
         var autoSync = await SafeGetAsync(() => BackendApiClient.GetMyPosAutoSyncSettingsAsync(), "auto-sync instellingen");
 
         var step1Done = snelStartConnection?.HasClientKey == true;
+
+        if (step1Done)
+        {
+            var admins = await SafeGetAsync(() => BackendApiClient.GetTenantSnelStartAdministratiesAsync(TenantId), "SnelStart-administraties");
+            snelStartAdministratieNaam = admins is { Count: > 0 }
+                ? string.Join(", ", admins.Where(a => !string.IsNullOrWhiteSpace(a.Naam)).Select(a => a.Naam))
+                : null;
+        }
+        else
+        {
+            snelStartAdministratieNaam = null;
+        }
+
         var step2Done = myPosConnection is not null
             && !string.IsNullOrWhiteSpace(myPosConnection.ClientId)
             && (myPosConnection.HasClientSecret || myPosConnection.HasApiKey);
         var step3Done = myPosConnection?.SnelStartBankDagboekId is not null;
-        var step4Done = typeStatus?.AllMapped == true;
+
+        // Minstens één actieve mapping naar een grootboekrekening moet bestaan, én er mag geen
+        // geïmporteerd transactietype ongemapt zijn. typeStatus.AllMapped alleen is niet genoeg:
+        // dat is ook 'true' als er nog geen transacties zijn geïmporteerd (0 van 0 gemapt).
+        var hasRealMapping = mappings?.Any(m => m.IsActive && m.SnelStartGrootboekId is not null) == true;
+        var noUnmappedKnownTypes = typeStatus is null || typeStatus.Types.Count == 0 || typeStatus.AllMapped;
+        var step4Done = hasRealMapping && noUnmappedKnownTypes;
+
         var step5Done = autoSync?.Enabled == true;
 
         coreSteps =
@@ -153,6 +184,26 @@ else
 }
 
 <style>
+    .stappenplan-admin-note {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: .9rem;
+        color: #1E3A5F;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .stappenplan-admin-label {
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: #64748B;
+        font-weight: 600;
+    }
+
     .stappenplan-progress {
         display: flex;
         align-items: center;

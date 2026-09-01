@@ -31,6 +31,13 @@ else
     <div class="card mb-3">
         <div class="card-header">SnelStart-verbinding</div>
         <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(snelStartAdministratieNaam))
+            {
+                <p class="text-muted mb-3">
+                    Gekoppelde SnelStart-administratie (via de maatwerksleutel):
+                    <strong>@snelStartAdministratieNaam</strong>. Je hoeft hier alleen het bankdagboek te kiezen.
+                </p>
+            }
             @if (dagboeken.Count == 0)
             {
                 <div class="alert alert-danger" role="alert">
@@ -79,6 +86,7 @@ else
 
     private TenantMyPosConnectionViewModel? connection;
     private List<SnelStartDagboekLookupViewModel> dagboeken = [];
+    private string? snelStartAdministratieNaam;
 
     private bool isLoading;
     private bool isSaving;
@@ -112,6 +120,19 @@ else
         {
             Logger.LogWarning(ex, "SnelStart-dagboeken ophalen mislukt.");
             dagboeken = [];
+        }
+
+        try
+        {
+            var admins = await BackendApiClient.GetTenantSnelStartAdministratiesAsync(TenantId);
+            snelStartAdministratieNaam = admins is { Count: > 0 }
+                ? string.Join(", ", admins.Where(a => !string.IsNullOrWhiteSpace(a.Naam)).Select(a => a.Naam))
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "SnelStart-administratie ophalen mislukt.");
+            snelStartAdministratieNaam = null;
         }
 
         isLoading = false;

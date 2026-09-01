@@ -152,6 +152,10 @@ public interface IBackendApiClient
     Guid tenantId,
     CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<SnelStartAdministratieLookupViewModel>> GetTenantSnelStartAdministratiesAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
+
     Task UpdateTenantMyPosConnectionAsync(
         Guid tenantId,
         Guid connectionId,
