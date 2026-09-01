@@ -19,13 +19,6 @@
     Ga naar <a href="mypos/verbinding">MyPos-verbinding</a> voor de volledige API-instellingen.
 </p>
 
-@if (!string.IsNullOrWhiteSpace(detectedAdministratie))
-{
-    <p class="text-muted mb-4">
-        Gekoppelde SnelStart-administratie: <strong>@detectedAdministratie</strong>
-    </p>
-}
-
 @if (!string.IsNullOrWhiteSpace(pageError))
 {
     <div class="alert alert-danger">@pageError</div>
@@ -104,7 +97,6 @@ else
 
     private TenantMyPosConnectionViewModel? connection;
     private string? editName;
-    private string? detectedAdministratie;
 
     private bool isLoading;
     private bool isSaving;
@@ -130,21 +122,16 @@ else
             pageError = $"Laden mislukt: {ex.Message}";
         }
 
-        try
+        if (string.IsNullOrWhiteSpace(editName))
         {
-            var admins = await BackendApiClient.GetTenantSnelStartAdministratiesAsync(TenantId);
-            detectedAdministratie = admins is { Count: > 0 }
-                ? string.Join(", ", admins.Where(a => !string.IsNullOrWhiteSpace(a.Naam)).Select(a => a.Naam))
-                : null;
-
-            if (string.IsNullOrWhiteSpace(editName) && !string.IsNullOrWhiteSpace(detectedAdministratie))
+            try
             {
-                editName = detectedAdministratie;
+                editName = await BackendApiClient.GetTenantNameAsync(TenantId);
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "SnelStart-administratie ophalen mislukt.");
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Tenantnaam ophalen mislukt.");
+            }
         }
 
         isLoading = false;

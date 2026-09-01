@@ -856,30 +856,6 @@ public sealed class BackendApiClient : IBackendApiClient
                ?? [];
     }
 
-    public async Task<IReadOnlyList<SnelStartAdministratieLookupViewModel>> GetTenantSnelStartAdministratiesAsync(
-    Guid tenantId,
-    CancellationToken cancellationToken = default)
-    {
-        var url = $"api/tenants/{tenantId}/snelstart/lookups/administraties";
-
-        _logger.LogInformation(
-            "Tenantgerichte SnelStart administraties ophalen via {Url}",
-            url);
-
-        return await ExecuteWithRetryAsync(
-                   async ct =>
-                   {
-                       var result = await _httpClient.GetFromJsonAsync<List<SnelStartAdministratieLookupViewModel>>(
-                           url,
-                           ct);
-
-                       return (IReadOnlyList<SnelStartAdministratieLookupViewModel>)(result ?? []);
-                   },
-                   operationName: $"tenantgerichte SnelStart administraties ophalen voor tenant {tenantId}",
-                   cancellationToken)
-               ?? [];
-    }
-
     public async Task UpdateTenantMyPosConnectionAsync(
         Guid tenantId,
         Guid connectionId,

@@ -29,8 +29,4 @@ public interface ISnelStartLookupService
     Task<IReadOnlyList<SnelStartDagboekLookupDto>> GetTenantDagboekenAsync(
     Guid tenantId,
     CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<SnelStartAdministratieLookupDto>> GetTenantAdministratiesAsync(
-        Guid tenantId,
-        CancellationToken cancellationToken = default);
 }

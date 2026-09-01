@@ -181,41 +181,4 @@ public sealed class SnelStartLookupsController : ControllerBase
                 statusCode: StatusCodes.Status502BadGateway);
         }
     }
-
-    [HttpGet("/api/tenants/{tenantId:guid}/snelstart/lookups/administraties")]
-    [ProducesResponseType(typeof(IReadOnlyList<SnelStartAdministratieLookupDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status502BadGateway)]
-    public async Task<ActionResult<IReadOnlyList<SnelStartAdministratieLookupDto>>> GetTenantAdministraties(
-    Guid tenantId,
-    CancellationToken cancellationToken)
-    {
-        try
-        {
-            _logger.LogDebug(
-                "Tenantgerichte SnelStart administraties lookup gestart. TenantId: {TenantId}.",
-                tenantId);
-
-            var result = await _snelStartLookupService.GetTenantAdministratiesAsync(
-                tenantId,
-                cancellationToken);
-
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (SnelStartLookupException ex)
-        {
-            return Problem(
-                title: "SnelStart administraties lookup mislukt",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status502BadGateway);
-        }
-    }
 }
