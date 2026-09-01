@@ -8,6 +8,10 @@
 -- de definitieve verwijdering staat onderaan als losse, nog niet uitgevoerde stap.
 
 SET NOCOUNT ON;
+-- Vereist voor tabellen met filtered indexes / indexed views / computed-column
+-- indexes; sqlcmd draait deze standaard OFF.
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
 
 UPDATE dbo.TenantSnelStartConnections
 SET SubscriptionKeyEncrypted = NULL
