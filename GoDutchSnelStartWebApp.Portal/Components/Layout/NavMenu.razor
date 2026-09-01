@@ -60,6 +60,11 @@
         <div class="app-nav-section">
             <div class="app-nav-heading-dark">MyPos</div>
 
+            <NavLink class="app-nav-link" @onclick="ScrollToContent" href="mypos/stappenplan" Match="NavLinkMatch.Prefix">
+                <span class="app-nav-link-icon">✅</span>
+                <span>Stappenplan</span>
+            </NavLink>
+
             <NavLink class="app-nav-link" @onclick="ScrollToContent" href="snelstart/connection" Match="NavLinkMatch.Prefix">
                 <span class="app-nav-link-icon">🔑</span>
                 <span>SnelStart koppeling</span>

@@ -1,0 +1,250 @@
+@page "/mypos/stappenplan"
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosStappenplan> Logger
+@inject AppSession Session
+
+<PageTitle>myPOS Stappenplan</PageTitle>
+
+<h1>Stappenplan</h1>
+<p class="text-muted">
+    Doorloop deze stappen om myPOS-transacties automatisch te laten exporteren naar SnelStart.
+    Vink af wat je al hebt gedaan.
+</p>
+
+@if (isLoading)
+{
+    <p>Gegevens laden...</p>
+}
+else
+{
+    <div class="stappenplan-progress mb-4">
+        <div class="stappenplan-progress-bar">
+            <div class="stappenplan-progress-fill" style="width:@(ProgressPercent)%"></div>
+        </div>
+        <span class="stappenplan-progress-label">@completedCore van @coreSteps.Count verplichte stappen voltooid</span>
+    </div>
+
+    @foreach (var step in coreSteps)
+    {
+        @RenderStep(step)
+    }
+
+    <h2 class="h5 mt-4 mb-3">Optioneel</h2>
+
+    @foreach (var step in optionalSteps)
+    {
+        @RenderStep(step)
+    }
+
+    <button class="btn btn-outline-secondary btn-sm mt-3" @onclick="LoadDataAsync" disabled="@isRefreshing">
+        @(isRefreshing ? "Vernieuwen..." : "Status vernieuwen")
+    </button>
+}
+
+@code {
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    private bool isLoading = true;
+    private bool isRefreshing;
+
+    private List<StepInfo> coreSteps = [];
+    private List<StepInfo> optionalSteps = [];
+
+    private int completedCore => coreSteps.Count(s => s.Done);
+    private int ProgressPercent => coreSteps.Count == 0 ? 0 : (int)Math.Round(100.0 * completedCore / coreSteps.Count);
+
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        isRefreshing = !isLoading;
+        StateHasChanged();
+
+        var snelStartConnection = await SafeGetAsync(() => BackendApiClient.GetTenantSnelStartConnectionAsync(TenantId), "SnelStart-koppeling");
+        var myPosConnection = await SafeGetAsync(() => BackendApiClient.GetTenantMyPosConnectionAsync(TenantId), "myPOS-koppeling");
+        var typeStatus = await SafeGetAsync(() => BackendApiClient.GetMyPosTransactionTypeStatusAsync(TenantId), "transactietype-status");
+        var autoSync = await SafeGetAsync(() => BackendApiClient.GetMyPosAutoSyncSettingsAsync(), "auto-sync instellingen");
+
+        var step1Done = snelStartConnection?.HasClientKey == true;
+        var step2Done = myPosConnection is not null
+            && !string.IsNullOrWhiteSpace(myPosConnection.ClientId)
+            && (myPosConnection.HasClientSecret || myPosConnection.HasApiKey);
+        var step3Done = myPosConnection?.SnelStartBankDagboekId is not null;
+        var step4Done = typeStatus?.AllMapped == true;
+        var step5Done = autoSync?.Enabled == true;
+
+        coreSteps =
+        [
+            new StepInfo(1, "SnelStart maatwerksleutel invoeren",
+                "Voer de SnelStart-maatwerksleutel van deze administratie in, zodat het portaal bij SnelStart kan.",
+                "/snelstart/connection", step1Done, null),
+
+            new StepInfo(2, "myPOS-koppeling aanmaken",
+                "Voer het myPOS klantnummer en klantgeheim (of API-key) in.",
+                "/mypos/verbinding", step2Done, null),
+
+            new StepInfo(3, "SnelStart-bankdagboek koppelen",
+                "Maak in SnelStart een bankdagboek aan voor myPOS en koppel dat hier aan de myPOS-koppeling.",
+                "/mypos/snelstart-verbinding", step3Done,
+                step1Done && step2Done ? null : "Vereist stap 1 en 2"),
+
+            new StepInfo(4, "Transactietypes mappen",
+                "Koppel elk myPOS-transactietype aan de juiste SnelStart-grootboekrekening.",
+                "/mypos/mappings", step4Done,
+                step1Done ? null : "Vereist stap 1"),
+        ];
+
+        optionalSteps =
+        [
+            new StepInfo(5, "Auto-sync instellen",
+                "Laat myPOS-transacties automatisch en periodiek naar SnelStart exporteren.",
+                "/mypos/auto-sync", step5Done,
+                coreSteps.All(s => s.Done) ? null : "Werkt pas betrouwbaar als stap 1 t/m 4 voltooid zijn"),
+        ];
+
+        isLoading = false;
+        isRefreshing = false;
+        StateHasChanged();
+    }
+
+    private async Task<T?> SafeGetAsync<T>(Func<Task<T>> call, string what)
+    {
+        try
+        {
+            return await call();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Stappenplan: ophalen van {What} mislukt.", what);
+            return default;
+        }
+    }
+
+    private RenderFragment RenderStep(StepInfo s) => @<div class="stap-card @(s.Done ? "stap-card-done" : "")">
+        <div class="stap-marker @(s.Done ? "stap-marker-done" : "")">@(s.Done ? "✓" : s.Number.ToString())</div>
+        <div class="stap-body">
+            <strong>@s.Title</strong>
+            <div class="stap-description">@s.Description</div>
+            @if (!string.IsNullOrEmpty(s.BlockedHint))
+            {
+                <div class="stap-hint">@s.BlockedHint</div>
+            }
+        </div>
+        <div class="stap-status">
+            @if (s.Done)
+            {
+                <span class="badge stap-badge-done">Voltooid</span>
+            }
+            else
+            {
+                <a class="btn btn-primary btn-sm" href="@s.Href">Ga naar stap</a>
+            }
+        </div>
+    </div>;
+
+    private sealed record StepInfo(int Number, string Title, string Description, string Href, bool Done, string? BlockedHint);
+}
+
+<style>
+    .stappenplan-progress {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .stappenplan-progress-bar {
+        flex: 1;
+        max-width: 320px;
+        height: 10px;
+        background: #E5E9F0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .stappenplan-progress-fill {
+        height: 100%;
+        background: #16A34A;
+        border-radius: 999px;
+        transition: width .3s ease;
+    }
+
+    .stappenplan-progress-label {
+        font-size: .9rem;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .stap-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+    }
+
+    .stap-card-done {
+        background: #F0FDF4;
+        border-color: #BBF7D0;
+    }
+
+    .stap-marker {
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        background: #0066CC;
+        color: #fff;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: .9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+    }
+
+    .stap-marker-done {
+        background: #16A34A;
+    }
+
+    .stap-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .stap-description {
+        font-size: .88rem;
+        color: #475569;
+        margin-top: 2px;
+        line-height: 1.5;
+    }
+
+    .stap-hint {
+        font-size: .8rem;
+        color: #B45309;
+        margin-top: 6px;
+    }
+
+    .stap-status {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .stap-badge-done {
+        background: #16A34A;
+        color: #fff;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 999px;
+    }
+</style>
