@@ -149,12 +149,15 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
         if (!connection.IsActive) throw new InvalidOperationException("myPOS connection is not active.");
 
         var clientSecret = _secretEncryptionService.Decrypt(connection.ClientSecretEncrypted);
-        var apiKey = _secretEncryptionService.Decrypt(connection.ApiKeyEncrypted);
 
         if (string.IsNullOrWhiteSpace(clientSecret)) throw new InvalidOperationException("myPOS client secret is missing.");
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("myPOS API key is missing.");
+        if (string.IsNullOrWhiteSpace(connection.ClientId)) throw new InvalidOperationException("myPOS Klantnummer ontbreekt.");
 
         var accessToken = await GetAccessTokenAsync(connection.AuthUrl, connection.ClientId, clientSecret, cancellationToken);
+
+        // De myPOS transactions-API verwacht het Klantnummer (Client ID) in de API-Key-header,
+        // niet het Klantgeheim. Er is geen aparte API-sleutel.
+        var apiKey = connection.ClientId.Trim();
         var requestId = Guid.NewGuid().ToString("N");
         var importedUtc = DateTime.UtcNow;
 
@@ -283,14 +286,33 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
         {
             var token = await GetAccessTokenAsync(connection.AuthUrl, connection.ClientId, clientSecret, cancellationToken);
 
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return new ConnectionTestResultDto
+                {
+                    Success = false,
+                    Provider = "myPOS",
+                    Message = "myPOS gaf een leeg access_token terug.",
+                    TestedUrl = connection.AuthUrl
+                };
+            }
+
+            // Ook de transactions-API zelf aanspreken (OAuth alleen zegt niks over de API-toegang).
+            await FetchTransactionTotalCountAsync(
+                connection.TransactionsApiBaseUrl,
+                token,
+                connection.ClientId.Trim(),
+                Guid.NewGuid().ToString("N"),
+                DateTime.UtcNow.AddDays(-1),
+                DateTime.UtcNow,
+                cancellationToken);
+
             return new ConnectionTestResultDto
             {
-                Success = !string.IsNullOrWhiteSpace(token),
+                Success = true,
                 Provider = "myPOS",
-                Message = string.IsNullOrWhiteSpace(token)
-                    ? "myPOS gaf een leeg access_token terug."
-                    : "myPOS-authenticatie geslaagd.",
-                TestedUrl = connection.AuthUrl
+                Message = "myPOS-authenticatie en transactie-API geslaagd.",
+                TestedUrl = connection.TransactionsApiBaseUrl
             };
         }
         catch (Exception ex)
