@@ -50,14 +50,14 @@ public sealed class TenantMyPosConnectionsController : ControllerBase
      [FromBody] CreateTenantMyPosConnectionRequest request,
      CancellationToken cancellationToken)
     {
-        var id = await _tenantMyPosConnectionService.CreateAsync(
+        var created = await _tenantMyPosConnectionService.CreateAsync(
             tenantId,
             request,
             cancellationToken);
 
         return Created(
             $"/api/tenants/{tenantId}/mypos/connection",
-            new { id });
+            new { id = created.Id });
     }
 
     [HttpPut("{id:guid}")]
