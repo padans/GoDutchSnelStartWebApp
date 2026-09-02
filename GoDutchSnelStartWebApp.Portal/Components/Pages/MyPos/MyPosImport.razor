@@ -156,22 +156,26 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Vanaf datum</label>
-                <input type="date" class="form-control" @bind="fromDate" />
+                <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                       @bind="fromDate" @bind:format="dd-MM-yyyy" />
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">Vanaf tijd</label>
-                <input type="time" class="form-control" @bind="fromTime" />
+                <input type="text" class="form-control" placeholder="uu:mm"
+                       @bind="fromTime" @bind:format="HH:mm" />
             </div>
 
             <div class="col-md-3">
                 <label class="form-label">T/m datum</label>
-                <input type="date" class="form-control" @bind="toDate" />
+                <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                       @bind="toDate" @bind:format="dd-MM-yyyy" />
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">T/m tijd</label>
-                <input type="time" class="form-control" @bind="toTime" />
+                <input type="text" class="form-control" placeholder="uu:mm"
+                       @bind="toTime" @bind:format="HH:mm" />
             </div>
 
             <div class="col-md-2">
