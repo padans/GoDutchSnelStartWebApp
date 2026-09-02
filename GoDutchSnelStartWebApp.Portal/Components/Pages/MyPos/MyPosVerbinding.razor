@@ -16,38 +16,33 @@
 <h1>myPOS API-verbinding</h1>
 <p class="text-muted">Voer uw myPOS API-gegevens in (Klantnummer en Klantgeheim).</p>
 
-<!-- ── Stap 1: SnelStart voorbereiden ────────────────────────────────────── -->
+<!-- ── Stap 1: SnelStart-maatwerksleutel ────────────────────────────────── -->
 <div class="setup-step-box mb-3">
     <div class="setup-step-number">1</div>
     <div class="setup-step-body">
-        <strong>Maak eerst een bankdagboek aan in SnelStart</strong><br>
-        <span>
-            Log in op <a href="https://login.snelstart.nl/" target="_blank" rel="noopener">login.snelstart.nl</a>
-            en maak daar een virtueel bankdagboek aan voor myPOS (bijv. <em>1150 – MyPos Bank</em>).
-            Koppel daar de juiste grootboekrekening aan. Dagboeken aanmaken via dit portaal is niet mogelijk —
-            deze pagina haalt alleen bestaande SnelStart-dagboeken op.
-        </span>
+        <strong>Voer eerst de SnelStart-maatwerksleutel in</strong><br>
+        <span>Ga naar <a href="/snelstart/connection">SnelStart koppeling</a> en voer uw maatwerksleutel in.</span>
     </div>
 </div>
 
-<!-- ── Stap 2: SnelStart-koppeling instellen ─────────────────────────────── -->
+<!-- ── Stap 2: myPOS API-gegevens ───────────────────────────────────────── -->
 <div class="setup-step-box mb-3">
     <div class="setup-step-number">2</div>
     <div class="setup-step-body">
-        <strong>Stel de SnelStart-koppeling in</strong><br>
-        <span>
-            Ga naar <a href="/snelstart/connection">SnelStart → Verbinding</a> en voer uw maatwerksleutel in.
-            Zonder werkende SnelStart-koppeling kunnen de dagboeken hieronder niet worden opgehaald.
-        </span>
+        <strong>Voer hieronder uw myPOS API-gegevens in</strong><br>
+        <span>Klantnummer en Klantgeheim uit de myPOS REST API-integratie.</span>
     </div>
 </div>
 
-<!-- ── Stap 3: myPOS-koppeling instellen ─────────────────────────────────── -->
+<!-- ── Stap 3: SnelStart-bankdagboek koppelen ───────────────────────────── -->
 <div class="setup-step-box mb-4">
     <div class="setup-step-number">3</div>
     <div class="setup-step-body">
-        <strong>Stel de myPOS API-koppeling in (hieronder)</strong><br>
-        <span>Voer uw myPOS API-gegevens in en koppel het juiste SnelStart-bankdagboek.</span>
+        <strong>Koppel daarna het SnelStart-bankdagboek</strong><br>
+        <span>
+            Op <a href="/mypos/snelstart-verbinding">SnelStart-verbinding</a> kies je het bankdagboek
+            (bijv. <em>1150 – MyPos Bank</em>). Maak dat dagboek zo nodig eerst aan in SnelStart.
+        </span>
     </div>
 </div>
 
@@ -57,50 +52,8 @@
 }
 else if (connection is null)
 {
-    @if (dagboeken.Count == 0)
-    {
-        <div class="alert alert-danger" role="alert">
-            <strong>SnelStart-koppeling vereist</strong><br />
-            Voordat u de myPOS-koppeling kunt aanmaken, moet u eerst:
-            <ol class="mt-2 mb-1">
-                <li>Uw <a href="/snelstart/connection" class="alert-link">SnelStart maatwerksleutel</a> invoeren via het menu <strong>SnelStart koppeling</strong>.</li>
-                <li>In SnelStart zelf een bankdagboek aanmaken voor myPOS (bijv. <em>1150 – MyPos Bank</em>).</li>
-            </ol>
-            Kom daarna terug op deze pagina.
-        </div>
-    }
-    else
-    {
-    <!-- ── Aanmaakformulier (nog geen koppeling) ───────────────────────── -->
-    <!-- Card 1: SnelStart-verbinding -->
-    <div class="card mb-3">
-        <div class="card-header">SnelStart-verbinding</div>
-        <div class="card-body">
-            @if (dagboeken.Count == 0)
-            {
-                <div class="alert alert-warning py-2">
-                    ⚠ Geen SnelStart-dagboeken gevonden — stel eerst de
-                    <a href="/snelstart/connection">SnelStart-koppeling</a> in.
-                </div>
-            }
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">SnelStart bankdagboek <span class="text-danger">*</span></label>
-                    <select class="form-select" value="@FormatGuid(createForm.SnelStartBankDagboekId)"
-                            @onchange="OnCreateDagboekChanged">
-                        <option value="">-- Kies een dagboek --</option>
-                        @foreach (var d in dagboeken)
-                        {
-                            <option value="@d.Id">@d.Nummer - @d.Omschrijving</option>
-                        }
-                    </select>
-                    <div class="form-text">Bijv. 1150 – MyPos Bank (aan te maken in SnelStart)</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card 2: MyPos API-gegevens -->
+    <!-- ── Aanmaakformulier: alleen de myPOS API-gegevens. Het SnelStart-bankdagboek
+         koppel je daarna op /mypos/snelstart-verbinding (stap 3 van het stappenplan). ── -->
     <div class="card mb-3">
         <div class="card-header">MyPos API-gegevens</div>
         <div class="card-body">
@@ -195,9 +148,12 @@ else if (connection is null)
                     @(isSaving ? "Aanmaken..." : "Koppeling aanmaken")
                 </button>
             </div>
+            <p class="text-muted mt-3 mb-0">
+                Na het aanmaken koppel je het SnelStart-bankdagboek op
+                <a href="/mypos/snelstart-verbinding">SnelStart-verbinding</a> (stap 3).
+            </p>
         </div>
     </div>
-    }
 }
 else
 {
@@ -379,11 +335,7 @@ else
             errorMessage = "Klantnummer is verplicht.";
             return;
         }
-        if (createForm.SnelStartBankDagboekId is null)
-        {
-            errorMessage = "Kies een SnelStart-bankdagboek.";
-            return;
-        }
+        // Het SnelStart-bankdagboek is hier optioneel; dat koppel je op /mypos/snelstart-verbinding.
 
         errorMessage = null;
         isSaving = true;
@@ -404,21 +356,6 @@ else
         {
             isSaving = false;
         }
-    }
-
-    private void OnCreateDagboekChanged(ChangeEventArgs args)
-    {
-        if (!Guid.TryParse(args.Value?.ToString(), out var id))
-        {
-            createForm.SnelStartBankDagboekId = null;
-            createForm.SnelStartBankDagboekNummer = null;
-            createForm.SnelStartBankDagboekNaam = null;
-            return;
-        }
-        var d = dagboeken.FirstOrDefault(x => x.Id == id);
-        createForm.SnelStartBankDagboekId = d?.Id;
-        createForm.SnelStartBankDagboekNummer = d?.Nummer;
-        createForm.SnelStartBankDagboekNaam = d?.Omschrijving;
     }
 
     private void OnDagboekChanged(ChangeEventArgs args)
