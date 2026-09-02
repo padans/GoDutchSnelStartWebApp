@@ -632,6 +632,23 @@ public sealed class BackendApiClient : IBackendApiClient
             cancellationToken);
     }
 
+    public async Task<ConnectionTestResultViewModel> TestMyPosConnectionAsync(
+        Guid tenantId,
+        Guid tenantMyPosConnectionId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/mypos/transactions/test-connection" +
+                  $"?tenantMyPosConnectionId={tenantMyPosConnectionId}";
+
+        _logger.LogInformation("myPOS-verbinding testen via {Url}", url);
+
+        using var response = await _httpClient.PostAsync(url, content: null, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<ConnectionTestResultViewModel>(cancellationToken: cancellationToken)
+               ?? new ConnectionTestResultViewModel { Success = false, Provider = "myPOS", Message = "Geen resultaat ontvangen." };
+    }
+
     public async Task<MyPosTransactionImportResultViewModel> ImportMyPosTransactionsAsync(
         Guid tenantId,
         Guid tenantMyPosConnectionId,
@@ -653,7 +670,7 @@ public sealed class BackendApiClient : IBackendApiClient
             async ct =>
             {
                 using var response = await _httpClient.PostAsync(url, content: null, ct);
-                response.EnsureSuccessStatusCode();
+                await EnsureSuccessAsync(response, ct);
 
                 var importResult = await response.Content.ReadFromJsonAsync<MyPosTransactionImportResultViewModel>(
                     cancellationToken: ct);
@@ -1353,4 +1370,43 @@ public sealed class BackendApiClient : IBackendApiClient
     private sealed record TenantNameDto(string? Name, string? CompanyName);
     private sealed record TenantModulesDto(bool GoDutchEnabled, bool MyPosEnabled);
     private sealed record CreateIdResponseDto(Guid Id);
+    private sealed record BackendErrorBody(string? Message);
+
+    /// <summary>
+    /// Als de respons geen succes is: lees het {"Message": "..."}-veld van de API-foutmiddleware
+    /// en gooi met dát bericht in plaats van de generieke "status code does not indicate success".
+    /// </summary>
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        string? serverMessage = null;
+        try
+        {
+            var body = await response.Content.ReadFromJsonAsync<BackendErrorBody>(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(body?.Message))
+            {
+                serverMessage = body!.Message;
+            }
+        }
+        catch
+        {
+            // geen JSON-foutbody — val terug op de statuscode
+        }
+
+        throw new BackendApiException(
+            serverMessage ?? $"Serverfout (HTTP {(int)response.StatusCode}).",
+            (int)response.StatusCode);
+    }
+}
+
+public sealed class BackendApiException : Exception
+{
+    public int StatusCode { get; }
+
+    public BackendApiException(string message, int statusCode) : base(message)
+        => StatusCode = statusCode;
 }

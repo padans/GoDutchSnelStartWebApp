@@ -1,5 +1,6 @@
 ﻿using GoDutchSnelStartWebApp.Application.Abstractions.Repositories.MyPos;
 using GoDutchSnelStartWebApp.Application.Abstractions.Security;
+using GoDutchSnelStartWebApp.Application.ConnectivityTests.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Entities.MyPos;
@@ -253,6 +254,57 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
     {
         var transactions = await _rawTransactionRepository.GetByTenantAsync(tenantId, fromUtc, toUtc, cancellationToken);
         return transactions.Select(MapToDto).ToList();
+    }
+
+    public async Task<ConnectionTestResultDto> TestConnectionAsync(
+        Guid tenantId,
+        Guid tenantMyPosConnectionId,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _connectionRepository.GetByIdAsync(tenantMyPosConnectionId, cancellationToken);
+        if (connection is null || connection.TenantId != tenantId)
+        {
+            return new ConnectionTestResultDto { Success = false, Provider = "myPOS", Message = "myPOS-koppeling niet gevonden." };
+        }
+
+        var clientSecret = _secretEncryptionService.Decrypt(connection.ClientSecretEncrypted);
+
+        if (string.IsNullOrWhiteSpace(connection.ClientId) || string.IsNullOrWhiteSpace(clientSecret))
+        {
+            return new ConnectionTestResultDto
+            {
+                Success = false,
+                Provider = "myPOS",
+                Message = "myPOS Klantnummer of Klantgeheim ontbreekt."
+            };
+        }
+
+        try
+        {
+            var token = await GetAccessTokenAsync(connection.AuthUrl, connection.ClientId, clientSecret, cancellationToken);
+
+            return new ConnectionTestResultDto
+            {
+                Success = !string.IsNullOrWhiteSpace(token),
+                Provider = "myPOS",
+                Message = string.IsNullOrWhiteSpace(token)
+                    ? "myPOS gaf een leeg access_token terug."
+                    : "myPOS-authenticatie geslaagd.",
+                TestedUrl = connection.AuthUrl
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "myPOS verbindingstest mislukt. TenantId: {TenantId}.", tenantId);
+
+            return new ConnectionTestResultDto
+            {
+                Success = false,
+                Provider = "myPOS",
+                Message = ex.Message,
+                TestedUrl = connection.AuthUrl
+            };
+        }
     }
 
     private async Task<string> GetAccessTokenAsync(

@@ -123,14 +123,18 @@ else if (connection is null)
             </div>
 
             <div class="row g-3">
+                @* Lokvelden: vangen de browser-autofill van de portal-login op, zodat die niet
+                   in Klantnummer/Klantgeheim terechtkomt. *@
+                <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true" tabindex="-1" />
+                <input type="password" name="password" autocomplete="current-password" style="display:none" aria-hidden="true" tabindex="-1" />
                 <div class="col-md-4">
                     <label class="form-label">Klantnummer <span class="text-danger">*</span></label>
-                    <input class="form-control" @bind="createForm.ClientId" placeholder="Uw myPOS klantnummer" autocomplete="off" />
+                    <input class="form-control" name="mypos-clientid" @bind="createForm.ClientId" placeholder="Uw myPOS klantnummer" autocomplete="off" />
                     <div class="form-text">Klantnummer (Client ID) zoals getoond in myPOS</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Klantgeheim</label>
-                    <input class="form-control" type="password" @bind="createForm.ClientSecret" placeholder="Uw myPOS klantgeheim" autocomplete="new-password" />
+                    <input class="form-control" type="password" name="mypos-clientsecret" @bind="createForm.ClientSecret" placeholder="Uw myPOS klantgeheim" autocomplete="new-password" />
                     <div class="form-text">Klantgeheim (Client Secret) zoals getoond in myPOS</div>
                 </div>
             </div>
@@ -230,16 +234,18 @@ else
             </div>
 
             <div class="row g-3">
+                @* Lokvelden: vangen de browser-autofill van de portal-login op. Zonder deze
+                   vulde de browser de inlognaam in het Klantnummer-veld. *@
+                <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true" tabindex="-1" />
+                <input type="password" name="password" autocomplete="current-password" style="display:none" aria-hidden="true" tabindex="-1" />
                 <div class="col-md-4">
                     <label class="form-label">Klantnummer</label>
-                    <input class="form-control" @bind="_clientId" placeholder="Laat leeg om te behouden" autocomplete="off" />
+                    <input class="form-control" name="mypos-clientid" @bind="_clientId" placeholder="Laat leeg om te behouden" autocomplete="off" />
                     <div class="form-text">Opgeslagen: @(!string.IsNullOrEmpty(connection.ClientId) ? "✓ Ja" : "Nee") — laat leeg om huidige waarde te behouden</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Klantgeheim</label>
-                    <input type="text" style="display:none" aria-hidden="true" tabindex="-1" />
-                    <input type="password" style="display:none" aria-hidden="true" tabindex="-1" />
-                    <input class="form-control" type="password" @bind="clientSecret" placeholder="Laat leeg om te behouden" autocomplete="off" />
+                    <input class="form-control" type="password" name="mypos-clientsecret" @bind="clientSecret" placeholder="Laat leeg om te behouden" autocomplete="new-password" />
                     <div class="form-text">Opgeslagen: @(connection.HasClientSecret ? "✓ Ja" : "Nee") — laat leeg om huidige waarde te behouden</div>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
@@ -262,9 +268,23 @@ else
             <button class="btn btn-primary" @onclick="SaveMyPosCredsAsync" disabled="@_isSavingCreds">
                 @(_isSavingCreds ? "Opslaan..." : "Opslaan")
             </button>
+            <button class="btn btn-outline-secondary ms-2" @onclick="TestConnectionAsync" disabled="@(_isTesting || _isSavingCreds)">
+                @(_isTesting ? "Testen..." : "🔌 Verbinding testen")
+            </button>
             <button class="btn btn-outline-secondary ms-2" @onclick="LoadDataAsync" disabled="@_isSavingCreds">
                 Vernieuwen
             </button>
+
+            @if (_testResult is not null)
+            {
+                <div class="alert @(_testResult.Success ? "alert-success" : "alert-danger") mt-3 py-2" role="alert">
+                    <strong>@(_testResult.Success ? "✓ myPOS-verbinding geslaagd" : "✗ myPOS-verbinding mislukt")</strong>
+                    @if (!string.IsNullOrWhiteSpace(_testResult.Message))
+                    {
+                        <br />@_testResult.Message
+                    }
+                </div>
+            }
         </div>
     </div>
 }
@@ -279,6 +299,8 @@ else
     private bool isLoading;
     private bool isSaving;
     private bool _isSavingCreds;
+    private bool _isTesting;
+    private ConnectionTestResultViewModel? _testResult;
     private bool _showHelp;
     private bool _showExample;
     private string _ibanCopied = "📋";
@@ -411,6 +433,38 @@ else
         finally
         {
             _isSavingCreds = false;
+        }
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        _testResult = null;
+        errorMessage = null;
+
+        if (connection is null || connection.Id == Guid.Empty)
+        {
+            errorMessage = "Geen geldige koppeling geladen.";
+            return;
+        }
+
+        _isTesting = true;
+        try
+        {
+            _testResult = await BackendApiClient.TestMyPosConnectionAsync(TenantId, connection.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS-verbindingstest mislukt.");
+            _testResult = new ConnectionTestResultViewModel
+            {
+                Success = false,
+                Provider = "myPOS",
+                Message = ex.Message
+            };
+        }
+        finally
+        {
+            _isTesting = false;
         }
     }
 

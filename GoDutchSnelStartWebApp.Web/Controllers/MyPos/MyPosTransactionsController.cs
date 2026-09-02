@@ -1,4 +1,5 @@
-﻿using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
+﻿using GoDutchSnelStartWebApp.Application.ConnectivityTests.Dtos;
+using GoDutchSnelStartWebApp.Application.MyPos.Dtos;
 using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -72,6 +73,27 @@ public sealed class MyPosTransactionsController : ControllerBase
             tenantMyPosConnectionId,
             DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc),
             DateTime.SpecifyKind(toUtc, DateTimeKind.Utc),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPost("test-connection")]
+    [ProducesResponseType(typeof(ConnectionTestResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ConnectionTestResultDto>> TestConnectionAsync(
+        Guid tenantId,
+        [FromQuery] Guid tenantMyPosConnectionId,
+        CancellationToken cancellationToken)
+    {
+        if (tenantMyPosConnectionId == Guid.Empty)
+        {
+            return BadRequest("tenantMyPosConnectionId is verplicht.");
+        }
+
+        var result = await _importService.TestConnectionAsync(
+            tenantId,
+            tenantMyPosConnectionId,
             cancellationToken);
 
         return Ok(result);

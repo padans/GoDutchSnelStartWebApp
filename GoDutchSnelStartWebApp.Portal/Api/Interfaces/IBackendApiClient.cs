@@ -131,6 +131,11 @@ public interface IBackendApiClient
         DateTime toUtc,
         CancellationToken cancellationToken = default);
 
+    Task<ConnectionTestResultViewModel> TestMyPosConnectionAsync(
+        Guid tenantId,
+        Guid tenantMyPosConnectionId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<MyPosRawTransactionViewModel>> GetMyPosRawTransactionsAsync(
         Guid tenantId,
         DateTime fromUtc,
