@@ -14,7 +14,7 @@
 <PageTitle>myPOS API-verbinding</PageTitle>
 
 <h1>myPOS API-verbinding</h1>
-<p class="text-muted">Voer uw myPOS API-gegevens in (Klantnummer en Klantgeheim).</p>
+<p class="text-muted">Voer uw myPOS API-gegevens in (Klantnummer, Klantgeheim en API-sleutel).</p>
 
 <!-- ── Stap 1: SnelStart-maatwerksleutel ────────────────────────────────── -->
 <div class="setup-step-box mb-3">
@@ -30,7 +30,7 @@
     <div class="setup-step-number">2</div>
     <div class="setup-step-body">
         <strong>Voer hieronder uw myPOS API-gegevens in</strong><br>
-        <span>Klantnummer en Klantgeheim uit de myPOS REST API-integratie.</span>
+        <span>Klantnummer, Klantgeheim en API-sleutel uit de myPOS REST API-integratie.</span>
     </div>
 </div>
 
@@ -82,7 +82,7 @@ else if (connection is null)
                 @if (_showHelp)
                 {
                     <div class="cred-help-panel">
-                        <p class="cred-help-intro">Volg deze stappen om uw myPOS Klantnummer en Klantgeheim op te halen:</p>
+                        <p class="cred-help-intro">Volg deze stappen om uw myPOS Klantnummer, Klantgeheim en API-sleutel op te halen:</p>
                         <ol class="cred-help-steps">
                             <li>
                                 <strong>Log eerst in op uw telefoon</strong> — myPOS vereist telefoonbevestiging
@@ -103,7 +103,7 @@ else if (connection is null)
                             </li>
                             <li>
                                 Klik op <strong>+ Nieuwe referenties genereren</strong>. U ziet dan een tabel met
-                                uw <em>Klantnummer</em> en <em>Klantgeheim</em>. Kopieer deze waarden hieronder.
+                                uw <em>Klantnummer</em>, <em>Klantgeheim</em> en <em>API-sleutel</em>. Kopieer deze waarden hieronder.
                             </li>
                         </ol>
                         <div class="cred-example-toggle mt-3">
@@ -136,6 +136,11 @@ else if (connection is null)
                     <label class="form-label">Klantgeheim</label>
                     <input class="form-control" type="password" name="mypos-clientsecret" @bind="createForm.ClientSecret" placeholder="Uw myPOS klantgeheim" autocomplete="new-password" />
                     <div class="form-text">Klantgeheim (Client Secret) zoals getoond in myPOS</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">API-sleutel</label>
+                    <input class="form-control" type="password" name="mypos-apikey" @bind="createForm.ApiKey" placeholder="Uw myPOS API-sleutel" autocomplete="new-password" />
+                    <div class="form-text">API-Key uit de myPOS REST API-integratie (aparte waarde, niet het Klantgeheim)</div>
                 </div>
             </div>
 
@@ -193,7 +198,7 @@ else
                 @if (_showHelp)
                 {
                     <div class="cred-help-panel">
-                        <p class="cred-help-intro">Volg deze stappen om uw myPOS Klantnummer en Klantgeheim op te halen:</p>
+                        <p class="cred-help-intro">Volg deze stappen om uw myPOS Klantnummer, Klantgeheim en API-sleutel op te halen:</p>
                         <ol class="cred-help-steps">
                             <li>
                                 <strong>Log eerst in op uw telefoon</strong> — myPOS vereist telefoonbevestiging
@@ -214,7 +219,7 @@ else
                             </li>
                             <li>
                                 Klik op <strong>+ Nieuwe referenties genereren</strong>. U ziet dan een tabel met
-                                uw <em>Klantnummer</em> en <em>Klantgeheim</em>. Kopieer deze waarden hieronder.
+                                uw <em>Klantnummer</em>, <em>Klantgeheim</em> en <em>API-sleutel</em>. Kopieer deze waarden hieronder.
                             </li>
                         </ol>
                         <div class="cred-example-toggle mt-3">
@@ -248,8 +253,19 @@ else
                     <input class="form-control" type="password" name="mypos-clientsecret" @bind="clientSecret" placeholder="Laat leeg om te behouden" autocomplete="new-password" />
                     <div class="form-text">Opgeslagen: @(connection.HasClientSecret ? "✓ Ja" : "Nee") — laat leeg om huidige waarde te behouden</div>
                 </div>
+            </div>
+
+            <div class="row g-3 mt-0">
+                <div class="col-md-4">
+                    <label class="form-label">API-sleutel</label>
+                    <input class="form-control" type="password" name="mypos-apikey" @bind="_apiKey" placeholder="Laat leeg om te behouden" autocomplete="new-password" />
+                    <div class="form-text">
+                        Opgeslagen: @(connection.HasApiKey ? "✓ Ja" : "Nee") — API-Key uit de myPOS REST API-integratie
+                        (aparte waarde, niet het Klantgeheim). Laat leeg om huidige waarde te behouden.
+                    </div>
+                </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <div class="form-check mb-2">
+                    <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="isActive" @bind="connection.IsActive" />
                         <label class="form-check-label" for="isActive">Koppeling actief</label>
                     </div>
@@ -306,6 +322,7 @@ else
     private string _ibanCopied = "📋";
     private string? _clientId;
     private string? clientSecret;
+    private string? _apiKey;
     private string? errorMessage;
     private string? successMessage;
 
@@ -347,6 +364,7 @@ else
 
         _clientId = null;
         clientSecret = null;
+        _apiKey = null;
         isLoading = false;
     }
 
@@ -357,6 +375,16 @@ else
             errorMessage = "Klantnummer is verplicht.";
             return;
         }
+        if (string.IsNullOrWhiteSpace(createForm.ClientSecret))
+        {
+            errorMessage = "Klantgeheim is verplicht.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(createForm.ApiKey))
+        {
+            errorMessage = "API-sleutel is verplicht.";
+            return;
+        }
         // Het SnelStart-bankdagboek is hier optioneel; dat koppel je op /mypos/snelstart-verbinding.
 
         errorMessage = null;
@@ -364,7 +392,6 @@ else
 
         try
         {
-            createForm.ApiKey = createForm.ClientSecret;
             await BackendApiClient.CreateTenantMyPosConnectionAsync(TenantId, createForm);
             successMessage = "myPOS-koppeling aangemaakt.";
             await LoadDataAsync();
@@ -413,7 +440,7 @@ else
                 TransactionsApiBaseUrl = "https://transactions-api.mypos.com/v1.1",
                 ClientId = string.IsNullOrWhiteSpace(_clientId) ? connection.ClientId!.Trim() : _clientId.Trim(),
                 ClientSecret = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
-                ApiKey = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
+                ApiKey = string.IsNullOrWhiteSpace(_apiKey) ? null : _apiKey.Trim(),
                 SnelStartBankDagboekId = connection.SnelStartBankDagboekId,
                 SnelStartBankDagboekNummer = NormalizeNullable(connection.SnelStartBankDagboekNummer),
                 SnelStartBankDagboekNaam = NormalizeNullable(connection.SnelStartBankDagboekNaam),
