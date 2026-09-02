@@ -35,6 +35,13 @@ public sealed class ApiExceptionMiddleware
             _logger.LogWarning(ex, "Conflict or invalid operation.");
             await WriteErrorResponseAsync(context, HttpStatusCode.Conflict, ex.Message);
         }
+        catch (HttpRequestException ex)
+        {
+            // Upstream (SnelStart / myPOS) gaf een fout terug. Geef het echte bericht door
+            // i.p.v. een generieke 500, zodat de gebruiker ziet wat er misging.
+            _logger.LogWarning(ex, "Upstream request failed.");
+            await WriteErrorResponseAsync(context, HttpStatusCode.BadGateway, ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception.");
