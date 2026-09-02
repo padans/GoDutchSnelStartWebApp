@@ -17,6 +17,10 @@
     {
         <span>Beheer de SnelStart API-verbinding, administraties en de koppeling van bankaccounts per administratie.</span>
     }
+    else if (IsMyPos)
+    {
+        <span>Voer uw SnelStart-maatwerksleutel in en geef aan bij welke administratie die hoort.</span>
+    }
     else
     {
         <span>Voer uw maatwerksleutel in en koppel uw SnelStart-administratie aan bankaccounts.</span>
@@ -245,6 +249,20 @@ else
         </div>
     </div>
 
+    @if (IsMyPos && hasClientKey)
+    {
+        <div class="alert alert-info">
+            De maatwerksleutel staat klaar en de administratie is daarmee gekoppeld.
+            Volgende stap: kies het SnelStart-bankdagboek op
+            <a href="/mypos/snelstart-verbinding">SnelStart-verbinding</a>, of volg het
+            <a href="/mypos/stappenplan">stappenplan</a>.
+        </div>
+    }
+
+    @* SECTIE 2 (administraties) en SECTIE 3 (bankaccount-koppelingen) horen bij de GoDutch-flow.
+       MyPos gebruikt alleen de maatwerksleutel hierboven + een dagboek op /mypos/snelstart-verbinding. *@
+    @if (!IsMyPos)
+    {
     @* ─── SECTIE 2: Administraties ─── *@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -471,6 +489,7 @@ else
             }
         </div>
     </div>
+    } @* einde @if (!IsMyPos) — SECTIE 2 + 3 *@
 }
 
 <style>
@@ -598,6 +617,8 @@ else
     private bool isSavingConn;
     private string? connSuccess;
     private string? connError;
+
+    private bool IsMyPos => string.Equals(Session.Module, "MyPos", StringComparison.OrdinalIgnoreCase);
 
     // Maatwerksleutel (ClientKey op verbindingsniveau)
     private bool hasClientKey => connection?.HasClientKey == true;
