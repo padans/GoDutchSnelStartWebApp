@@ -7,6 +7,11 @@
 <h1 class="page-title mb-1">Welkom@(!string.IsNullOrEmpty(Session.TenantName) ? $", {Session.TenantName}" : "")</h1>
 <p class="text-muted mb-4">Volg de stappen hieronder om de koppeling in te stellen en transacties naar SnelStart te verwerken.</p>
 
+@if (Session.Module == "MyPos")
+{
+    <ConnectionStatusBadge ShowSnelStart="true" ShowMyPos="true" />
+}
+
 @if (Session.Module == "MyPos" || Session.Module == "Beheerder")
 {
     <div class="start-card mb-4">
