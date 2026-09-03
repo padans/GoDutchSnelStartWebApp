@@ -125,9 +125,10 @@ public sealed class MyPosAutoSyncService : IMyPosAutoSyncService
         var typesList = string.Join(", ", unmappedTypes);
         var title = $"myPOS: {unmappedTypes.Count} ongemapte transactietype(s)";
         var message =
-            $"De myPOS auto-sync voor tenant {tenantId} is gestopt omdat de volgende transactietypes " +
-            $"niet gekoppeld zijn aan een SnelStart-grootboekrekening:\n\n{typesList}\n\n" +
-            $"Koppel deze types via het portal onder myPOS > Transactietype mappings.";
+            $"De myPOS auto-sync heeft deze ronde geen exportbatch aangemaakt omdat de volgende " +
+            $"transactietypes nog niet gekoppeld zijn aan een SnelStart-grootboekrekening:\n\n{typesList}\n\n" +
+            $"Koppel deze types via het portal onder myPOS > Transactietype mappings. " +
+            $"Zodra alle types gekoppeld zijn wordt de export bij de volgende ronde automatisch hervat.";
 
         try
         {

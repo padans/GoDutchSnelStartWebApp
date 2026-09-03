@@ -27,6 +27,11 @@
     }
 </p>
 
+@if (Session.Module != "Beheerder")
+{
+    <ConnectionStatusBadge ShowSnelStart="true" />
+}
+
 @if (!string.IsNullOrWhiteSpace(pageError))
 {
     <div class="alert alert-danger">@pageError</div>
