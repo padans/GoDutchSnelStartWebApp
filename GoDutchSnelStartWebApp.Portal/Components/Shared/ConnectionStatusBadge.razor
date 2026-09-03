@@ -1,0 +1,77 @@
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using Microsoft.Extensions.Options
+
+@inject IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject AppSession Session
+
+<div class="conn-status-bar mb-3">
+    @if (_loading)
+    {
+        <span class="conn-badge conn-badge-loading">Koppelingsstatus laden…</span>
+    }
+    else
+    {
+        @if (ShowSnelStart)
+        {
+            <span class="conn-badge @(_snelStartActive ? "conn-badge-ok" : "conn-badge-warn")">
+                <span>@(_snelStartActive ? "✓" : "⚠")</span>
+                <span>SnelStart-koppeling @(_snelStartActive ? "actief" : "niet actief")</span>
+                @if (!_snelStartActive)
+                {
+                    <a href="/snelstart/connection">instellen</a>
+                }
+            </span>
+        }
+        @if (ShowMyPos)
+        {
+            <span class="conn-badge @(_myPosActive ? "conn-badge-ok" : "conn-badge-warn")">
+                <span>@(_myPosActive ? "✓" : "⚠")</span>
+                <span>myPOS-koppeling @(_myPosActive ? "actief" : "niet actief")</span>
+                @if (!_myPosActive)
+                {
+                    <a href="/mypos/verbinding">instellen</a>
+                }
+            </span>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Toon de status van de tenant-SnelStart-koppeling (maatwerksleutel).</summary>
+    [Parameter] public bool ShowSnelStart { get; set; }
+
+    /// <summary>Toon de status van de myPOS-koppeling.</summary>
+    [Parameter] public bool ShowMyPos { get; set; }
+
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    private bool _loading = true;
+    private bool _snelStartActive;
+    private bool _myPosActive;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ShowSnelStart)
+        {
+            try
+            {
+                var c = await BackendApiClient.GetTenantSnelStartConnectionAsync(TenantId);
+                _snelStartActive = c is { IsActive: true, HasClientKey: true };
+            }
+            catch { /* status onbekend → toon 'niet actief' */ }
+        }
+
+        if (ShowMyPos)
+        {
+            try
+            {
+                var c = await BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+                _myPosActive = c is { IsActive: true, HasClientSecret: true };
+            }
+            catch { /* idem */ }
+        }
+
+        _loading = false;
+    }
+}

@@ -36,3 +36,69 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+/* Koppelingsstatus-badge (ConnectionStatusBadge) */
+.conn-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.conn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .85rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.conn-badge-ok {
+    background: #F0FDF4;
+    border-color: #BBF7D0;
+    color: #15803D;
+}
+
+.conn-badge-warn {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+    color: #B45309;
+}
+
+.conn-badge-loading {
+    background: #F1F5F9;
+    color: #64748B;
+}
+
+.conn-badge a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+/* Datumveld met kalender-icoon (MyPos import) */
+.date-with-picker {
+    position: relative;
+}
+
+.date-with-picker .date-calendar {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
+    width: 2.25rem;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.date-with-picker .date-calendar::-webkit-calendar-picker-indicator {
+    opacity: .65;
+    cursor: pointer;
+}
+
+.date-with-picker .date-calendar:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}

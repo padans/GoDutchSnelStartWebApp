@@ -20,6 +20,7 @@
                  ProgressPercentage="@progressPercentage" />
 
 <h1>myPOS transacties ophalen</h1>
+<ConnectionStatusBadge ShowMyPos="true" />
 <p class="text-muted">
     Kies zelf de periode waarover myPOS transacties moeten worden opgehaald. De transacties worden eerst raw opgeslagen.
     Controleer daarna de totalisaties en de SnelStart-grootboek mappings voordat er later naar SnelStart wordt geëxporteerd.
@@ -156,8 +157,12 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Vanaf datum</label>
-                <input type="text" class="form-control" placeholder="dd-mm-jjjj"
-                       @bind="fromDate" @bind:format="dd-MM-yyyy" />
+                <div class="date-with-picker">
+                    <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                           @bind="fromDate" @bind:format="dd-MM-yyyy" />
+                    <input type="date" class="date-calendar" title="Kies datum" tabindex="-1"
+                           value="@(fromDate?.ToString("yyyy-MM-dd"))" @onchange="OnFromDatePicked" />
+                </div>
             </div>
 
             <div class="col-md-2">
@@ -168,8 +173,12 @@
 
             <div class="col-md-3">
                 <label class="form-label">T/m datum</label>
-                <input type="text" class="form-control" placeholder="dd-mm-jjjj"
-                       @bind="toDate" @bind:format="dd-MM-yyyy" />
+                <div class="date-with-picker">
+                    <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                           @bind="toDate" @bind:format="dd-MM-yyyy" />
+                    <input type="date" class="date-calendar" title="Kies datum" tabindex="-1"
+                           value="@(toDate?.ToString("yyyy-MM-dd"))" @onchange="OnToDatePicked" />
+                </div>
             </div>
 
             <div class="col-md-2">
@@ -1113,6 +1122,23 @@
         {
             selectedPeriodDate = parsed.Date;
             ApplySelectedPeriod();
+        }
+    }
+
+    // Kalender-icoon naast het datumveld levert een ISO-datum (yyyy-MM-dd) aan.
+    private void OnFromDatePicked(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var d))
+        {
+            fromDate = d.Date;
+        }
+    }
+
+    private void OnToDatePicked(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var d))
+        {
+            toDate = d.Date;
         }
     }
 
