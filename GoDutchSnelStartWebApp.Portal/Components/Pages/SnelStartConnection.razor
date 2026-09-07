@@ -29,7 +29,7 @@
 
 @if (Session.Module != "Beheerder")
 {
-    <ConnectionStatusBadge ShowSnelStart="true" />
+    <ConnectionStatusBadge ShowSnelStart="true" ShowMyPos="@IsMyPos" />
 }
 
 @if (!string.IsNullOrWhiteSpace(pageError))
