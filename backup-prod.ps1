@@ -170,11 +170,14 @@ foreach ($s in $targetSites) {
     Write-Host ("      $($s.Name)  " + [math]::Round((Get-Item $zip).Length / 1MB, 1) + ' MB')
 }
 
-# -- 5. Certificaten (optioneel) + broncode (optioneel) + manifest ----------
+# -- 5. Certificaten / TLS-setup (optioneel) + broncode (optioneel) + manifest --
 if ($CertPassword) {
-    Write-Host '[5/5] SSL-certificaten exporteren + MANIFEST...'
+    Write-Host '[5/5] TLS-setup back-uppen + MANIFEST...'
     $certDir = Join-Path $dest 'certs'
     New-Item -ItemType Directory -Path $certDir -Force | Out-Null
+
+    # 5a. Probeer elk gebonden certificaat als .pfx te exporteren (lukt alleen als
+    #     de private key exportable is gemarkeerd).
     $done = @{}
     foreach ($s in (Get-Website)) {
         foreach ($b in $s.Bindings.Collection) {
@@ -186,15 +189,32 @@ if ($CertPassword) {
                 try {
                     Export-PfxCertificate -Cert "Cert:\LocalMachine\$store\$thumb" `
                         -FilePath (Join-Path $certDir "$thumb.pfx") -Password $CertPassword -Force | Out-Null
-                    Write-Host "      cert $thumb geexporteerd"
+                    Write-Host "      cert $thumb geexporteerd (.pfx)"
                 } catch {
-                    Write-Warning "      cert $thumb exporteren mislukt: $_"
+                    Write-Host "      cert $thumb : private key niet-exportabel - .pfx overgeslagen ($($_.Exception.Message))"
+                    # publieke cert (zonder key) wel meenemen, is nuttig voor keten/thumbprint
+                    try {
+                        Export-Certificate -Cert "Cert:\LocalMachine\$store\$thumb" `
+                            -FilePath (Join-Path $certDir "$thumb.cer") -Type CERT -Force | Out-Null
+                    } catch { }
                 }
             }
         }
     }
-} else {
-    Write-Host '[5/5] MANIFEST... (SSL-certificaten NIET meegenomen - geef -CertPassword om ze te exporteren)'
+
+    # 5b. win-acme (Let's Encrypt) state - de echte back-up van de TLS-setup als de
+    #     keys niet-exportabel zijn: hiermee kan de cert opnieuw uitgegeven/gebonden worden.
+    $winAcme = 'C:\ProgramData\win-acme'
+    if (Test-Path $winAcme) {
+        $staging = Join-Path $env:TEMP "gd-winacme-$stamp"
+        $null = robocopy $winAcme $staging /MIR /NFL /NDL /NP /R:1 /W:1
+        Compress-Archive -Path (Join-Path $staging '*') -DestinationPath (Join-Path $certDir 'win-acme-state.zip') -Force
+        Remove-Item $staging -Recurse -Force
+        Write-Host ('      win-acme-state.zip  ' + [math]::Round((Get-Item (Join-Path $certDir 'win-acme-state.zip')).Length / 1MB, 1) + ' MB')
+    }
+}
+else {
+    Write-Host '[5/5] MANIFEST... (geen -CertPassword: TLS-setup NIET meegenomen)'
 }
 
 if ($IncludeSource -and (Test-Path (Join-Path $RepoPath '.git'))) {
@@ -217,7 +237,10 @@ INHOUD
   iis\sites-summary.txt    Leesbare lijst: fysieke paden, bindings, SSL-thumbprints, app pools.
   sites\<site>.zip         Volledige fysieke map per site (incl. appsettings.Production.json,
                           web.config en gecompileerde DLLs). 'logs' is weggelaten.
-  certs\<thumb>.pfx        SSL-certificaten (alleen als met -CertPassword gedraaid).
+  certs\<thumb>.pfx        SSL-certificaat MET private key (alleen als de key exportabel is).
+  certs\<thumb>.cer        Publiek certificaat zonder key (fallback als .pfx niet kan).
+  certs\win-acme-state.zip C:\ProgramData\win-acme: Let's Encrypt renewal-config + ACME-account.
+                          Hiermee is de cert opnieuw uit te geven/te binden.
   repo.bundle             Git bundle van de broncode (alleen met -IncludeSource).
 
 BEVAT GEHEIMEN - beveiligd bewaren (DB-connectiestrings met sa-wachtwoord en de SnelStart
@@ -234,9 +257,14 @@ RESTORE (op DEZELFDE server)
     Optie A (alles): kopieer iis\config-backup\GoDutchProd-<stamp> terug naar
       %windir%\system32\inetsrv\backup\<naam>\  en draai:  appcmd restore backup "<naam>"
     Optie B (gericht): pas bindings/pools handmatig aan a.d.h.v. iis\sites-summary.txt / sites.xml.
-  Certificaten :
-    Import-PfxCertificate -FilePath certs\<thumb>.pfx -CertStoreLocation Cert:\LocalMachine\My -Password <pwd>
-    Daarna de https-binding opnieuw aan het thumbprint koppelen (zie sites-summary.txt).
+  Certificaten (Let's Encrypt via win-acme) :
+    Als certs\<thumb>.pfx bestaat:
+      Import-PfxCertificate -FilePath certs\<thumb>.pfx -CertStoreLocation Cert:\LocalMachine\WebHosting -Password <pwd>
+      Daarna de https-binding opnieuw aan het thumbprint koppelen (zie sites-summary.txt).
+    Als alleen certs\win-acme-state.zip bestaat (private key was niet-exportabel):
+      Pak win-acme-state.zip uit naar C:\ProgramData\win-acme, installeer win-acme,
+      en draai:  wacs.exe --renew --force   (geeft de cert opnieuw uit en herbindt de sites).
+    De scheduled task "win-acme renew (...)" vernieuwt de cert daarna weer automatisch.
 
 DPAPI-CAVEAT
   De kolommen *Encrypted in de database (maatwerksleutels, client secrets, API keys, OAuth-tokens)
