@@ -7,6 +7,10 @@
     <File Path="MyPos_Swagger.json" />
     <File Path="___SnelStartAPI.json" />
   </Folder>
+  <Folder Name="/Scripts/">
+    <File Path="backup-dev.ps1" />
+    <File Path="backup-prod.ps1" />
+  </Folder>
   <Project Path="GoDutchSnelStartWebApp.Application/GoDutchSnelStartWebApp.Application.csproj" Id="768a8912-02ac-440e-8cd6-a1515e8c5fc0" />
   <Project Path="GoDutchSnelStartWebApp.Domain/GoDutchSnelStartWebApp.Domain.csproj" Id="c3362d57-e944-46c1-a422-3a5730f0e24b" />
   <Project Path="GoDutchSnelStartWebApp.Infrastructure/GoDutchSnelStartWebApp.Infrastructure.csproj" Id="56660f7f-6516-4163-ba80-ebf0b22b3593" />
