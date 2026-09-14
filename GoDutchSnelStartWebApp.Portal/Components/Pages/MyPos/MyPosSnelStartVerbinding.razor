@@ -75,9 +75,23 @@ else
             <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
                 @(isSaving ? "Opslaan..." : "Opslaan")
             </button>
+            <button class="btn btn-outline-secondary ms-2" @onclick="TestConnectionAsync" disabled="@(isTesting || isSaving)">
+                @(isTesting ? "Testen..." : "🔌 Verbinding testen")
+            </button>
             <button class="btn btn-outline-secondary ms-2" @onclick="LoadDataAsync" disabled="@isSaving">
                 Vernieuwen
             </button>
+
+            @if (testResult is not null)
+            {
+                <div class="alert @(testResult.Success ? "alert-success" : "alert-danger") mt-3 py-2" role="alert">
+                    <strong>@(testResult.Success ? "✓ SnelStart-verbinding geslaagd" : "✗ SnelStart-verbinding mislukt")</strong>
+                    @if (!string.IsNullOrWhiteSpace(testResult.Message))
+                    {
+                        <br />@testResult.Message
+                    }
+                </div>
+            }
         </div>
     </div>
 }
@@ -91,6 +105,8 @@ else
 
     private bool isLoading;
     private bool isSaving;
+    private bool isTesting;
+    private ConnectionTestResultViewModel? testResult;
     private string? errorMessage;
     private string? successMessage;
 
@@ -190,6 +206,26 @@ else
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        testResult = null;
+        errorMessage = null;
+        isTesting = true;
+        try
+        {
+            testResult = await BackendApiClient.TestTenantSnelStartConnectionAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SnelStart-verbindingstest mislukt.");
+            testResult = new ConnectionTestResultViewModel { Success = false, Provider = "SnelStart", Message = $"Test mislukt: {ex.Message}" };
+        }
+        finally
+        {
+            isTesting = false;
         }
     }
 
