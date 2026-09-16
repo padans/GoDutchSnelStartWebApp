@@ -248,7 +248,7 @@
                     <div class="fs-4">@importResult.UpdatedCount</div>
                 </div>
                 <div class="col-md-3">
-                    <strong>Niet toegevoegd</strong>
+                    <strong>Overgeslagen</strong>
                     <div class="fs-4">@importResult.SkippedCount</div>
                 </div>
 
@@ -885,7 +885,7 @@
                            $"myPOS import uitgevoerd. Opgehaald: {importResult.FetchedCount}, " +
                            $"nieuw toegevoegd: {importResult.InsertedCount}, " +
                            $"bijgewerkt/bestaand: {importResult.UpdatedCount}, " +
-                           $"niet toegevoegd: {importResult.SkippedCount}.";
+                           $"overgeslagen: {importResult.SkippedCount}.";
 
             await LoadDataForPeriodAsync(showBusy: false);
         }
@@ -961,7 +961,7 @@
                 await SetProgressAsync(
                     45,
                     "Raw transacties laden...",
-                     $"Opgehaald: {importResult.FetchedCount}, nieuw: {importResult.InsertedCount}, bestaand/bijgewerkt: {importResult.UpdatedCount}, niet toegevoegd: {importResult.SkippedCount}");
+                     $"Opgehaald: {importResult.FetchedCount}, nieuw: {importResult.InsertedCount}, bestaand/bijgewerkt: {importResult.UpdatedCount}, overgeslagen: {importResult.SkippedCount}");
 
             }
 
@@ -1005,7 +1005,7 @@
                 $"myPOS import uitgevoerd. Opgehaald: {importResult.FetchedCount}, " +
                 $"nieuw toegevoegd: {importResult.InsertedCount}, " +
                 $"bestaand/bijgewerkt: {importResult.UpdatedCount}, " +
-                $"niet toegevoegd: {importResult.SkippedCount}.";
+                $"overgeslagen: {importResult.SkippedCount}.";
         }
         catch (TaskCanceledException ex)
         {
@@ -1466,7 +1466,7 @@
                 await SetProgressAsync(
                     percentage,
                     "myPOS transacties opgehaald...",
-                    $"Blok {index + 1} van {totalPeriods} klaar. Nieuw: {totalInserted}, bestaand/bijgewerkt: {totalUpdated}, niet toegevoegd: {totalSkipped}");
+                    $"Blok {index + 1} van {totalPeriods} klaar. Nieuw: {totalInserted}, bestaand/bijgewerkt: {totalUpdated}, overgeslagen: {totalSkipped}");
             }
         }
 
