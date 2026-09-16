@@ -79,7 +79,7 @@ else if (settings is not null)
                     </div>
 
                     <div class="mt-auto d-flex gap-2" @onclick:stopPropagation="true">
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveSettingsAsync" disabled="@isSaving">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveLookbackAsync" disabled="@isSaving">
                             @(isSaving ? "Opslaan..." : "Opslaan")
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadSettingsAsync" disabled="@isSaving">
@@ -140,7 +140,7 @@ else if (settings is not null)
                     </div>
 
                     <div class="mt-auto d-flex gap-2" @onclick:stopPropagation="true">
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveSettingsAsync" disabled="@isSaving">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="SavePeriodAsync" disabled="@isSaving">
                             @(isSaving ? "Opslaan..." : "Opslaan")
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadSettingsAsync" disabled="@isSaving">
@@ -211,6 +211,12 @@ else if (settings is not null)
 
     private void SelectLookback() { if (settings is not null) settings.SyncMode = "Lookback"; }
     private void SelectPeriod()   { if (settings is not null) settings.SyncMode = "Period"; }
+
+    // Elke kaart slaat expliciet zijn eigen methode op, ongeacht welke kaart het laatst
+    // is aangeklikt om te bekijken - voorkomt dat een per-ongeluk-klik op de andere kaart
+    // die methode activeert zodra je op Opslaan drukt.
+    private Task SaveLookbackAsync() { SelectLookback(); return SaveSettingsAsync(); }
+    private Task SavePeriodAsync()   { SelectPeriod();   return SaveSettingsAsync(); }
 
     private async Task LoadSettingsAsync()
     {
