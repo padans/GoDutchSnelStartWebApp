@@ -9,8 +9,16 @@
 @inject IOptions<PortalTenantOptions> TenantOptions
 @inject ILogger<MyPosBalanceOverview> Logger
 @inject AppSession Session
+@implements IDisposable
 
 <PageTitle>MyPos overzichten</PageTitle>
+
+<ProgressOverlay Visible="@isBusy"
+                 Title="Saldo-overzicht berekenen"
+                 Message="@progressMessage"
+                 Detail="@progressDetail"
+                 ProgressPercentage="@progressPercentage"
+                 ShowPercentage="false" />
 
 <h1>MyPos overzichten</h1>
 <ConnectionStatusBadge ShowSnelStart="true" ShowMyPos="true" />
@@ -174,6 +182,14 @@
     private string? errorMessage;
     private MyPosBalanceOverviewResultViewModel? result;
 
+    private string progressMessage = "Transacties worden opgehaald bij myPOS...";
+    private string progressDetail = string.Empty;
+    private int progressPercentage;
+    private System.Threading.Timer? progressTimer;
+    private int elapsedSeconds;
+    private CancellationTokenSource? calculateCts;
+    private bool disposed;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -251,6 +267,9 @@
         var toUtc = DateTime.SpecifyKind(toLocal, DateTimeKind.Local).ToUniversalTime();
 
         isBusy = true;
+        StartProgressTimer();
+
+        calculateCts = new CancellationTokenSource();
 
         try
         {
@@ -264,16 +283,83 @@
                 Granularity = granularity
             };
 
-            result = await BackendApiClient.GetMyPosBalanceOverviewAsync(TenantId, request);
+            var calculated = await BackendApiClient.GetMyPosBalanceOverviewAsync(TenantId, request, calculateCts.Token);
+
+            if (!disposed)
+            {
+                result = calculated;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Pagina verlaten terwijl het berekenen liep: bewust geannuleerd, geen foutmelding tonen.
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "myPOS saldo-overzicht berekenen mislukt.");
-            errorMessage = $"Berekenen mislukt: {ex.Message}";
+
+            if (!disposed)
+            {
+                errorMessage = $"Berekenen mislukt: {ex.Message}";
+            }
         }
         finally
         {
-            isBusy = false;
+            StopProgressTimer();
+            calculateCts?.Dispose();
+            calculateCts = null;
+
+            if (!disposed)
+            {
+                isBusy = false;
+                StateHasChanged();
+            }
         }
+    }
+
+    private void StartProgressTimer()
+    {
+        elapsedSeconds = 0;
+        progressPercentage = 0;
+        progressDetail = "Net gestart...";
+
+        progressTimer = new System.Threading.Timer(_ =>
+        {
+            elapsedSeconds++;
+
+            // Geen echte voortgang beschikbaar (myPOS rapporteert dit niet tussentijds):
+            // een langzaam oplopende balk geeft aan dat de app nog bezig is, zonder een
+            // precisie te suggereren die er niet is. Vlakt af richting 92% totdat het
+            // resultaat binnen is.
+            var target = Math.Min(92, elapsedSeconds);
+
+            InvokeAsync(() =>
+            {
+                if (disposed)
+                {
+                    return;
+                }
+
+                progressPercentage = target;
+                progressDetail = $"Bezig: {elapsedSeconds} seconden verstreken. " +
+                                  "Bij brede periodes haalt myPOS veel paginas op; dit kan enkele minuten duren.";
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void StopProgressTimer()
+    {
+        progressTimer?.Dispose();
+        progressTimer = null;
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        StopProgressTimer();
+        calculateCts?.Cancel();
+        calculateCts?.Dispose();
+        calculateCts = null;
     }
 }
