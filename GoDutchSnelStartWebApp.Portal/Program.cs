@@ -37,6 +37,9 @@ namespace GoDutchSnelStartWebApp.Portal
             builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>(client =>
             {
                 client.BaseAddress = new Uri(apiBaseUrl);
+                // Het myPOS saldo-overzicht kan bij brede periodes (veel myPOS-paginas)
+                // meerdere minuten duren; de default van 100s is daarvoor te krap.
+                client.Timeout = TimeSpan.FromMinutes(10);
             });
             builder.Services.Configure<PortalTenantOptions>(
                     builder.Configuration.GetSection(PortalTenantOptions.SectionName));

@@ -6,6 +6,7 @@ using GoDutchSnelStartWebApp.Application.MyPos.Interfaces;
 using GoDutchSnelStartWebApp.Domain.Entities.MyPos;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.IO;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -70,11 +71,10 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
 
         var totalPages = (int)Math.Ceiling((double)totalRecords / limit);
         var processedRecords = 0;
+        const int maxPageAttempts = 4;
 
         for (var page = 1; page <= totalPages; page++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             var url = BuildTransactionsEndpoint(
                 baseUrl,
                 fromUtc,
@@ -82,48 +82,82 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
                 page,
                 limit);
 
-            _logger.LogInformation(
-                "myPOS transacties ophalen. Page: {Page}/{TotalPages}, Limit: {Limit}.",
-                page,
-                totalPages,
-                limit);
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddMyPosHeaders(request, accessToken, apiKey, requestId);
-
-            using var response = await _httpClient.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            for (var attempt = 1; attempt <= maxPageAttempts; attempt++)
             {
-                _logger.LogWarning(
-                    "myPOS transacties ophalen mislukt. Page: {Page}, StatusCode: {StatusCode}, ResponsePreview: {ResponsePreview}.",
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _logger.LogInformation(
+                    "myPOS transacties ophalen. Page: {Page}/{TotalPages}, Limit: {Limit}, Attempt: {Attempt}/{MaxAttempts}.",
                     page,
-                    (int)response.StatusCode,
-                    Truncate(json));
+                    totalPages,
+                    limit,
+                    attempt,
+                    maxPageAttempts);
 
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    AddMyPosHeaders(request, accessToken, apiKey, requestId);
+
+                    using var response = await _httpClient.SendAsync(
+                        request,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken);
+
+                    var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning(
+                            "myPOS transacties ophalen mislukt. Page: {Page}, StatusCode: {StatusCode}, ResponsePreview: {ResponsePreview}.",
+                            page,
+                            (int)response.StatusCode,
+                            Truncate(json));
+
+                        if (IsTransientStatusCode(response.StatusCode) && attempt < maxPageAttempts)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
+                            continue;
+                        }
+
+                        response.EnsureSuccessStatusCode();
+                    }
+
+                    var pageTransactions = ParseTransactionItems(json);
+
+                    if (pageTransactions.Count > 0)
+                    {
+                        transactions.AddRange(pageTransactions);
+                        processedRecords += pageTransactions.Count;
+                    }
+
+                    _logger.LogInformation(
+                        "myPOS pagina verwerkt. Page: {Page}/{TotalPages}, PageCount: {PageCount}, Processed: {Processed}/{TotalRecords}.",
+                        page,
+                        totalPages,
+                        pageTransactions.Count,
+                        processedRecords,
+                        totalRecords);
+
+                    break;
+                }
+                catch (Exception ex) when (
+                    (ex is TaskCanceledException or IOException or HttpRequestException) &&
+                    !cancellationToken.IsCancellationRequested &&
+                    attempt < maxPageAttempts)
+                {
+                    // Een timeout/verbindingsfout op één pagina mag niet de hele (mogelijk
+                    // al minutenlange) meerdere-paginas-fetch laten mislukken.
+                    _logger.LogWarning(
+                        ex,
+                        "myPOS pagina ophalen tijdelijk mislukt (netwerk/timeout). Page: {Page}, Attempt: {Attempt}/{MaxAttempts}.",
+                        page,
+                        attempt,
+                        maxPageAttempts);
+
+                    await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
+                }
             }
-
-            var pageTransactions = ParseTransactionItems(json);
-
-            if (pageTransactions.Count > 0)
-            {
-                transactions.AddRange(pageTransactions);
-                processedRecords += pageTransactions.Count;
-            }
-
-            _logger.LogInformation(
-                "myPOS pagina verwerkt. Page: {Page}/{TotalPages}, PageCount: {PageCount}, Processed: {Processed}/{TotalRecords}.",
-                page,
-                totalPages,
-                pageTransactions.Count,
-                processedRecords,
-                totalRecords);
         }
 
         _logger.LogInformation(

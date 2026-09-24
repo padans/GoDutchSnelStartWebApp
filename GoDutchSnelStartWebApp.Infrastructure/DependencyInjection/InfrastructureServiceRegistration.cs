@@ -79,7 +79,9 @@ public static class InfrastructureServiceRegistration
         services.AddHttpClient<ISnelStartBankStatementImporter, SnelStartBankStatementImporter>();
         services.AddHttpClient<IMyPosTransactionImportService, MyPosTransactionImportService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(60);
+            // Per individuele myPOS-aanroep (niet cumulatief over alle paginas van een
+            // saldo-overzicht, dat kan meerdere minuten duren en heeft eigen retries).
+            client.Timeout = TimeSpan.FromSeconds(90);
         });
         services.AddHttpClient<IMyPosExportBatchExportService, MyPosExportBatchExportService>(client =>
         {
