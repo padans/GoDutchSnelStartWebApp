@@ -649,6 +649,22 @@ public sealed class BackendApiClient : IBackendApiClient
                ?? new ConnectionTestResultViewModel { Success = false, Provider = "myPOS", Message = "Geen resultaat ontvangen." };
     }
 
+    public async Task<MyPosBalanceOverviewResultViewModel> GetMyPosBalanceOverviewAsync(
+        Guid tenantId,
+        MyPosBalanceOverviewRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/tenants/{tenantId}/mypos/transactions/balance-overview";
+
+        _logger.LogInformation("myPOS saldo-overzicht opvragen via {Url}", url);
+
+        using var response = await _httpClient.PostAsJsonAsync(url, request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<MyPosBalanceOverviewResultViewModel>(cancellationToken: cancellationToken)
+               ?? new MyPosBalanceOverviewResultViewModel();
+    }
+
     public async Task<MyPosTransactionImportResultViewModel> ImportMyPosTransactionsAsync(
         Guid tenantId,
         Guid tenantMyPosConnectionId,

@@ -329,6 +329,189 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
         }
     }
 
+    public async Task<MyPosBalanceOverviewResultDto> GetBalanceOverviewAsync(
+        Guid tenantId,
+        MyPosBalanceOverviewRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (tenantId == Guid.Empty) throw new InvalidOperationException("TenantId is required.");
+        if (request.TenantMyPosConnectionId == Guid.Empty) throw new InvalidOperationException("TenantMyPosConnectionId is required.");
+        if (request.ToUtc <= request.FromUtc) throw new InvalidOperationException("ToUtc must be greater than FromUtc.");
+
+        var connection = await _connectionRepository.GetByIdAsync(request.TenantMyPosConnectionId, cancellationToken);
+        if (connection is null || connection.TenantId != tenantId) throw new KeyNotFoundException("myPOS connection not found.");
+        if (!connection.IsActive) throw new InvalidOperationException("myPOS connection is not active.");
+
+        var clientSecret = _secretEncryptionService.Decrypt(connection.ClientSecretEncrypted);
+
+        if (string.IsNullOrWhiteSpace(clientSecret)) throw new InvalidOperationException("myPOS client secret is missing.");
+        if (string.IsNullOrWhiteSpace(connection.ClientId)) throw new InvalidOperationException("myPOS Klantnummer ontbreekt.");
+
+        var referenceUtc = DateTime.SpecifyKind(request.ReferenceUtc, DateTimeKind.Utc);
+        var fromUtc = DateTime.SpecifyKind(request.FromUtc, DateTimeKind.Utc);
+        var toUtc = DateTime.SpecifyKind(request.ToUtc, DateTimeKind.Utc);
+
+        // De transacties moeten opgehaald worden over het volledige bereik tussen de
+        // gevraagde periode EN het referentietijdstip (dat buiten de gevraagde periode kan liggen).
+        var fetchFromUtc = referenceUtc < fromUtc ? referenceUtc : fromUtc;
+        var fetchToUtc = referenceUtc > toUtc ? referenceUtc : toUtc;
+
+        var accessToken = await GetAccessTokenAsync(connection.AuthUrl, connection.ClientId, clientSecret, cancellationToken);
+        var apiKey = connection.ClientId.Trim();
+        var requestId = Guid.NewGuid().ToString("N");
+
+        var rawItems = await FetchTransactionsAsync(
+            connection.TransactionsApiBaseUrl,
+            accessToken,
+            apiKey,
+            requestId,
+            fetchFromUtc,
+            fetchToUtc,
+            cancellationToken);
+
+        var sortedTransactions = rawItems
+            .Select(item => (
+                DateUtc: TryGetDateTime(item, "date") ?? TryGetDateTime(item, "transaction_date") ?? TryGetDateTime(item, "created_at"),
+                Amount: TryGetDecimal(item, "transaction_amount") ?? TryGetDecimal(item, "transactionAmount") ?? TryGetDecimal(item, "amount") ?? 0m))
+            .Where(x => x.DateUtc is not null)
+            .Select(x => (DateUtc: DateTime.SpecifyKind(x.DateUtc!.Value, DateTimeKind.Utc), x.Amount))
+            .OrderBy(x => x.DateUtc)
+            .ToList();
+
+        // Cumulatieve som van alle transacties met datum < x (halfopen interval-conventie).
+        decimal CumBefore(DateTime x) => sortedTransactions.Where(t => t.DateUtc < x).Sum(t => t.Amount);
+
+        var cumAtReference = CumBefore(referenceUtc);
+
+        decimal BalanceAt(DateTime x) => request.ReferenceBalance + (CumBefore(x) - cumAtReference);
+
+        var periods = BuildPeriodBoundaries(fromUtc, toUtc, request.Granularity);
+        var periodDtos = new List<MyPosBalancePeriodDto>(periods.Count);
+
+        foreach (var (periodFromUtc, periodToUtc, label) in periods)
+        {
+            var beginBalance = Math.Round(BalanceAt(periodFromUtc), 2, MidpointRounding.AwayFromZero);
+            var endBalance = Math.Round(BalanceAt(periodToUtc), 2, MidpointRounding.AwayFromZero);
+            var transactionCount = sortedTransactions.Count(t => t.DateUtc >= periodFromUtc && t.DateUtc < periodToUtc);
+
+            periodDtos.Add(new MyPosBalancePeriodDto
+            {
+                Label = label,
+                FromUtc = periodFromUtc,
+                ToUtc = periodToUtc,
+                BeginBalance = beginBalance,
+                EndBalance = endBalance,
+                Mutation = Math.Round(endBalance - beginBalance, 2, MidpointRounding.AwayFromZero),
+                TransactionCount = transactionCount
+            });
+        }
+
+        var totalTransactionCount = sortedTransactions.Count(t => t.DateUtc >= fromUtc && t.DateUtc < toUtc);
+
+        _logger.LogInformation(
+            "myPOS saldo-overzicht berekend. TenantId: {TenantId}, ConnectionId: {ConnectionId}, ReferenceUtc: {ReferenceUtc}, ReferenceBalance: {ReferenceBalance}, FromUtc: {FromUtc}, ToUtc: {ToUtc}, Granularity: {Granularity}, Periods: {PeriodCount}, TotalTransactionCount: {TotalTransactionCount}.",
+            tenantId,
+            connection.Id,
+            referenceUtc,
+            request.ReferenceBalance,
+            fromUtc,
+            toUtc,
+            request.Granularity,
+            periodDtos.Count,
+            totalTransactionCount);
+
+        return new MyPosBalanceOverviewResultDto
+        {
+            TenantId = tenantId,
+            TenantMyPosConnectionId = connection.Id,
+            ReferenceBalance = request.ReferenceBalance,
+            ReferenceUtc = referenceUtc,
+            FromUtc = fromUtc,
+            ToUtc = toUtc,
+            Granularity = request.Granularity,
+            TotalTransactionCount = totalTransactionCount,
+            Periods = periodDtos
+        };
+    }
+
+    private static TimeZoneInfo GetNlTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
+        }
+    }
+
+    /// <summary>
+    /// Verdeelt [fromUtc, toUtc) in sub-periodes (maand/kwartaal/jaar), uitgelijnd op NL-kalendergrenzen.
+    /// De eerste en laatste sub-periode worden geclipt aan fromUtc/toUtc.
+    /// </summary>
+    private static List<(DateTime FromUtc, DateTime ToUtc, string Label)> BuildPeriodBoundaries(
+        DateTime fromUtc,
+        DateTime toUtc,
+        string granularity)
+    {
+        var result = new List<(DateTime FromUtc, DateTime ToUtc, string Label)>();
+
+        if (string.Equals(granularity, "None", StringComparison.OrdinalIgnoreCase))
+        {
+            result.Add((fromUtc, toUtc, "Periode"));
+            return result;
+        }
+
+        var nlTz = GetNlTimeZone();
+        var fromLocal = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, nlTz);
+        var toLocal = TimeZoneInfo.ConvertTimeFromUtc(toUtc, nlTz);
+        var nlCulture = CultureInfo.GetCultureInfo("nl-NL");
+
+        DateTime cursor;
+
+        if (string.Equals(granularity, "Year", StringComparison.OrdinalIgnoreCase))
+        {
+            cursor = new DateTime(fromLocal.Year, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        }
+        else if (string.Equals(granularity, "Quarter", StringComparison.OrdinalIgnoreCase))
+        {
+            var quarterStartMonth = ((fromLocal.Month - 1) / 3 * 3) + 1;
+            cursor = new DateTime(fromLocal.Year, quarterStartMonth, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        }
+        else
+        {
+            cursor = new DateTime(fromLocal.Year, fromLocal.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        }
+
+        while (cursor < toLocal)
+        {
+            var next = string.Equals(granularity, "Year", StringComparison.OrdinalIgnoreCase)
+                ? cursor.AddYears(1)
+                : string.Equals(granularity, "Quarter", StringComparison.OrdinalIgnoreCase)
+                    ? cursor.AddMonths(3)
+                    : cursor.AddMonths(1);
+
+            var periodStartLocal = cursor < fromLocal ? fromLocal : cursor;
+            var periodEndLocal = next > toLocal ? toLocal : next;
+
+            var label = string.Equals(granularity, "Year", StringComparison.OrdinalIgnoreCase)
+                ? cursor.Year.ToString(CultureInfo.InvariantCulture)
+                : string.Equals(granularity, "Quarter", StringComparison.OrdinalIgnoreCase)
+                    ? $"Q{(((cursor.Month - 1) / 3) + 1)} {cursor.Year}"
+                    : cursor.ToString("MMMM yyyy", nlCulture);
+
+            var periodStartUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(periodStartLocal, DateTimeKind.Unspecified), nlTz);
+            var periodEndUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(periodEndLocal, DateTimeKind.Unspecified), nlTz);
+
+            result.Add((periodStartUtc, periodEndUtc, label));
+
+            cursor = next;
+        }
+
+        return result;
+    }
+
     private async Task<string> GetAccessTokenAsync(
      string authUrl,
      string clientId,

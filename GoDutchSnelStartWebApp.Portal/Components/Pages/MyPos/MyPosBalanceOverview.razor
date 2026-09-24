@@ -1,0 +1,279 @@
+@page "/mypos/overzichten"
+
+@using GoDutchSnelStartWebApp.Portal.Configuration
+@using GoDutchSnelStartWebApp.Portal.Models.MyPos
+@using Microsoft.Extensions.Options
+@using GoDutchSnelStartWebApp.Portal.Components.Shared
+
+@inject GoDutchSnelStartWebApp.Portal.Api.Interfaces.IBackendApiClient BackendApiClient
+@inject IOptions<PortalTenantOptions> TenantOptions
+@inject ILogger<MyPosBalanceOverview> Logger
+@inject AppSession Session
+
+<PageTitle>MyPos overzichten</PageTitle>
+
+<h1>MyPos overzichten</h1>
+<ConnectionStatusBadge ShowSnelStart="true" ShowMyPos="true" />
+<p class="text-muted">
+    Bereken het begin- en eindsaldo van de myPOS-rekening per (sub-)periode, uitgaande van een saldo dat u zelf opgeeft
+    op een bekend tijdstip. Handig als extra controle dat het inlezen in SnelStart goed is gegaan.
+</p>
+
+<div class="alert alert-info">
+    <strong>Let op:</strong> myPOS biedt met de huidige koppelgegevens geen endpoint dat rechtstreeks een saldo teruggeeft.
+    Dit overzicht wordt daarom <strong>berekend</strong>: vanaf uw referentiesaldo worden de myPOS-transacties opgeteld/afgetrokken
+    om het saldo per periode terug te rekenen. Het is geen rechtstreekse saldo-opvraging bij myPOS.
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">Referentiesaldo</div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Saldo (EUR)</label>
+                <input type="number" step="0.01" class="form-control" @bind="referenceBalance" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">op datum</label>
+                <div class="date-with-picker">
+                    <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                           @bind="referenceDate" @bind:format="dd-MM-yyyy" />
+                    <input type="date" class="date-calendar" title="Kies datum" tabindex="-1"
+                           value="@(referenceDate?.ToString("yyyy-MM-dd"))" @onchange="OnReferenceDatePicked" />
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">tijd</label>
+                <input type="text" class="form-control" placeholder="uu:mm"
+                       @bind="referenceTime" @bind:format="HH:mm" />
+            </div>
+
+            <div class="col-md-4 text-muted small">
+                Bijvoorbeeld: het huidige saldo, vandaag op dit moment. Of het saldo zoals bekend uit een eerder
+                myPOS-overzicht op een specifieke datum/tijd.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Periode</div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Vanaf datum (00:00 uur)</label>
+                <div class="date-with-picker">
+                    <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                           @bind="fromDate" @bind:format="dd-MM-yyyy" />
+                    <input type="date" class="date-calendar" title="Kies datum" tabindex="-1"
+                           value="@(fromDate?.ToString("yyyy-MM-dd"))" @onchange="OnFromDatePicked" />
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">T/m datum (24:00 uur)</label>
+                <div class="date-with-picker">
+                    <input type="text" class="form-control" placeholder="dd-mm-jjjj"
+                           @bind="toDate" @bind:format="dd-MM-yyyy" />
+                    <input type="date" class="date-calendar" title="Kies datum" tabindex="-1"
+                           value="@(toDate?.ToString("yyyy-MM-dd"))" @onchange="OnToDatePicked" />
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Indeling</label>
+                <select class="form-select" @bind="granularity">
+                    <option value="Month">Per maand</option>
+                    <option value="Quarter">Per kwartaal</option>
+                    <option value="Year">Per jaar</option>
+                    <option value="None">Geen indeling (één periode)</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <button type="button" class="btn btn-primary" @onclick="CalculateAsync" disabled="@isBusy">
+                    @(isBusy ? "Berekenen..." : "Berekenen")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (result is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Berekend saldo-overzicht</span>
+            <span class="text-muted small">
+                Referentie: @result.ReferenceBalance.ToString("N2") op @LocalTime(result.ReferenceUtc).ToString("dd-MM-yyyy HH:mm")
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Periode</th>
+                            <th class="text-end">Beginsaldo</th>
+                            <th class="text-end">Mutatie</th>
+                            <th class="text-end">Eindsaldo</th>
+                            <th class="text-end">Aantal transacties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var period in result.Periods)
+                        {
+                            <tr>
+                                <td>@period.Label</td>
+                                <td class="text-end">@period.BeginBalance.ToString("N2")</td>
+                                <td class="text-end">@period.Mutation.ToString("N2")</td>
+                                <td class="text-end">@period.EndBalance.ToString("N2")</td>
+                                <td class="text-end">@period.TransactionCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (result.Periods.Count > 0)
+                    {
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td>Totaal</td>
+                                <td class="text-end">@result.Periods.First().BeginBalance.ToString("N2")</td>
+                                <td class="text-end">@((result.Periods.Last().EndBalance - result.Periods.First().BeginBalance).ToString("N2"))</td>
+                                <td class="text-end">@result.Periods.Last().EndBalance.ToString("N2")</td>
+                                <td class="text-end">@result.TotalTransactionCount</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Guid TenantId => Session.TenantId ?? TenantOptions.Value.TenantId;
+
+    private TenantMyPosConnectionViewModel? connection;
+
+    private decimal referenceBalance;
+    private DateTime? referenceDate = DateTime.Today;
+    private TimeOnly? referenceTime = TimeOnly.FromDateTime(DateTime.Now);
+
+    private DateTime? fromDate = new(DateTime.Today.Year, 1, 1);
+    private DateTime? toDate = DateTime.Today;
+    private string granularity = "Month";
+
+    private bool isBusy;
+    private string? errorMessage;
+    private MyPosBalanceOverviewResultViewModel? result;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            connection = await BackendApiClient.GetTenantMyPosConnectionAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS-koppeling laden mislukt op overzichtenpagina.");
+        }
+    }
+
+    private void OnReferenceDatePicked(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var d))
+        {
+            referenceDate = d.Date;
+        }
+    }
+
+    private void OnFromDatePicked(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var d))
+        {
+            fromDate = d.Date;
+        }
+    }
+
+    private void OnToDatePicked(ChangeEventArgs args)
+    {
+        if (DateTime.TryParse(args.Value?.ToString(), out var d))
+        {
+            toDate = d.Date;
+        }
+    }
+
+    private static DateTime LocalTime(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
+
+    private async Task CalculateAsync()
+    {
+        errorMessage = null;
+        result = null;
+
+        if (connection is null || connection.Id == Guid.Empty)
+        {
+            errorMessage = "Er is geen myPOS-koppeling gevonden. Maak eerst een koppeling aan.";
+            return;
+        }
+
+        if (!referenceDate.HasValue || !referenceTime.HasValue)
+        {
+            errorMessage = "Vul de referentiedatum en -tijd in.";
+            return;
+        }
+
+        if (!fromDate.HasValue || !toDate.HasValue)
+        {
+            errorMessage = "Vul de vanaf- en t/m-datum in.";
+            return;
+        }
+
+        var referenceLocal = referenceDate.Value.Date + referenceTime.Value.ToTimeSpan();
+        var referenceUtc = DateTime.SpecifyKind(referenceLocal, DateTimeKind.Local).ToUniversalTime();
+
+        var fromLocal = fromDate.Value.Date;
+        var toLocal = toDate.Value.Date.AddDays(1);
+
+        if (toLocal <= fromLocal)
+        {
+            errorMessage = "De t/m datum moet op of na de vanaf datum liggen.";
+            return;
+        }
+
+        var fromUtc = DateTime.SpecifyKind(fromLocal, DateTimeKind.Local).ToUniversalTime();
+        var toUtc = DateTime.SpecifyKind(toLocal, DateTimeKind.Local).ToUniversalTime();
+
+        isBusy = true;
+
+        try
+        {
+            var request = new MyPosBalanceOverviewRequestViewModel
+            {
+                TenantMyPosConnectionId = connection.Id,
+                ReferenceBalance = referenceBalance,
+                ReferenceUtc = referenceUtc,
+                FromUtc = fromUtc,
+                ToUtc = toUtc,
+                Granularity = granularity
+            };
+
+            result = await BackendApiClient.GetMyPosBalanceOverviewAsync(TenantId, request);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "myPOS saldo-overzicht berekenen mislukt.");
+            errorMessage = $"Berekenen mislukt: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+}

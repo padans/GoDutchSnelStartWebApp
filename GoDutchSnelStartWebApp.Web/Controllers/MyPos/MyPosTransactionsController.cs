@@ -78,6 +78,34 @@ public sealed class MyPosTransactionsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("balance-overview")]
+    [ProducesResponseType(typeof(MyPosBalanceOverviewResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<MyPosBalanceOverviewResultDto>> GetBalanceOverviewAsync(
+        Guid tenantId,
+        [FromBody] MyPosBalanceOverviewRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        if (request.TenantMyPosConnectionId == Guid.Empty)
+        {
+            return BadRequest("TenantMyPosConnectionId is verplicht.");
+        }
+
+        if (request.FromUtc == default || request.ToUtc == default || request.ToUtc <= request.FromUtc)
+        {
+            return BadRequest("Gebruik geldige FromUtc en ToUtc.");
+        }
+
+        if (request.ReferenceUtc == default)
+        {
+            return BadRequest("ReferenceUtc is verplicht.");
+        }
+
+        var result = await _importService.GetBalanceOverviewAsync(tenantId, request, cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpPost("test-connection")]
     [ProducesResponseType(typeof(ConnectionTestResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

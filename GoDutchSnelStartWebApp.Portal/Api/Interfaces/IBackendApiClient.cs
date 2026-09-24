@@ -149,6 +149,11 @@ public interface IBackendApiClient
         bool includeExported = false,
         CancellationToken cancellationToken = default);
 
+    Task<MyPosBalanceOverviewResultViewModel> GetMyPosBalanceOverviewAsync(
+        Guid tenantId,
+        MyPosBalanceOverviewRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<SnelStartBtwTariefLookupViewModel>> GetTenantSnelStartBtwTarievenAsync(
     Guid tenantId,
     CancellationToken cancellationToken = default);
