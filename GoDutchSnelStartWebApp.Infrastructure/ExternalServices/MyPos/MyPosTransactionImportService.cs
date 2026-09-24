@@ -46,34 +46,19 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
     CancellationToken cancellationToken)
     {
         const int limit = 100;
+        const int maxPageAttempts = 4;
+        const int maxPagesSafetyCap = 1000; // ~100.000 transacties; voorkomt een oneindige lus
 
         var transactions = new List<JsonElement>();
 
-        var totalRecords = await FetchTransactionTotalCountAsync(
-            baseUrl,
-            accessToken,
-            apiKey,
-            requestId,
-            fromUtc,
-            toUtc,
-            cancellationToken);
-
-        _logger.LogInformation(
-            "myPOS totaal aantal transacties opgehaald. TotalRecords: {TotalRecords}, FromUtc: {FromUtc}, ToUtc: {ToUtc}.",
-            totalRecords,
-            fromUtc,
-            toUtc);
-
-        if (totalRecords <= 0)
-        {
-            return transactions;
-        }
-
-        var totalPages = (int)Math.Ceiling((double)totalRecords / limit);
-        var processedRecords = 0;
-        const int maxPageAttempts = 4;
-
-        for (var page = 1; page <= totalPages; page++)
+        // myPOS' "pagination.total" blijkt niet betrouwbaar: bij brede periodes komt dit
+        // veld soms te laag terug (mogelijk eventual-consistency aan myPOS-zijde), waardoor
+        // een vooraf op basis daarvan berekend aantal paginas te vroeg stopt en data mist
+        // -- zonder dat er ook maar een fout optreedt. Daarom NIET vertrouwen op een totaal,
+        // maar simpelweg doorpaginerern tot een pagina minder dan "limit" items teruggeeft
+        // (myPOS negeert de limit-parameter en geeft altijd volle paginas van 100, dus een
+        // kortere pagina betekent onmiskenbaar: dit was de laatste).
+        for (var page = 1; page <= maxPagesSafetyCap; page++)
         {
             var url = BuildTransactionsEndpoint(
                 baseUrl,
@@ -82,14 +67,15 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
                 page,
                 limit);
 
+            IReadOnlyList<JsonElement>? pageTransactions = null;
+
             for (var attempt = 1; attempt <= maxPageAttempts; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 _logger.LogInformation(
-                    "myPOS transacties ophalen. Page: {Page}/{TotalPages}, Limit: {Limit}, Attempt: {Attempt}/{MaxAttempts}.",
+                    "myPOS transacties ophalen. Page: {Page}, Limit: {Limit}, Attempt: {Attempt}/{MaxAttempts}.",
                     page,
-                    totalPages,
                     limit,
                     attempt,
                     maxPageAttempts);
@@ -123,22 +109,7 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
                         response.EnsureSuccessStatusCode();
                     }
 
-                    var pageTransactions = ParseTransactionItems(json);
-
-                    if (pageTransactions.Count > 0)
-                    {
-                        transactions.AddRange(pageTransactions);
-                        processedRecords += pageTransactions.Count;
-                    }
-
-                    _logger.LogInformation(
-                        "myPOS pagina verwerkt. Page: {Page}/{TotalPages}, PageCount: {PageCount}, Processed: {Processed}/{TotalRecords}.",
-                        page,
-                        totalPages,
-                        pageTransactions.Count,
-                        processedRecords,
-                        totalRecords);
-
+                    pageTransactions = ParseTransactionItems(json);
                     break;
                 }
                 catch (Exception ex) when (
@@ -157,6 +128,27 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
 
                     await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
                 }
+            }
+
+            if (pageTransactions is null)
+            {
+                // Alle pogingen voor deze pagina zijn mislukt: hard falen i.p.v. stilzwijgend
+                // data missen -- de aanroeper (import/saldo-overzicht) moet dit kunnen zien.
+                throw new HttpRequestException(
+                    $"myPOS transacties ophalen mislukt voor pagina {page} na {maxPageAttempts} pogingen.");
+            }
+
+            transactions.AddRange(pageTransactions);
+
+            _logger.LogInformation(
+                "myPOS pagina verwerkt. Page: {Page}, PageCount: {PageCount}, TotaalOpgehaald: {Processed}.",
+                page,
+                pageTransactions.Count,
+                transactions.Count);
+
+            if (pageTransactions.Count < limit)
+            {
+                break;
             }
         }
 
