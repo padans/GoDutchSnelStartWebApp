@@ -603,12 +603,15 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
     {
         const int maxAttempts = 4;
 
+        // limit=100 (i.p.v. 1): myPOS negeert de limit-parameter toch (pagina's zijn altijd
+        // 100 groot), en met dezelfde limit als de echte paginering blijft het gedrag identiek
+        // aan de daadwerkelijke fetch-calls.
         var url = BuildTransactionsEndpoint(
             baseUrl,
             fromUtc,
             toUtc,
             page: 1,
-            limit: 1);
+            limit: 100);
 
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
@@ -681,24 +684,39 @@ public sealed class MyPosTransactionImportService : IMyPosTransactionImportServi
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        foreach (var propertyName in new[]
-                 {
-                 "total",
-                 "total_count",
-                 "totalCount",
-                 "total_records",
-                 "totalRecords",
-                 "records_total",
-                 "recordsTotal",
-                 "count"
-             })
+        var candidateRoots = new List<JsonElement> { root };
+
+        // myPOS nest het totaal onder "pagination": {"page_size":100,"page":N,"total":T}.
+        // Zonder deze check valt de methode terug op de array-lengte van de huidige pagina,
+        // wat bij limit=1-probes en bredere periodes tot een veel te laag (en dus afgekapt) totaal leidt.
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("pagination", out var paginationElement) &&
+            paginationElement.ValueKind == JsonValueKind.Object)
         {
-            if (root.ValueKind == JsonValueKind.Object &&
-                root.TryGetProperty(propertyName, out var totalElement) &&
-                totalElement.ValueKind == JsonValueKind.Number &&
-                totalElement.TryGetInt32(out var total))
+            candidateRoots.Insert(0, paginationElement);
+        }
+
+        foreach (var candidateRoot in candidateRoots)
+        {
+            foreach (var propertyName in new[]
+                     {
+                     "total",
+                     "total_count",
+                     "totalCount",
+                     "total_records",
+                     "totalRecords",
+                     "records_total",
+                     "recordsTotal",
+                     "count"
+                 })
             {
-                return total;
+                if (candidateRoot.ValueKind == JsonValueKind.Object &&
+                    candidateRoot.TryGetProperty(propertyName, out var totalElement) &&
+                    totalElement.ValueKind == JsonValueKind.Number &&
+                    totalElement.TryGetInt32(out var total))
+                {
+                    return total;
+                }
             }
         }
 
